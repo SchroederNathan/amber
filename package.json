@@ -3,10 +3,36 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@ai-sdk/react": "^4.0.15",
+    "@clerk/expo": "^3.6.5",
+    "@expo/ui": "~57.0.3",
+    "@shopify/flash-list": "2.0.2",
+    "ai": "^7.0.14",
+    "convex": "^1.42.1",
     "expo": "~57.0.2",
+    "expo-apple-authentication": "~57.0.0",
+    "expo-auth-session": "~57.0.1",
+    "expo-constants": "~57.0.3",
+    "expo-dev-client": "~57.0.5",
+    "expo-font": "~57.0.0",
+    "expo-image": "~57.0.0",
+    "expo-linking": "~57.0.1",
+    "expo-media-library": "~57.0.1",
+    "expo-observe": "~57.0.3",
+    "expo-router": "~57.0.3",
+    "expo-secure-store": "~57.0.0",
     "expo-status-bar": "~57.0.0",
+    "expo-web-browser": "~57.0.0",
     "react": "19.2.3",
-    "react-native": "0.86.0"
+    "react-dom": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-nitro-image": "^0.15.1",
+    "react-native-nitro-modules": "^0.36.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2",
+    "react-native-unistyles": "^3.2.5",
+    "react-native-vision-camera": "^5.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -14,9 +40,10 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
-  "private": true
+  "private": true,
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

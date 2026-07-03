@@ -2,12 +2,18 @@
   "expo": {
     "name": "amber",
     "slug": "amber",
+    "scheme": "amber",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Amber needs access to your Camera to capture photos and videos.",
+        "NSMicrophoneUsageDescription": "Amber needs access to your Microphone to record audio for video recordings."
+      },
+      "bundleIdentifier": "com.schroedernathan.amber"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +22,43 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/ExposureTrial-0.otf",
+            "./assets/fonts/Satoshi-Regular.otf",
+            "./assets/fonts/Satoshi-Medium.otf",
+            "./assets/fonts/Satoshi-Bold.otf"
+          ]
+        }
+      ],
+      "expo-image",
+      "expo-router",
+      "expo-status-bar",
+      "@clerk/expo",
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "967a8121-92b8-4eb9-a208-9addf1220534"
+      }
+    },
+    "owner": "exponathan"
   }
 }
