@@ -6,15 +6,22 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { Readability } from "@mozilla/readability";
+import { parseHTML } from "linkedom";
 
 // Bare model-id strings route through the Vercel AI Gateway automatically
 // (authenticated via the AI_GATEWAY_API_KEY deployment env var).
 const MODEL = "google/gemini-2.5-flash-lite";
 
+// How much extracted text to feed the classifier. The model only needs enough
+// to understand the piece — it doesn't read the whole thing.
 const MAX_CONTENT_CHARS = 8000;
+// How much of the article body to store & render. Kept well under Convex's
+// 1MB document limit; long-form essays run tens of thousands of chars.
+const MAX_STORED_CONTENT_CHARS = 100000;
 
 // ---------------------------------------------------------------------------
-// HTML extraction (hand-rolled, no extra deps)
+// HTML extraction
 // ---------------------------------------------------------------------------
 
 function decodeEntities(text: string): string {
@@ -220,10 +227,16 @@ function htmlToText(html: string): string {
     .map((para) => para.replace(/[ \t]+/g, " ").replace(/\n/g, " ").trim())
     .filter((para) => para !== "")
     .join("\n\n");
-  return text.slice(0, MAX_CONTENT_CHARS);
+  return text.slice(0, MAX_STORED_CONTENT_CHARS);
 }
 
-function extractBodyText(html: string): string {
+/**
+ * Fallback extractor: crude tag-scoping + tag-stripping. Only used when
+ * Readability can't isolate an article (e.g. malformed markup). It leaks page
+ * chrome (nav menus, share counts, captions) on many sites, which is exactly
+ * why Readability is preferred.
+ */
+function extractBodyTextRegex(html: string): string {
   let scope = html;
   const article = html.match(/<article[\s\S]*?<\/article>/i);
   if (article) {
@@ -254,6 +267,40 @@ function extractBodyText(html: string): string {
   ]);
   scope = scope.replace(/<!--[\s\S]*?-->/g, " ");
   return htmlToText(scope);
+}
+
+/**
+ * Extract the readable article body. Mozilla Readability (the engine behind
+ * Firefox Reader View) scores DOM blocks by text density and link ratio to
+ * isolate the real article, discarding nav, ads, share widgets, comment
+ * counts, captions, and other boilerplate — so it works across arbitrary
+ * article pages rather than one site's markup. We feed its cleaned article
+ * HTML through htmlToText to get the paragraph-separated plain text the client
+ * renders. Falls back to the regex extractor if Readability finds nothing
+ * (e.g. non-article pages or JS-rendered shells with no server-side content).
+ */
+function extractBodyText(html: string, url: string): string {
+  try {
+    const { document } = parseHTML(html);
+    // Give Readability a base URL so it can resolve/keep links correctly.
+    try {
+      const base = document.createElement("base");
+      base.setAttribute("href", url);
+      document.head?.appendChild(base);
+    } catch {
+      // Non-fatal — Readability still parses without a <base>.
+    }
+    const article = new Readability(document).parse();
+    if (article?.content) {
+      const text = htmlToText(article.content);
+      if (text.trim() !== "") {
+        return text;
+      }
+    }
+  } catch {
+    // Fall through to the regex extractor below.
+  }
+  return extractBodyTextRegex(html);
 }
 
 type PageData = {
@@ -327,7 +374,7 @@ async function fetchPage(url: string): Promise<PageData> {
     }
   }
 
-  const content = extractBodyText(html);
+  const content = extractBodyText(html, finalUrl);
 
   return {
     title,

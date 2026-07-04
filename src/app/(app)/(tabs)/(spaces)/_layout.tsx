@@ -1,11 +1,19 @@
-import { HeaderButton } from '@/components/header-button';
+import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { Text } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { PlatformColor, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 export default function SpacesStackLayout() {
   const router = useRouter();
-  const { theme } = useUnistyles();
+
+  // Native bar-button items don't run JS on tap the way a Pressable does, so
+  // the light haptic HeaderButton used to give is fired here instead.
+  const newSpace = () => {
+    if (process.env.EXPO_OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push('/new-space');
+  };
 
   return (
     <Stack
@@ -18,9 +26,15 @@ export default function SpacesStackLayout() {
         name="index"
         options={{
           headerTitle: () => <Text style={styles.title}>spaces</Text>,
-          headerRight: () => (
-            <HeaderButton icon="plus" onPress={() => router.push('/new-space')} />
-          ),
+          unstable_headerRightItems: () => [
+            {
+              type: 'button',
+              label: 'New space',
+              icon: { type: 'sfSymbol', name: 'plus' } as const,
+              tintColor: PlatformColor('label'),
+              onPress: newSpace,
+            },
+          ],
         }}
       />
     </Stack>

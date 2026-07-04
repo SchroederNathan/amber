@@ -6,8 +6,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function SpaceScreen() {
@@ -59,11 +58,15 @@ export default function SpaceScreen() {
             fontFamily: theme.fonts.display,
             color: theme.colors.foreground,
           },
-          headerRight: () => (
-            <Pressable hitSlop={8} onPress={confirmDelete}>
-              <SymbolView name="trash" size={19} tintColor={theme.colors.danger} />
-            </Pressable>
-          ),
+          unstable_headerRightItems: () => [
+            {
+              type: 'button',
+              label: 'Delete',
+              icon: { type: 'sfSymbol', name: 'trash' } as const,
+              tintColor: theme.colors.danger,
+              onPress: confirmDelete,
+            },
+          ],
         }}
       />
       <View style={styles.container}>

@@ -7,7 +7,9 @@ import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
+import { File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
+import * as Sharing from 'expo-sharing';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/build/react-navigation';
 import { SymbolView } from 'expo-symbols';
@@ -53,6 +55,34 @@ export default function ItemScreen() {
   }
 
   const heroUri = item.imageUrl ?? item.heroImageUrl;
+
+  // A link shares its URL; a saved image/sticker shares the picture itself.
+  // `expo-sharing` needs a local file, so the remote image is cached first.
+  const shareImage = async () => {
+    if (!item.imageUrl) return;
+    try {
+      if (!(await Sharing.isAvailableAsync())) {
+        if (item.url) await Share.share({ url: item.url });
+        return;
+      }
+      const ext = item.isSticker ? 'png' : 'jpg';
+      const file = new File(Paths.cache, `${item._id}.${ext}`);
+      if (file.exists) file.delete();
+      await File.downloadFileAsync(item.imageUrl, file);
+      await Sharing.shareAsync(file.uri, {
+        mimeType: item.isSticker ? 'image/png' : 'image/jpeg',
+        UTI: item.isSticker ? 'public.png' : 'public.jpeg',
+        dialogTitle: item.title ?? 'Share',
+      });
+    } catch {
+      // User cancelled the sheet, or the download/share failed — nothing to do.
+    }
+  };
+
+  const onShare = item.imageUrl
+    ? shareImage
+    : () => Share.share({ url: item.url! });
+
   const paragraphs =
     item.content
       ?.split(/\n{2,}/)
@@ -66,33 +96,34 @@ export default function ItemScreen() {
           headerShown: true,
           headerTitle: () => <Wordmark />,
           headerBackButtonDisplayMode: 'minimal',
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              {item.url ? (
-                <Pressable hitSlop={8} onPress={() => Share.share({ url: item.url! })}>
-                  <SymbolView
-                    name="square.and.arrow.up"
-                    size={20}
-                    tintColor={theme.colors.primary}
-                  />
-                </Pressable>
-              ) : null}
-              <Pressable
-                hitSlop={8}
-                onPress={async () => {
-                  router.back();
-                  await deleteItem({ id: item._id });
-                }}
-              >
-                <SymbolView name="trash" size={20} tintColor={theme.colors.primary} />
-              </Pressable>
-            </View>
-          ),
+          unstable_headerRightItems: () => [
+            ...(item.imageUrl || item.url
+              ? [
+                  {
+                    type: 'button' as const,
+                    label: 'Share',
+                    icon: { type: 'sfSymbol', name: 'square.and.arrow.up' } as const,
+                    tintColor: theme.colors.primary,
+                    onPress: onShare,
+                  },
+                ]
+              : []),
+            {
+              type: 'button' as const,
+              label: 'Delete',
+              icon: { type: 'sfSymbol', name: 'trash' } as const,
+              tintColor: theme.colors.primary,
+              onPress: async () => {
+                router.back();
+                await deleteItem({ id: item._id });
+              },
+            },
+          ],
         }}
       />
       <ScrollView
         contentInsetAdjustmentBehavior="never"
-        style={[styles.container, { marginTop: headerHeight + theme.gap(5) }]}
+        style={[styles.container, { paddingTop: headerHeight + theme.gap(5) }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -107,7 +138,7 @@ export default function ItemScreen() {
                   // Match the source shape; OG images default to 1200×630 (≈1.91).
                   { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
                 ]}
-                transition={200}
+                // transition={200}
               />
             </Link.AppleZoomTarget>
           </View>
@@ -237,11 +268,6 @@ const styles = StyleSheet.create((theme) => ({
   body: {
     gap: theme.gap(5),
     paddingHorizontal: theme.gap(2),
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.gap(2),
   },
   processingRow: {
     flexDirection: 'row',
