@@ -14,7 +14,8 @@
         "NSCameraUsageDescription": "Amber uses your camera so you can capture things you want to save for later.",
         "NSMicrophoneUsageDescription": "Amber needs access to your Microphone to record audio for video recordings.",
         "NSPhotoLibraryUsageDescription": "Amber lets you save photos and screenshots from your library into your hub.",
-        "NSPhotoLibraryAddUsageDescription": "Amber can save images back to your photo library."
+        "NSPhotoLibraryAddUsageDescription": "Amber can save images back to your photo library.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.schroedernathan.amber"
     },
