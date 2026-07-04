@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
-import { useUnistyles } from 'react-native-unistyles';
+import { Text } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function SearchStackLayout() {
   const { theme } = useUnistyles();
@@ -9,18 +10,22 @@ export default function SearchStackLayout() {
       screenOptions={{
         headerTransparent: true,
         headerShadowVisible: false,
-        headerLargeTitle: true,
-        headerLargeTitleShadowVisible: false,
-        headerLargeStyle: { backgroundColor: 'transparent' },
-        headerBlurEffect: 'none',
-        headerLargeTitleStyle: {
-          fontFamily: theme.fonts.display,
-          color: theme.colors.foreground,
-        },
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Search' }} />
+      <Stack.Screen
+        name="index"
+        options={{ headerTitle: () => <Text style={styles.title}>search</Text> }}
+      />
     </Stack>
   );
 }
+
+const styles = StyleSheet.create((theme) => ({
+  title: {
+    fontFamily: theme.fonts.display,
+    fontSize: 26,
+    letterSpacing: 0.5,
+    color: theme.colors.foreground,
+  },
+}));

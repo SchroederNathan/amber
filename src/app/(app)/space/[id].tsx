@@ -26,7 +26,7 @@ export default function SpaceScreen() {
   if (space === null) {
     return (
       <View style={styles.loading}>
-        <EmptyState icon="tray" title="Gone" message="This space no longer exists." />
+        <EmptyState title="Gone" message="This space no longer exists." />
       </View>
     );
   }
@@ -66,7 +66,6 @@ export default function SpaceScreen() {
           items={space.items}
           ListEmptyComponent={
             <EmptyState
-              icon="sparkles"
               title="Nothing filed yet"
               message={'When you save something that fits this space,\nAmber will shelve it here automatically.'}
             />

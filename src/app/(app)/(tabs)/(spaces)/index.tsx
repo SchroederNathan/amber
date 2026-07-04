@@ -19,6 +19,17 @@ export default function SpacesScreen() {
     );
   }
 
+  if (spaces.length === 0) {
+    return (
+      <View style={styles.container}>
+        <EmptyState
+          title="Make a space"
+          message={'Spaces are shelves for a theme — design inspiration,\nrecipes, gift ideas. New saves file themselves.'}
+        />
+      </View>
+    );
+  }
+
   return (
     <FlashList
       data={spaces}
@@ -26,13 +37,6 @@ export default function SpacesScreen() {
       keyExtractor={(space) => space._id}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
-      ListEmptyComponent={
-        <EmptyState
-          icon="rectangle.stack"
-          title="Make a space"
-          message={'Spaces are shelves for a theme — design inspiration,\nrecipes, gift ideas. New saves file themselves.'}
-        />
-      }
       renderItem={({ item: space, index }) => (
         <Animated.View
           style={styles.cell}

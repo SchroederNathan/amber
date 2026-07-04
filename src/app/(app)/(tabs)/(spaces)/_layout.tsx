@@ -1,6 +1,7 @@
 import { HeaderButton } from '@/components/header-button';
 import { Stack, useRouter } from 'expo-router';
-import { useUnistyles } from 'react-native-unistyles';
+import { Text } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function SpacesStackLayout() {
   const router = useRouter();
@@ -11,21 +12,13 @@ export default function SpacesStackLayout() {
       screenOptions={{
         headerTransparent: true,
         headerShadowVisible: false,
-        headerLargeTitle: true,
-        headerLargeTitleShadowVisible: false,
-        headerLargeStyle: { backgroundColor: 'transparent' },
-        headerBlurEffect: 'none',
-        headerLargeTitleStyle: {
-          fontFamily: theme.fonts.display,
-          color: theme.colors.foreground,
-        },
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
       <Stack.Screen
         name="index"
         options={{
-          title: 'Spaces',
+          headerTitle: () => <Text style={styles.title}>spaces</Text>,
           headerRight: () => (
             <HeaderButton icon="plus" onPress={() => router.push('/new-space')} />
           ),
@@ -34,3 +27,12 @@ export default function SpacesStackLayout() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create((theme) => ({
+  title: {
+    fontFamily: theme.fonts.display,
+    fontSize: 26,
+    letterSpacing: 0.5,
+    color: theme.colors.foreground,
+  },
+}));

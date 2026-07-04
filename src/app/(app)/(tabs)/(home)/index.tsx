@@ -16,19 +16,20 @@ export default function HomeScreen() {
     );
   }
 
+  if (items.length === 0) {
+    return (
+      <View style={styles.container}>
+        <EmptyState
+          title="Save it for later"
+          message={'Tap + to drop in a link, a photo, or a stray thought.\nAmber keeps it warm until you need it.'}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <MasonryFeed
-        items={items}
-        numColumns={2}
-        ListEmptyComponent={
-          <EmptyState
-            icon="sparkles"
-            title="Save it for later"
-            message={'Tap + to drop in a link, a photo, or a stray thought.\nAmber keeps it warm until you need it.'}
-          />
-        }
-      />
+      <MasonryFeed items={items} numColumns={2} />
     </View>
   );
 }

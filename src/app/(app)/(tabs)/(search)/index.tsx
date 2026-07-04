@@ -39,17 +39,21 @@ export default function SearchScreen() {
   return (
     <View style={styles.container}>
       {query.length === 0 ? (
-        <ScrollView contentInsetAdjustmentBehavior="automatic">
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={styles.emptyContent}
+        >
           <EmptyState
-            icon="magnifyingglass"
             title="Find anything"
             message={'Search goes through titles, tags, and\ndescriptions Amber wrote for your saves.'}
           />
         </ScrollView>
       ) : results && results.length === 0 ? (
-        <ScrollView contentInsetAdjustmentBehavior="automatic">
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={styles.emptyContent}
+        >
           <EmptyState
-            icon="tray"
             title="Nothing yet"
             message={`No saves match “${query}”.`}
           />
@@ -65,5 +69,8 @@ const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  emptyContent: {
+    flexGrow: 1,
   },
 }));

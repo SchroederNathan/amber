@@ -1,42 +1,29 @@
-import { SymbolView, type SFSymbol } from 'expo-symbols';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 type Props = {
-  icon: SFSymbol;
   title: string;
   message: string;
 };
 
-export function EmptyState({ icon, title, message }: Props) {
-  const { theme } = useUnistyles();
+export function EmptyState({ title, message }: Props) {
   return (
     <Animated.View entering={FadeIn.duration(400)} style={styles.container}>
-      <View style={styles.iconCircle}>
-        <SymbolView name={icon} size={30} tintColor={theme.colors.primary} />
-      </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
-    alignItems: 'center',
-    paddingVertical: theme.gap(8),
-    paddingHorizontal: theme.gap(4),
-    gap: theme.gap(1),
-  },
-  iconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: theme.colors.primarySoft,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.gap(1),
+    paddingHorizontal: theme.gap(4),
+    paddingBottom: rt.insets.bottom + theme.gap(2),
+    gap: theme.gap(1),
   },
   title: {
     fontFamily: theme.fonts.display,
