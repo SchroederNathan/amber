@@ -5,7 +5,7 @@ import { useMutation } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -39,6 +39,20 @@ export function ItemCard({ item }: { item: FeedItem }) {
   const deleteItem = useMutation(api.items.deleteItem);
 
   const imageUri = item.imageUrl ?? item.heroImageUrl;
+  const captionTitle = item.title ?? item.note ?? (item.url ? displayHost(item.url) : undefined);
+
+  const openMenu = () => {
+    const options = item.url ? ['Share', 'Delete', 'Cancel'] : ['Delete', 'Cancel'];
+    const destructiveButtonIndex = item.url ? 1 : 0;
+    const cancelButtonIndex = options.length - 1;
+    ActionSheetIOS.showActionSheetWithOptions(
+      { options, destructiveButtonIndex, cancelButtonIndex },
+      (index) => {
+        if (item.url && index === 0) Share.share({ url: item.url });
+        else if (index === destructiveButtonIndex) deleteItem({ id: item._id });
+      },
+    );
+  };
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.cell}>
@@ -71,16 +85,14 @@ export function ItemCard({ item }: { item: FeedItem }) {
               </View>
             )}
 
-            {item.type === 'link' && (
-              <View style={styles.caption}>
-                <Text style={styles.captionTitle} numberOfLines={2}>
-                  {item.title ?? displayHost(item.url)}
-                </Text>
-                <Text style={styles.captionHost} numberOfLines={1}>
-                  {item.siteName ?? displayHost(item.url)}
-                </Text>
-              </View>
-            )}
+            <View style={styles.caption}>
+              <Text style={styles.captionTitle} numberOfLines={1}>
+                {captionTitle}
+              </Text>
+              <Pressable hitSlop={10} onPress={openMenu} style={styles.menuButton}>
+                <SymbolView name="ellipsis" size={15} tintColor={theme.colors.muted} />
+              </Pressable>
+            </View>
 
             {item.status === 'processing' && (
               <View style={styles.processing}>
@@ -112,7 +124,7 @@ export function ItemCard({ item }: { item: FeedItem }) {
 
 const styles = StyleSheet.create((theme) => ({
   cell: {
-    padding: 3,
+    padding: 4,
   },
   card: {
     borderRadius: theme.radius.md,
@@ -143,20 +155,22 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.foreground,
   },
   caption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.gap(0.5),
     paddingHorizontal: theme.gap(0.5),
     paddingTop: theme.gap(0.75),
-    gap: 2,
   },
   captionTitle: {
+    flex: 1,
     fontFamily: theme.fonts.medium,
     fontSize: 12,
     lineHeight: 16,
     color: theme.colors.foreground,
   },
-  captionHost: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 10,
-    color: theme.colors.muted,
+  menuButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   processing: {
     position: 'absolute',

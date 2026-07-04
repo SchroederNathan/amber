@@ -8,7 +8,7 @@ type Props = {
   ListHeaderComponent?: React.ComponentType | React.ReactElement;
 };
 
-export function MasonryFeed({ items, numColumns = 3, ListEmptyComponent, ListHeaderComponent }: Props) {
+export function MasonryFeed({ items, numColumns = 2, ListEmptyComponent, ListHeaderComponent }: Props) {
   return (
     <FlashList
       data={items}
@@ -18,7 +18,7 @@ export function MasonryFeed({ items, numColumns = 3, ListEmptyComponent, ListHea
       keyExtractor={(item) => item._id}
       renderItem={({ item }) => <ItemCard item={item} />}
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingHorizontal: 9, paddingVertical: 9 }}
+      contentContainerStyle={{ paddingHorizontal: 0, paddingVertical: 8 }}
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ListHeaderComponent}
     />
