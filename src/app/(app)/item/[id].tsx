@@ -211,7 +211,7 @@ const styles = StyleSheet.create((theme) => ({
   hero: {
     width: '100%',
     // Full-bleed so the card image zooms edge-to-edge into place.
-    backgroundColor: theme.colors.surfaceMuted,
+
   },
   body: {
     gap: theme.gap(1.5),
