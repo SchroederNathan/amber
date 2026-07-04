@@ -36,6 +36,7 @@ const itemFields = {
   url: v.optional(v.string()),
   storageId: v.optional(v.id("_storage")),
   aspectRatio: v.optional(v.number()),
+  isSticker: v.optional(v.boolean()),
   tags: v.array(v.string()),
   content: v.optional(v.string()),
   siteName: v.optional(v.string()),
@@ -167,6 +168,7 @@ export const createImageItem = mutation({
   args: {
     storageId: v.id("_storage"),
     aspectRatio: v.optional(v.number()),
+    isSticker: v.optional(v.boolean()),
   },
   returns: v.id("items"),
   handler: async (ctx, args) => {
@@ -183,6 +185,7 @@ export const createImageItem = mutation({
       status: "processing",
       storageId: args.storageId,
       aspectRatio: args.aspectRatio,
+      isSticker: args.isSticker,
       tags: [],
       searchText: "",
     });

@@ -3,8 +3,16 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  interpolateColor,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -13,6 +21,13 @@ import {
   useCameraPermission,
   usePhotoOutput,
 } from 'react-native-vision-camera';
+import { isAvailable as stickerLiftAvailable, liftSubject } from 'subject-lift';
+
+type CaptureMode = 'photo' | 'sticker';
+
+// The amber accent matches theme.colors.primary (identical in both themes).
+const AMBER = '#e6a23c';
+const INACTIVE = 'rgba(255,255,255,0.55)';
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -23,6 +38,44 @@ export default function CameraScreen() {
   const photoOutput = usePhotoOutput();
   const saveImages = useSaveImages();
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<CaptureMode>('photo');
+
+  // Slides the active-label highlight between Photo (0) and Sticker (1).
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(mode === 'sticker' ? 1 : 0, { duration: 200 });
+  }, [mode, progress]);
+
+  const switchMode = useCallback((next: CaptureMode) => {
+    if (next === 'sticker' && !stickerLiftAvailable) return;
+    setMode((current) => {
+      if (current !== next && process.env.EXPO_OS === 'ios') {
+        Haptics.selectionAsync();
+      }
+      return next;
+    });
+  }, []);
+
+  // Horizontal swipe over the preview toggles modes (iOS-camera style). The
+  // activeOffsetX keeps taps and vertical drags from triggering it.
+  const swipe = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-20, 20])
+        .onEnd((event) => {
+          'worklet';
+          if (event.translationX < -40) runOnJS(switchMode)('sticker');
+          else if (event.translationX > 40) runOnJS(switchMode)('photo');
+        }),
+    [switchMode],
+  );
+
+  const photoLabelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [AMBER, INACTIVE]),
+  }));
+  const stickerLabelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [INACTIVE, AMBER]),
+  }));
 
   const pickFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -57,7 +110,30 @@ export default function CameraScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
       const photoFile = await photoOutput.capturePhotoToFile({}, {});
-      await saveImages([{ uri: `file://${photoFile.filePath}` }]);
+      const uri = `file://${photoFile.filePath}`;
+
+      if (mode === 'sticker') {
+        const sticker = await liftSubject(uri);
+        if (!sticker.hasSubject) {
+          Alert.alert(
+            'No subject found',
+            'Point the camera at a clear subject and try again.',
+          );
+          setBusy(false);
+          return;
+        }
+        await saveImages([
+          {
+            uri: sticker.uri,
+            width: sticker.width,
+            height: sticker.height,
+            mimeType: 'image/png',
+            isSticker: true,
+          },
+        ]);
+      } else {
+        await saveImages([{ uri }]);
+      }
       router.back();
     } catch {
       Alert.alert('Capture failed', 'Could not take that photo. Try again.');
@@ -103,14 +179,19 @@ export default function CameraScreen() {
     );
   }
 
+  const showControls = hasPermission && device;
+
   return (
     <View style={styles.container}>
-      {body}
+      <GestureDetector gesture={swipe}>
+        <View style={styles.preview}>{body}</View>
+      </GestureDetector>
+
       <View style={[styles.topBar, { top: insets.top + 8 }]}>
         <Pressable style={styles.roundButton} onPress={() => router.back()}>
           <SymbolView name="xmark" size={17} tintColor="#fff" weight="semibold" />
         </Pressable>
-        {hasPermission && device ? (
+        {showControls ? (
           <Pressable
             style={styles.roundButton}
             onPress={() => setPosition((p) => (p === 'back' ? 'front' : 'back'))}
@@ -123,16 +204,38 @@ export default function CameraScreen() {
           </Pressable>
         ) : null}
       </View>
-      {hasPermission && device ? (
-        <View style={[styles.bottomBar, { bottom: insets.bottom + 24 }]}>
-          <Pressable style={styles.libraryButton} onPress={pickFromLibrary}>
-            <SymbolView name="photo.on.rectangle" size={20} tintColor="#fff" />
-          </Pressable>
-          <Pressable style={styles.shutter} onPress={capture} disabled={busy}>
-            {busy ? <ActivityIndicator color="#1a1712" /> : <View style={styles.shutterInner} />}
-          </Pressable>
-          <View style={styles.libraryButton} />
-        </View>
+
+      {showControls ? (
+        <>
+          {stickerLiftAvailable ? (
+            <View style={[styles.modeSelector, { bottom: insets.bottom + 118 }]}>
+              <Pressable hitSlop={10} onPress={() => switchMode('photo')}>
+                <Animated.Text style={[styles.modeLabel, photoLabelStyle]}>
+                  PHOTO
+                </Animated.Text>
+              </Pressable>
+              <Pressable hitSlop={10} onPress={() => switchMode('sticker')}>
+                <Animated.Text style={[styles.modeLabel, stickerLabelStyle]}>
+                  STICKER
+                </Animated.Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <View style={[styles.bottomBar, { bottom: insets.bottom + 24 }]}>
+            <Pressable style={styles.libraryButton} onPress={pickFromLibrary}>
+              <SymbolView name="photo.on.rectangle" size={20} tintColor="#fff" />
+            </Pressable>
+            <Pressable style={styles.shutter} onPress={capture} disabled={busy}>
+              {busy ? (
+                <ActivityIndicator color="#1a1712" />
+              ) : (
+                <View style={styles.shutterInner} />
+              )}
+            </Pressable>
+            <View style={styles.libraryButton} />
+          </View>
+        </>
       ) : null}
     </View>
   );
@@ -142,6 +245,9 @@ const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  preview: {
+    flex: 1,
   },
   camera: {
     flex: 1,
@@ -160,6 +266,20 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modeSelector: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.gap(3),
+  },
+  modeLabel: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 13,
+    letterSpacing: 1.5,
   },
   bottomBar: {
     position: 'absolute',

@@ -43,7 +43,7 @@ export default function ItemScreen() {
   if (item === null) {
     return (
       <View style={styles.loading}>
-        <EmptyState icon="tray" title="Gone" message="This save no longer exists." />
+        <EmptyState title="Gone" message="This save no longer exists." />
       </View>
     );
   }

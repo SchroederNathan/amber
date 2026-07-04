@@ -5,11 +5,49 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+
+// Standard OpenGraph image shape (1200×630) — the default when a link's real
+// hero dimensions weren't captured. Mirrors item-card so covers match the feed.
+const OG_RATIO = 1.91;
+
+function clampRatio(ratio: number | undefined, fallback: number) {
+  const value = ratio && !Number.isNaN(ratio) ? ratio : fallback;
+  return Math.min(Math.max(value, 0.5), 2);
+}
+
+function timeAgo(ms: number) {
+  const mins = Math.floor((Date.now() - ms) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+  const years = Math.floor(days / 365);
+  return `${years} year${years === 1 ? '' : 's'} ago`;
+}
+
+// Tilt + drop each cover to fan them out; the center sits upright and on top.
+function coverTransform(i: number, n: number) {
+  if (n <= 1) return { zIndex: 2 };
+  const offset = i - (n - 1) / 2;
+  return {
+    marginHorizontal: -14,
+    zIndex: Math.abs(offset) < 0.5 ? 3 : 1,
+    transform: [{ translateY: Math.abs(offset) * 10 }, { rotate: `${offset * 8}deg` }],
+  };
+}
 
 export default function SpacesScreen() {
+  const { theme } = useUnistyles();
   const { data: spaces } = useQuery(convexQuery(api.spaces.listSpaces, {}));
 
   if (spaces === undefined) {
@@ -34,43 +72,76 @@ export default function SpacesScreen() {
   return (
     <FlashList
       data={spaces}
-      numColumns={2}
       keyExtractor={(space) => space._id}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
-      renderItem={({ item: space, index }) => (
-        <Animated.View
-          style={styles.cell}
-          entering={FadeInDown.delay(index * 60).duration(350)}
-        >
-          <Link href={`/space/${space._id}`} asChild>
-            <Link.Trigger>
-              <Pressable style={({ pressed }) => [styles.spaceCard, pressed && { opacity: 0.85 }]}>
-                <View style={styles.previewRow}>
-                  {space.previewImageUrls.length > 0 ? (
-                    space.previewImageUrls.map((url, i) => (
-                      <Image key={i} source={{ uri: url }} style={styles.previewImage} />
-                    ))
-                  ) : (
-                    <View style={[styles.previewImage, styles.previewPlaceholder]}>
-                      <Text style={styles.previewEmoji}>{space.emoji ?? '✶'}</Text>
+      renderItem={({ item: space, index }) => {
+        // `previews` can be briefly absent when the offline cache rehydrates an
+        // older query shape before the live refetch lands.
+        const previews = (space.previews ?? []).slice(0, 3);
+        return (
+          <Animated.View
+            style={styles.card}
+            entering={FadeInDown.delay(index * 60).duration(350)}
+          >
+            <Link href={`/space/${space._id}`} asChild>
+              <Link.Trigger>
+                <Pressable style={({ pressed }) => [styles.cardInner, pressed && styles.cardPressed]}>
+                  <View style={styles.topRow}>
+                    <View style={styles.meta}>
+                      <SymbolView name="clock" size={13} tintColor={theme.colors.muted} />
+                      <Text style={styles.metaText}>{timeAgo(space._creationTime)}</Text>
                     </View>
-                  )}
-                </View>
-                <View style={styles.spaceMeta}>
-                  <Text style={styles.spaceName} numberOfLines={1}>
+                    <View style={styles.meta}>
+                      <SymbolView
+                        name="square.stack"
+                        size={13}
+                        tintColor={theme.colors.muted}
+                      />
+                      <Text style={styles.metaText}>{space.itemCount}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.title} numberOfLines={1}>
                     {space.emoji ? `${space.emoji}  ${space.name}` : space.name}
                   </Text>
-                  <Text style={styles.spaceCount}>
-                    {space.itemCount === 1 ? '1 save' : `${space.itemCount} saves`}
-                  </Text>
-                </View>
-              </Pressable>
-            </Link.Trigger>
-            <Link.Preview />
-          </Link>
-        </Animated.View>
-      )}
+                  {space.description ? (
+                    <Text style={styles.subtitle} numberOfLines={1}>
+                      {space.description}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.covers}>
+                    {previews.length > 0 ? (
+                      previews.map((preview, i) => (
+                        <Image
+                          key={preview.url}
+                          source={{ uri: preview.url }}
+                          style={[
+                            styles.cover,
+                            {
+                              aspectRatio: clampRatio(
+                                preview.aspectRatio,
+                                preview.type === 'link' ? OG_RATIO : 1,
+                              ),
+                            },
+                            coverTransform(i, previews.length),
+                          ]}
+                        />
+                      ))
+                    ) : (
+                      <View style={[styles.cover, styles.coverPlaceholder]}>
+                        <Text style={styles.coverEmoji}>{space.emoji ?? '✶'}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              </Link.Trigger>
+              <Link.Preview />
+            </Link>
+          </Animated.View>
+        );
+      }}
     />
   );
 }
@@ -80,58 +151,85 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
   },
   content: {
-    padding: theme.gap(1.5),
-  },
-  cell: {
-    flex: 1,
-    padding: theme.gap(0.5),
+    padding: theme.gap(2),
   },
   loading: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  spaceCard: {
-    backgroundColor: theme.colors.surface,
+  // The visible group panel. Styling lives on this outer view (not the inner
+  // Pressable) so it always paints regardless of how Link.Trigger clones its
+  // child. overflow:hidden clips the covers that bleed past the bottom edge.
+  card: {
+    marginBottom: theme.gap(2),
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: theme.radius.lg,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.gap(1),
-    gap: theme.gap(1),
+    borderColor: theme.colors.faint,
+    overflow: 'hidden',
   },
-  previewRow: {
+  cardInner: {
+    paddingTop: theme.gap(1.5),
+    paddingHorizontal: theme.gap(1.5),
+    // No paddingBottom: the covers bleed to the bottom edge and get clipped.
+  },
+  cardPressed: {
+    opacity: 0.92,
+  },
+  topRow: {
     flexDirection: 'row',
-    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  previewImage: {
-    flex: 1,
-    aspectRatio: 1.4,
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  metaText: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+    color: theme.colors.muted,
+  },
+  title: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 18,
+    color: theme.colors.foreground,
+    textAlign: 'center',
+    marginTop: theme.gap(1),
+  },
+  subtitle: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 13,
+    color: theme.colors.muted,
+    textAlign: 'center',
+    marginTop: 3,
+  },
+  // Visible band for the fanned covers; taller covers spill below and are
+  // clipped by the card's rounded bottom edge (card has overflow: hidden).
+  covers: {
+    height: 104,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginTop: theme.gap(1.5),
+  },
+  cover: {
+    width: 96,
     borderRadius: theme.radius.sm,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
+    boxShadow: `0 6px 14px rgba(0,0,0,0.22), inset 0 0 0 1px ${theme.colors.imageBorder}`,
   },
-  previewPlaceholder: {
+  coverPlaceholder: {
+    height: 96,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primarySoft,
   },
-  previewEmoji: {
-    fontSize: 28,
-  },
-  spaceMeta: {
-    paddingHorizontal: theme.gap(0.5),
-    paddingBottom: theme.gap(0.5),
-    gap: 2,
-  },
-  spaceName: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 17,
-    color: theme.colors.foreground,
-  },
-  spaceCount: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
-    color: theme.colors.muted,
+  coverEmoji: {
+    fontSize: 34,
   },
 }));

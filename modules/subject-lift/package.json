@@ -1,0 +1,7 @@
+{
+  "name": "subject-lift",
+  "version": "1.0.0",
+  "description": "On-device iOS subject lifting into die-cut sticker PNGs.",
+  "main": "index.ts",
+  "private": true
+}

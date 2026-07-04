@@ -48,7 +48,13 @@ export const listSpaces = query({
     v.object({
       ...spaceFields,
       itemCount: v.number(),
-      previewImageUrls: v.array(v.string()),
+      previews: v.array(
+        v.object({
+          url: v.string(),
+          type: v.union(v.literal("image"), v.literal("link"), v.literal("note")),
+          aspectRatio: v.optional(v.number()),
+        }),
+      ),
     }),
   ),
   handler: async (ctx) => {
@@ -76,22 +82,30 @@ export const listSpaces = query({
       }
       items.sort((a, b) => b._creationTime - a._creationTime);
 
-      const previewImageUrls: string[] = [];
+      const previews: {
+        url: string;
+        type: Doc<"items">["type"];
+        aspectRatio?: number;
+      }[] = [];
       for (const item of items) {
-        if (previewImageUrls.length >= 3) {
+        if (previews.length >= 3) {
           break;
         }
         if (item.storageId) {
           const url = await ctx.storage.getUrl(item.storageId);
           if (url !== null) {
-            previewImageUrls.push(url);
+            previews.push({ url, type: item.type, aspectRatio: item.aspectRatio });
           }
         } else if (item.heroImageUrl) {
-          previewImageUrls.push(item.heroImageUrl);
+          previews.push({
+            url: item.heroImageUrl,
+            type: item.type,
+            aspectRatio: item.aspectRatio,
+          });
         }
       }
 
-      results.push({ ...space, itemCount: joins.length, previewImageUrls });
+      results.push({ ...space, itemCount: joins.length, previews });
     }
     return results;
   },

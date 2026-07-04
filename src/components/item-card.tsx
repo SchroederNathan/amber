@@ -20,6 +20,7 @@ export type FeedItem = {
   imageUrl?: string | null;
   heroImageUrl?: string;
   aspectRatio?: number;
+  isSticker?: boolean;
   tags: string[];
 };
 
@@ -58,14 +59,21 @@ export function ItemCard({ item }: { item: FeedItem }) {
     <Animated.View entering={FadeIn.duration(300)} style={styles.cell}>
       <Link href={`/item/${item._id}`} asChild>
         <Link.Trigger withAppleZoom>
-          <Pressable style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.card,
+              item.isSticker && styles.cardSticker,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
             {imageUri ? (
               <Image
                 source={{ uri: imageUri }}
                 recyclingKey={item._id}
                 transition={200}
+                contentFit={item.isSticker ? 'contain' : 'cover'}
                 style={[
-                  styles.image,
+                  item.isSticker ? styles.sticker : styles.image,
                   { aspectRatio: clampRatio(item.aspectRatio, item.type === 'link' ? OG_RATIO : 1) },
                 ]}
               />
@@ -145,12 +153,27 @@ const styles = StyleSheet.create((theme) => ({
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
+  // Stickers are transparent die-cut PNGs — let the drop shadow spill past the
+  // tile bounds instead of being clipped by the card's overflow.
+  cardSticker: {
+    overflow: 'visible',
+  },
   image: {
     width: '100%',
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
     boxShadow: `inset 0 0 0 1px ${theme.colors.imageBorder}`,
+  },
+  // No fill / border / rounding: the white die-cut edge is baked into the PNG.
+  // The iOS layer shadow is cast from the image's opaque pixels, so it hugs the
+  // silhouette rather than a rectangle.
+  sticker: {
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
   },
   textFace: {
     padding: theme.gap(1.5),

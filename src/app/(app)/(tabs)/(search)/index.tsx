@@ -5,7 +5,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 function useDebounced<T>(value: T, delay: number): T {
@@ -40,25 +40,15 @@ export default function SearchScreen() {
   return (
     <View style={styles.container}>
       {query.length === 0 ? (
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.emptyContent}
-        >
-          <EmptyState
-            title="Find anything"
-            message={'Search goes through titles, tags, and\ndescriptions Amber wrote for your saves.'}
-          />
-        </ScrollView>
+        <EmptyState
+          title="Find anything"
+          message={'Search goes through titles, tags, and\ndescriptions Amber wrote for your saves.'}
+        />
       ) : results && results.length === 0 ? (
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={styles.emptyContent}
-        >
-          <EmptyState
-            title="Nothing yet"
-            message={`No saves match “${query}”.`}
-          />
-        </ScrollView>
+        <EmptyState
+          title="Nothing yet"
+          message={`No saves match “${query}”.`}
+        />
       ) : (
         <MasonryFeed items={results ?? []} />
       )}
@@ -69,8 +59,5 @@ export default function SearchScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-  },
-  emptyContent: {
-    flexGrow: 1,
   },
 }));

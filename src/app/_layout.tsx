@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useUnistyles } from 'react-native-unistyles';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
@@ -51,20 +52,22 @@ function NavThemeProvider({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24, buster: 'v1' }}
-        >
-          <OnboardingProvider>
-            <NavThemeProvider>
-              <Slot />
-              <StatusBar style="auto" />
-            </NavThemeProvider>
-          </OnboardingProvider>
-        </PersistQueryClientProvider>
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24, buster: 'v1' }}
+          >
+            <OnboardingProvider>
+              <NavThemeProvider>
+                <Slot />
+                <StatusBar style="auto" />
+              </NavThemeProvider>
+            </OnboardingProvider>
+          </PersistQueryClientProvider>
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }

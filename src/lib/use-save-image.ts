@@ -9,6 +9,8 @@ export type LocalImage = {
   width?: number;
   height?: number;
   mimeType?: string;
+  /** Marks a subject-lifted die-cut PNG so the feed renders it as a sticker. */
+  isSticker?: boolean;
 };
 
 /**
@@ -37,7 +39,7 @@ export function useSaveImages() {
           const { storageId } = await result.json();
           const aspectRatio =
             image.width && image.height ? image.width / image.height : undefined;
-          await createImageItem({ storageId, aspectRatio });
+          await createImageItem({ storageId, aspectRatio, isSticker: image.isSticker });
         }),
       );
     },

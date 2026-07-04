@@ -4,7 +4,8 @@
     "strict": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@convex/*": ["./convex/*"]
+      "@convex/*": ["./convex/*"],
+      "subject-lift": ["./modules/subject-lift"]
     }
   },
   "include": [
