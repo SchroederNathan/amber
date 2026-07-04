@@ -16,11 +16,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { theme } = useUnistyles();
   const item = useQuery(api.items.getItem, { id: id as Id<'items'> });
   const deleteItem = useMutation(api.items.deleteItem);
@@ -49,11 +51,16 @@ export default function ItemScreen() {
       .filter((p) => p.length > 0) ?? [];
 
   return (
-    <>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
+          // Native transparent header: the back button and toolbar items pick
+          // up the system liquid-glass treatment on iOS 26 for free.
+          headerShown: true,
+          headerTitle: '',
+          headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={styles.headerActions}>
               {item.url ? (
                 <Pressable hitSlop={8} onPress={() => Share.share({ url: item.url! })}>
                   <SymbolView
@@ -70,30 +77,40 @@ export default function ItemScreen() {
                   await deleteItem({ id: item._id });
                 }}
               >
-                <SymbolView name="trash" size={20} tintColor={theme.colors.danger} />
+                <SymbolView name="trash" size={20} tintColor={theme.colors.primary} />
               </Pressable>
             </View>
           ),
         }}
       />
       <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         style={styles.container}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
         {heroUri ? (
-          <Image
-            source={{ uri: heroUri }}
-            style={[
-              styles.hero,
-              // Match the source shape; OG images default to 1200×630 (≈1.91).
-              { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
-            ]}
-            transition={200}
-          />
+          <Link.AppleZoomTarget>
+            <Image
+              source={{ uri: heroUri }}
+              style={[
+                styles.hero,
+                // Match the source shape; OG images default to 1200×630 (≈1.91).
+                { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
+              ]}
+              transition={200}
+            />
+          </Link.AppleZoomTarget>
         ) : null}
 
-        <View style={styles.body}>
+        <View
+          style={[
+            styles.body,
+            // Without a native header the text needs to clear the notch and
+            // the floating controls when there's no hero to sit under.
+            { paddingTop: heroUri ? theme.gap(2) : insets.top + 52 },
+          ]}
+        >
           {item.status === 'processing' ? (
             <View style={styles.processingRow}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -168,7 +185,7 @@ export default function ItemScreen() {
           ) : null}
         </View>
       </ScrollView>
-    </>
+    </View>
   );
 }
 
@@ -178,8 +195,6 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.background,
   },
   content: {
-    padding: theme.gap(2),
-    gap: theme.gap(2),
     paddingBottom: theme.gap(6),
   },
   loading: {
@@ -190,12 +205,17 @@ const styles = StyleSheet.create((theme) => ({
   },
   hero: {
     width: '100%',
-    borderRadius: theme.radius.lg,
-    borderCurve: 'continuous',
+    // Full-bleed so the card image zooms edge-to-edge into place.
     backgroundColor: theme.colors.surfaceMuted,
   },
   body: {
     gap: theme.gap(1.5),
+    paddingHorizontal: theme.gap(2),
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.gap(2),
   },
   processingRow: {
     flexDirection: 'row',

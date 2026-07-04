@@ -43,7 +43,7 @@ export function ItemCard({ item }: { item: FeedItem }) {
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.cell}>
       <Link href={`/item/${item._id}`} asChild>
-        <Link.Trigger>
+        <Link.Trigger withAppleZoom>
           <Pressable style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
             {imageUri ? (
               <Image

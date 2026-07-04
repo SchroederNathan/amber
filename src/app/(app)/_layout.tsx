@@ -30,6 +30,8 @@ export default function AppLayout() {
         <Stack.Screen
           name="item/[id]"
           options={{
+            // Transparent native header over the full-bleed hero; the screen
+            // fills in the toolbar buttons (share/delete) once the item loads.
             title: '',
             headerBackButtonDisplayMode: 'minimal',
           }}

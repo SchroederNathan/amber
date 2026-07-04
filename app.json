@@ -7,6 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#faf6ee",
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
