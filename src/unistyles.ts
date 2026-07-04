@@ -9,8 +9,8 @@ const shared = {
   },
   gap: (v: number) => v * 8,
   radius: {
-    sm: 10,
-    md: 16,
+    sm: 8,
+    md: 11,
     lg: 22,
     xl: 28,
   },

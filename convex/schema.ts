@@ -33,7 +33,6 @@ export default defineSchema({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
-    emoji: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
   spaceItems: defineTable({

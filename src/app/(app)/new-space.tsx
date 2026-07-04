@@ -13,8 +13,6 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-const EMOJI_OPTIONS = ['✨', '🎨', '📚', '🍳', '🌿', '🏡', '🎁', '💡', '🧵', '🎞️'];
-
 export default function NewSpaceScreen() {
   const router = useRouter();
   const { theme } = useUnistyles();
@@ -22,7 +20,6 @@ export default function NewSpaceScreen() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [emoji, setEmoji] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -33,7 +30,6 @@ export default function NewSpaceScreen() {
       await createSpace({
         name: trimmed,
         description: description.trim() || undefined,
-        emoji: emoji ?? undefined,
       });
       if (process.env.EXPO_OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -73,20 +69,6 @@ export default function NewSpaceScreen() {
         onChangeText={setDescription}
         multiline
       />
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Pressable style={styles.emojiRow} onPress={() => {}}>
-          {EMOJI_OPTIONS.map((option) => (
-            <Pressable
-              key={option}
-              onPress={() => setEmoji(emoji === option ? null : option)}
-              style={[styles.emojiOption, emoji === option && styles.emojiSelected]}
-            >
-              <Text style={{ fontSize: 22 }}>{option}</Text>
-            </Pressable>
-          ))}
-        </Pressable>
-      </ScrollView>
 
       <Pressable
         onPress={save}
@@ -147,24 +129,6 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.foreground,
     minHeight: 72,
     textAlignVertical: 'top',
-  },
-  emojiRow: {
-    flexDirection: 'row',
-    gap: theme.gap(1),
-  },
-  emojiOption: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiSelected: {
-    backgroundColor: theme.colors.primarySoft,
-    borderColor: theme.colors.primary,
   },
   saveButton: {
     backgroundColor: theme.colors.primary,

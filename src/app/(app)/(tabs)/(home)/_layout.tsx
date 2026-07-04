@@ -1,11 +1,9 @@
 import { HeaderButton } from '@/components/header-button';
 import { Wordmark } from '@/components/wordmark';
 import { Stack, useRouter } from 'expo-router';
-import { useUnistyles } from 'react-native-unistyles';
 
 export default function HomeStackLayout() {
   const router = useRouter();
-  const { theme } = useUnistyles();
 
   return (
     <Stack

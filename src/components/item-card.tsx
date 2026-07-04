@@ -67,16 +67,18 @@ export function ItemCard({ item }: { item: FeedItem }) {
             ]}
           >
             {imageUri ? (
-              <Image
-                source={{ uri: imageUri }}
-                recyclingKey={item._id}
-                transition={200}
-                contentFit={item.isSticker ? 'contain' : 'cover'}
-                style={[
-                  item.isSticker ? styles.sticker : styles.image,
-                  { aspectRatio: clampRatio(item.aspectRatio, item.type === 'link' ? OG_RATIO : 1) },
-                ]}
-              />
+              <View style={!item.isSticker && styles.imageContainer}>
+                <Image
+                  source={{ uri: imageUri }}
+                  recyclingKey={item._id}
+                  transition={200}
+                  contentFit={item.isSticker ? 'contain' : 'cover'}
+                  style={[
+                    item.isSticker ? styles.sticker : styles.image,
+                    { aspectRatio: clampRatio(item.aspectRatio, item.type === 'link' ? OG_RATIO : 1) },
+                  ]}
+                />
+              </View>
             ) : (
               <View style={[styles.textFace, item.type === 'note' && styles.noteFace]}>
                 {item.type === 'link' && (
@@ -159,11 +161,18 @@ const styles = StyleSheet.create((theme) => ({
     overflow: 'visible',
   },
   image: {
-    width: '100%',
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.sm,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
-    boxShadow: `inset 0 0 0 1px ${theme.colors.imageBorder}`,
+  },
+
+  imageContainer: {
+    backgroundColor: 'white',
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
+    padding: theme.gap(0.5),
+    boxShadow: `0 0 4px 0 ${theme.colors.imageBorder}`,
+
   },
   // No fill / border / rounding: the white die-cut edge is baked into the PNG.
   // The iOS layer shadow is cast from the image's opaque pixels, so it hugs the

@@ -11,7 +11,6 @@ const spaceFields = {
   userId: v.string(),
   name: v.string(),
   description: v.optional(v.string()),
-  emoji: v.optional(v.string()),
 };
 
 const enrichedItemValidator = v.object({
@@ -153,7 +152,6 @@ export const createSpace = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    emoji: v.optional(v.string()),
   },
   returns: v.id("spaces"),
   handler: async (ctx, args) => {
@@ -166,7 +164,6 @@ export const createSpace = mutation({
       userId,
       name,
       description: args.description,
-      emoji: args.emoji,
     });
     await ctx.scheduler.runAfter(0, internal.ai.reclassifyForNewSpace, {
       spaceId,

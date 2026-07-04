@@ -54,7 +54,7 @@ export default function SpaceScreen() {
     <>
       <Stack.Screen
         options={{
-          title: space.emoji ? `${space.emoji} ${space.name}` : space.name,
+          title: space.name,
           headerTitleStyle: {
             fontFamily: theme.fonts.display,
             color: theme.colors.foreground,

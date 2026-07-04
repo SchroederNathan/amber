@@ -57,7 +57,6 @@ const enrichedItemWithSpacesValidator = v.object({
     v.object({
       _id: v.id("spaces"),
       name: v.string(),
-      emoji: v.optional(v.string()),
     }),
   ),
 });
@@ -120,11 +119,11 @@ export const getItem = query({
       .query("spaceItems")
       .withIndex("by_item", (q) => q.eq("itemId", item._id))
       .collect();
-    const spaces: { _id: Id<"spaces">; name: string; emoji?: string }[] = [];
+    const spaces: { _id: Id<"spaces">; name: string }[] = [];
     for (const join of joins) {
       const space = await ctx.db.get(join.spaceId);
       if (space !== null) {
-        spaces.push({ _id: space._id, name: space.name, emoji: space.emoji });
+        spaces.push({ _id: space._id, name: space.name });
       }
     }
     const enriched = await enrichItem(ctx, item);

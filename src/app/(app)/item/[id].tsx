@@ -1,15 +1,18 @@
 import { EmptyState } from '@/components/empty-state';
 import { TagChip } from '@/components/tag-chip';
+import { Wordmark } from '@/components/wordmark';
 import { displayHost } from '@/lib/url';
+import { convexQuery } from '@convex-dev/react-query';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
-import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/build/react-navigation';
 import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -25,6 +28,7 @@ export default function ItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const { theme } = useUnistyles();
   const { data: item } = useQuery(
     convexQuery(api.items.getItem, { id: id as Id<'items'> }),
@@ -59,10 +63,8 @@ export default function ItemScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          // Native transparent header: the back button and toolbar items pick
-          // up the system liquid-glass treatment on iOS 26 for free.
           headerShown: true,
-          headerTitle: '',
+          headerTitle: () => <Wordmark />,
           headerBackButtonDisplayMode: 'minimal',
           headerRight: () => (
             <View style={styles.headerActions}>
@@ -90,22 +92,25 @@ export default function ItemScreen() {
       />
       <ScrollView
         contentInsetAdjustmentBehavior="never"
-        style={styles.container}
+        style={[styles.container, { marginTop: headerHeight + theme.gap(5) }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {heroUri ? (
-          <Link.AppleZoomTarget>
-            <Image
-              source={{ uri: heroUri }}
-              style={[
-                styles.hero,
-                // Match the source shape; OG images default to 1200×630 (≈1.91).
-                { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
-              ]}
-              transition={200}
-            />
-          </Link.AppleZoomTarget>
+          <View style={!item.isSticker && styles.heroContainer}>
+            <Link.AppleZoomTarget>
+              <Image
+                source={{ uri: heroUri }}
+                contentFit={item.isSticker ? 'contain' : 'cover'}
+                style={[
+                  item.isSticker ? styles.hero : styles.heroImage,
+                  // Match the source shape; OG images default to 1200×630 (≈1.91).
+                  { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
+                ]}
+                transition={200}
+              />
+            </Link.AppleZoomTarget>
+          </View>
         ) : null}
 
         <View
@@ -113,7 +118,7 @@ export default function ItemScreen() {
             styles.body,
             // Without a native header the text needs to clear the notch and
             // the floating controls when there's no hero to sit under.
-            { paddingTop: heroUri ? theme.gap(2) : insets.top + 52 },
+            { paddingTop: heroUri ? theme.gap(5) : headerHeight + theme.gap(5) },
           ]}
         >
           {item.status === 'processing' ? (
@@ -123,29 +128,32 @@ export default function ItemScreen() {
             </View>
           ) : null}
 
-          <Text selectable style={styles.title}>
-            {item.title ?? item.note ?? displayHost(item.url)}
-          </Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>
+              {item.title ?? item.note ?? displayHost(item.url)}
+            </Text>
+            {item.url ? (
+              <Pressable
+                style={styles.sourceRow}
+                onPress={() => WebBrowser.openBrowserAsync(item.url!)}
+              >
+                <SymbolView name="safari" size={15} tintColor={theme.colors.muted} />
+                <Text style={styles.sourceText}>
+                  {item.siteName ?? displayHost(item.url)}
+                </Text>
+                <SymbolView
+                  name="arrow.up.right"
+                  size={11}
+                  tintColor={theme.colors.faint}
+                />
+              </Pressable>
+            ) : null}
+          </View>
 
-          {item.url ? (
-            <Pressable
-              style={styles.sourceRow}
-              onPress={() => WebBrowser.openBrowserAsync(item.url!)}
-            >
-              <SymbolView name="safari" size={15} tintColor={theme.colors.muted} />
-              <Text style={styles.sourceText}>
-                {item.siteName ?? displayHost(item.url)}
-              </Text>
-              <SymbolView
-                name="arrow.up.right"
-                size={11}
-                tintColor={theme.colors.faint}
-              />
-            </Pressable>
-          ) : null}
+
 
           {item.description ? (
-            <Text selectable style={styles.description}>
+            <Text style={styles.description}>
               {item.description}
             </Text>
           ) : null}
@@ -163,10 +171,7 @@ export default function ItemScreen() {
               {item.spaces.map((space) => (
                 <Link key={space._id} href={`/space/${space._id}`} asChild>
                   <Pressable>
-                    <TagChip
-                      emphasized
-                      label={space.emoji ? `${space.emoji} ${space.name}` : space.name}
-                    />
+                    <TagChip emphasized label={space.name} />
                   </Pressable>
                 </Link>
               ))}
@@ -208,13 +213,29 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
   },
+
   hero: {
     width: '100%',
-    // Full-bleed so the card image zooms edge-to-edge into place.
-
+    // Full-bleed so the card image (a die-cut sticker) zooms edge-to-edge.
+  },
+  // Non-sticker heroes get the same white matted frame as the home cards, so
+  // the padded look carries through the Apple zoom into this screen.
+  heroContainer: {
+    backgroundColor: 'white',
+    marginHorizontal: theme.gap(2),
+    borderRadius: theme.radius.lg,
+    borderCurve: 'continuous',
+    padding: theme.gap(1),
+    boxShadow: `0 0 4px 0 ${theme.colors.imageBorder}`,
+  },
+  heroImage: {
+    width: '100%',
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   body: {
-    gap: theme.gap(1.5),
+    gap: theme.gap(5),
     paddingHorizontal: theme.gap(2),
   },
   headerActions: {
@@ -232,10 +253,15 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 13,
     color: theme.colors.primaryText,
   },
+  titleContainer: {
+    gap: theme.gap(1),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
     fontFamily: theme.fonts.display,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 32,
+    textAlign: 'center',
     color: theme.colors.foreground,
   },
   sourceRow: {
@@ -252,12 +278,14 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fonts.medium,
     fontSize: 16,
     lineHeight: 23,
+    textAlign: 'center',
     color: theme.colors.muted,
   },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.gap(0.75),
+    justifyContent: 'center',
   },
   article: {
     gap: theme.gap(1.5),

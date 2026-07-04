@@ -86,16 +86,16 @@ export default function SpacesScreen() {
           >
             <Link href={`/space/${space._id}`} asChild>
               <Link.Trigger>
-                <Pressable style={({ pressed }) => [styles.cardInner, pressed && styles.cardPressed]}>
+                <View style={styles.cardInner}>
                   <View style={styles.topRow}>
                     <View style={styles.meta}>
-                      <SymbolView name="clock" size={13} tintColor={theme.colors.muted} />
+                      <SymbolView name="clock" size={16} tintColor={theme.colors.muted} />
                       <Text style={styles.metaText}>{timeAgo(space._creationTime)}</Text>
                     </View>
                     <View style={styles.meta}>
                       <SymbolView
                         name="square.stack"
-                        size={13}
+                        size={16}
                         tintColor={theme.colors.muted}
                       />
                       <Text style={styles.metaText}>{space.itemCount}</Text>
@@ -103,7 +103,7 @@ export default function SpacesScreen() {
                   </View>
 
                   <Text style={styles.title} numberOfLines={1}>
-                    {space.emoji ? `${space.emoji}  ${space.name}` : space.name}
+                    {space.name}
                   </Text>
                   {space.description ? (
                     <Text style={styles.subtitle} numberOfLines={1}>
@@ -131,11 +131,11 @@ export default function SpacesScreen() {
                       ))
                     ) : (
                       <View style={[styles.cover, styles.coverPlaceholder]}>
-                        <Text style={styles.coverEmoji}>{space.emoji ?? '✶'}</Text>
+                        <Text style={styles.coverEmoji}>✶</Text>
                       </View>
                     )}
                   </View>
-                </Pressable>
+                </View>
               </Link.Trigger>
               <Link.Preview />
             </Link>
@@ -166,22 +166,19 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.surfaceMuted,
     borderRadius: theme.radius.lg,
     borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: theme.colors.faint,
     overflow: 'hidden',
   },
   cardInner: {
-    paddingTop: theme.gap(1.5),
-    paddingHorizontal: theme.gap(1.5),
+    // paddingTop: theme.gap(1.5),
+    // paddingHorizontal: theme.gap(1.5),
     // No paddingBottom: the covers bleed to the bottom edge and get clipped.
-  },
-  cardPressed: {
-    opacity: 0.92,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: theme.gap(2),
+    paddingTop: theme.gap(2),
   },
   meta: {
     flexDirection: 'row',
@@ -189,16 +186,16 @@ const styles = StyleSheet.create((theme) => ({
     gap: 5,
   },
   metaText: {
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.bold,
     fontSize: 12,
-    color: theme.colors.muted,
+    color: theme.colors.foreground,
   },
   title: {
     fontFamily: theme.fonts.bold,
     fontSize: 18,
     color: theme.colors.foreground,
     textAlign: 'center',
-    marginTop: theme.gap(1),
+    // marginTop: theme.gap(1),
   },
   subtitle: {
     fontFamily: theme.fonts.regular,
