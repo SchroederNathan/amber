@@ -77,7 +77,6 @@ export default function SpacesScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
     padding: theme.gap(1.5),
@@ -90,7 +89,6 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.background,
   },
   spaceCard: {
     backgroundColor: theme.colors.surface,

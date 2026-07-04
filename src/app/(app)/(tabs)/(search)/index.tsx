@@ -68,7 +68,6 @@ export default function SearchScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   emptyContent: {
     flexGrow: 1,

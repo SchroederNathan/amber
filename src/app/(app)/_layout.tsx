@@ -22,7 +22,6 @@ export default function AppLayout() {
         headerTransparent: true,
         headerShadowVisible: false,
         headerTintColor: theme.colors.primary,
-        contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
       <Stack.Protected guard={onboarded}>

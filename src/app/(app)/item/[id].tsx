@@ -192,7 +192,6 @@ export default function ItemScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
     paddingBottom: theme.gap(6),

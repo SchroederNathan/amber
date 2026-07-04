@@ -147,7 +147,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
     paddingHorizontal: theme.gap(3),

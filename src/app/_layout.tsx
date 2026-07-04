@@ -3,10 +3,11 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { ConvexReactClient } from 'convex/react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
-import { Slot } from 'expo-router';
+import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
+import { useColorScheme } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
@@ -19,16 +20,36 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
 });
 
-// Keeps the native root view background in sync with the active theme so the
-// area behind React content (launch, overscroll, transparent sheets) matches
-// light/dark. The static app.json `backgroundColor` only guards the initial
-// flash; this handles theme changes at runtime.
-function RootBackground() {
+// Single source of truth for the native route background. The navigator paints
+// every screen's container with the navigation theme's `background`, so setting
+// it here — instead of a `contentStyle` on each screen — themes all nested
+// stacks at once and paints the screen container before JS content mounts (no
+// white flash on push / zoom transitions). `useColorScheme` is the reliable
+// system-appearance signal; the palette comes from Unistyles.
+function NavThemeProvider({ children }: { children: React.ReactNode }) {
+  const scheme = useColorScheme();
   const { theme } = useUnistyles();
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+
+  const navTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      background: theme.colors.background,
+      card: theme.colors.background,
+      text: theme.colors.foreground,
+      border: theme.colors.border,
+      primary: theme.colors.primary,
+    },
+  };
+
+  // Keep the native root view / window (behind the routes: launch, overscroll
+  // bounce, transparent sheets) in sync with the theme too.
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.colors.background);
   }, [theme.colors.background]);
-  return null;
+
+  return <ThemeProvider value={navTheme}>{children}</ThemeProvider>;
 }
 
 export default function RootLayout() {
@@ -36,9 +57,10 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <OnboardingProvider>
-          <RootBackground />
-          <Slot />
-          <StatusBar style="auto" />
+          <NavThemeProvider>
+            <Slot />
+            <StatusBar style="auto" />
+          </NavThemeProvider>
         </OnboardingProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>

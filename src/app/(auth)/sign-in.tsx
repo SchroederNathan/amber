@@ -123,7 +123,6 @@ export default function Page() {
 const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     padding: theme.gap(2.5),
     paddingTop: rt.insets.top + theme.gap(8),
     alignItems: 'center',

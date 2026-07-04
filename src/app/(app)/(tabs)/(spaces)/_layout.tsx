@@ -12,7 +12,6 @@ export default function SpacesStackLayout() {
       screenOptions={{
         headerTransparent: true,
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
       <Stack.Screen
