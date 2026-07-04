@@ -1,7 +1,8 @@
 import { OnboardingProvider } from '@/lib/onboarding';
+import { convex, persister, queryClient } from '@/lib/query-client';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import { ConvexReactClient } from 'convex/react';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -15,10 +16,6 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 if (!publishableKey) {
   throw new Error('Add your Clerk Publishable Key to the .env file');
 }
-
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
-  unsavedChangesWarning: false,
-});
 
 // Single source of truth for the native route background. The navigator paints
 // every screen's container with the navigation theme's `background`, so setting
@@ -56,12 +53,17 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <OnboardingProvider>
-          <NavThemeProvider>
-            <Slot />
-            <StatusBar style="auto" />
-          </NavThemeProvider>
-        </OnboardingProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24, buster: 'v1' }}
+        >
+          <OnboardingProvider>
+            <NavThemeProvider>
+              <Slot />
+              <StatusBar style="auto" />
+            </NavThemeProvider>
+          </OnboardingProvider>
+        </PersistQueryClientProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );

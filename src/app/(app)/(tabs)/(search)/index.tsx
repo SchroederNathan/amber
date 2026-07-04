@@ -1,7 +1,8 @@
 import { EmptyState } from '@/components/empty-state';
 import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
-import { useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -34,7 +35,7 @@ export default function SearchScreen() {
     });
   }, [navigation]);
 
-  const results = useQuery(api.items.searchItems, { query });
+  const { data: results } = useQuery(convexQuery(api.items.searchItems, { query }));
 
   return (
     <View style={styles.container}>

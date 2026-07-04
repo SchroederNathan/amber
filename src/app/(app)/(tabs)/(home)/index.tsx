@@ -1,12 +1,13 @@
 import { EmptyState } from '@/components/empty-state';
 import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
-import { useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ActivityIndicator, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 export default function HomeScreen() {
-  const items = useQuery(api.items.listItems);
+  const { data: items } = useQuery(convexQuery(api.items.listItems, {}));
 
   if (items === undefined) {
     return (

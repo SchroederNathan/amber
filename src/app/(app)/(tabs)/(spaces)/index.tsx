@@ -1,7 +1,8 @@
 import { EmptyState } from '@/components/empty-state';
 import { api } from '@convex/_generated/api';
+import { convexQuery } from '@convex-dev/react-query';
 import { FlashList } from '@shopify/flash-list';
-import { useQuery } from 'convex/react';
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -9,7 +10,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 export default function SpacesScreen() {
-  const spaces = useQuery(api.spaces.listSpaces);
+  const { data: spaces } = useQuery(convexQuery(api.spaces.listSpaces, {}));
 
   if (spaces === undefined) {
     return (

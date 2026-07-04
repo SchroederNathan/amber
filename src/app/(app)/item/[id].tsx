@@ -3,7 +3,9 @@ import { TagChip } from '@/components/tag-chip';
 import { displayHost } from '@/lib/url';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
-import { useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -24,9 +26,12 @@ export default function ItemScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useUnistyles();
-  const item = useQuery(api.items.getItem, { id: id as Id<'items'> });
+  const { data: item } = useQuery(
+    convexQuery(api.items.getItem, { id: id as Id<'items'> }),
+  );
   const deleteItem = useMutation(api.items.deleteItem);
 
+  // `undefined` = loading (nothing cached yet); `null` = not found.
   if (item === undefined) {
     return (
       <View style={styles.loading}>

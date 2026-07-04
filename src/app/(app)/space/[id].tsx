@@ -2,7 +2,9 @@ import { EmptyState } from '@/components/empty-state';
 import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
-import { useMutation, useQuery } from 'convex/react';
+import { convexQuery } from '@convex-dev/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
@@ -12,9 +14,12 @@ export default function SpaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { theme } = useUnistyles();
-  const space = useQuery(api.spaces.getSpace, { id: id as Id<'spaces'> });
+  const { data: space } = useQuery(
+    convexQuery(api.spaces.getSpace, { id: id as Id<'spaces'> }),
+  );
   const deleteSpace = useMutation(api.spaces.deleteSpace);
 
+  // `undefined` = loading (nothing cached yet); `null` = not found.
   if (space === undefined) {
     return (
       <View style={styles.loading}>
