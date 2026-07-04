@@ -86,11 +86,25 @@ export function ItemCard({ item }: { item: FeedItem }) {
             )}
 
             <View style={styles.caption}>
-              <Text style={styles.captionTitle} numberOfLines={1}>
-                {captionTitle}
-              </Text>
+              <View style={styles.captionText}>
+                <Text style={styles.captionTitle} numberOfLines={1}>
+                  {captionTitle}
+                </Text>
+                {item.type === 'link' && item.url ? (
+                  <View style={styles.captionHostRow}>
+                    <Text style={styles.captionHost} numberOfLines={1}>
+                      {displayHost(item.url)}
+                    </Text>
+                    <SymbolView
+                      name="arrow.up.right"
+                      size={9}
+                      tintColor={theme.colors.faint}
+                    />
+                  </View>
+                ) : null}
+              </View>
               <Pressable hitSlop={10} onPress={openMenu} style={styles.menuButton}>
-                <SymbolView name="ellipsis" size={15} tintColor={theme.colors.muted} />
+                <SymbolView name="ellipsis" size={15} tintColor={theme.colors.foreground} />
               </Pressable>
             </View>
 
@@ -136,6 +150,7 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
+    boxShadow: `inset 0 0 0 1px ${theme.colors.imageBorder}`,
   },
   textFace: {
     padding: theme.gap(1.5),
@@ -156,17 +171,32 @@ const styles = StyleSheet.create((theme) => ({
   },
   caption: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: theme.gap(0.5),
     paddingHorizontal: theme.gap(0.5),
     paddingTop: theme.gap(0.75),
   },
-  captionTitle: {
+  captionText: {
     flex: 1,
+    gap: 2,
+  },
+  captionTitle: {
     fontFamily: theme.fonts.medium,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 12,
     color: theme.colors.foreground,
+  },
+  captionHostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  captionHost: {
+    flexShrink: 1,
+    fontFamily: theme.fonts.regular,
+    fontSize: 10,
+    lineHeight: 12,
+    color: theme.colors.muted,
   },
   menuButton: {
     alignItems: 'center',
