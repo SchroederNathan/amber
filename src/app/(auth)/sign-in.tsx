@@ -1,4 +1,4 @@
-import { useSSO } from '@clerk/expo';
+import { useSSO, useSignIn } from '@clerk/expo';
 import { useSignInWithApple } from '@clerk/expo/apple';
 import React from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
@@ -7,7 +7,35 @@ import { StyleSheet } from 'react-native-unistyles';
 export default function Page() {
   const { startSSOFlow } = useSSO();
   const { startAppleAuthenticationFlow } = useSignInWithApple();
+  const { signIn } = useSignIn();
   const [pending, setPending] = React.useState(false);
+
+  const handleDevLogin = async () => {
+    if (!signIn) return;
+    const password = process.env.EXPO_PUBLIC_DEV_PASSWORD;
+    if (!password) {
+      console.warn('Dev login: set EXPO_PUBLIC_DEV_PASSWORD in .env.local');
+      return;
+    }
+    setPending(true);
+    try {
+      const { error } = await signIn.password({
+        identifier: 'dev+clerk_test@example.com',
+        password,
+      });
+      if (error) {
+        console.error('Dev login failed:', error);
+      } else if (signIn.status === 'complete') {
+        await signIn.finalize();
+      } else {
+        console.warn('Dev login incomplete:', signIn.status);
+      }
+    } catch (err) {
+      console.error('Dev login error:', err);
+    } finally {
+      setPending(false);
+    }
+  };
 
   const activate = async ({
     createdSessionId,
@@ -73,6 +101,20 @@ export default function Page() {
         >
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </Pressable>
+        {__DEV__ && (
+          <Pressable
+            testID="dev-login-button"
+            style={({ pressed }) => [
+              styles.appleButton,
+              pending && styles.buttonDisabled,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleDevLogin}
+            disabled={pending}
+          >
+            <Text style={styles.appleButtonText}>🔧 Dev login</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
