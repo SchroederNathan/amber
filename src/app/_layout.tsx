@@ -1,3 +1,4 @@
+import { OnboardingProvider } from '@/lib/onboarding';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { ConvexReactClient } from 'convex/react';
@@ -19,8 +20,10 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <Slot />
-        <StatusBar style="auto" />
+        <OnboardingProvider>
+          <Slot />
+          <StatusBar style="auto" />
+        </OnboardingProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );

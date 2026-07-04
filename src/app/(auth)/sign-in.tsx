@@ -158,7 +158,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   googleButton: {
     backgroundColor: theme.colors.background,
     borderWidth: 1,
-    borderColor: theme.colors.secondary,
+    borderColor: theme.colors.border,
     paddingVertical: theme.gap(1.75),
     borderRadius: 12,
     alignItems: 'center',

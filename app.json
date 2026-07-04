@@ -6,12 +6,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Amber needs access to your Camera to capture photos and videos.",
-        "NSMicrophoneUsageDescription": "Amber needs access to your Microphone to record audio for video recordings."
+        "NSCameraUsageDescription": "Amber uses your camera so you can capture things you want to save for later.",
+        "NSMicrophoneUsageDescription": "Amber needs access to your Microphone to record audio for video recordings.",
+        "NSPhotoLibraryUsageDescription": "Amber lets you save photos and screenshots from your library into your hub.",
+        "NSPhotoLibraryAddUsageDescription": "Amber can save images back to your photo library."
       },
       "bundleIdentifier": "com.schroedernathan.amber"
     },
@@ -24,7 +26,8 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -51,7 +54,8 @@
       "expo-web-browser"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "tsconfigPaths": true
     },
     "extra": {
       "router": {},

@@ -1,12 +1,6 @@
 import { StyleSheet } from 'react-native-unistyles';
 
-const lightTheme = {
-  colors: {
-    background: '#ffffff',
-    foreground: '#1c1c1e',
-    primary: '#e6a23c',
-    secondary: '#e6f4fe',
-  },
+const shared = {
   fonts: {
     regular: 'Satoshi-Regular',
     medium: 'Satoshi-Medium',
@@ -14,22 +8,48 @@ const lightTheme = {
     display: 'ExposureTrial-0',
   },
   gap: (v: number) => v * 8,
+  radius: {
+    sm: 10,
+    md: 16,
+    lg: 22,
+    xl: 28,
+  },
+} as const;
+
+const lightTheme = {
+  ...shared,
+  colors: {
+    background: '#faf6ee',
+    surface: '#fffdf8',
+    surfaceMuted: '#f3ecdd',
+    foreground: '#2b2418',
+    muted: '#8d8271',
+    faint: '#b5aa97',
+    primary: '#e6a23c',
+    primarySoft: '#f7e8cd',
+    primaryText: '#9a6416',
+    border: '#ece3d1',
+    danger: '#c05a3a',
+    overlay: 'rgba(43, 36, 24, 0.45)',
+  },
 } as const;
 
 const darkTheme = {
+  ...shared,
   colors: {
-    background: '#1c1c1e',
-    foreground: '#ffffff',
+    background: '#191510',
+    surface: '#231e16',
+    surfaceMuted: '#2c261c',
+    foreground: '#f4eddd',
+    muted: '#a2977f',
+    faint: '#6f6650',
     primary: '#e6a23c',
-    secondary: '#2c2c2e',
+    primarySoft: '#3a2f1c',
+    primaryText: '#f0c078',
+    border: '#332c20',
+    danger: '#e07a58',
+    overlay: 'rgba(0, 0, 0, 0.55)',
   },
-  fonts: {
-    regular: 'Satoshi-Regular',
-    medium: 'Satoshi-Medium',
-    bold: 'Satoshi-Bold',
-    display: 'ExposureTrial-0',
-  },
-  gap: (v: number) => v * 8,
 } as const;
 
 const appThemes = {
@@ -57,6 +77,6 @@ StyleSheet.configure({
   themes: appThemes,
   breakpoints,
   settings: {
-    initialTheme: 'light',
+    adaptiveThemes: true,
   },
 });
