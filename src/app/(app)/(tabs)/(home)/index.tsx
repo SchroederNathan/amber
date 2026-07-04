@@ -20,6 +20,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <MasonryFeed
         items={items}
+        numColumns={2}
         ListEmptyComponent={
           <EmptyState
             icon="sparkles"

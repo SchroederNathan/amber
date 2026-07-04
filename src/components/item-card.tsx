@@ -23,9 +23,15 @@ export type FeedItem = {
   tags: string[];
 };
 
+// Standard OpenGraph image shape (1200×630) — the default when a link's real
+// hero dimensions weren't captured.
+const OG_RATIO = 1.91;
+
 function clampRatio(ratio: number | undefined, fallback: number) {
-  if (!ratio || Number.isNaN(ratio)) return fallback;
-  return Math.min(Math.max(ratio, 0.6), 1.5);
+  const value = ratio && !Number.isNaN(ratio) ? ratio : fallback;
+  // Preserve the true aspect ratio so previews aren't cropped; only bound
+  // pathological extremes so one very tall/wide image can't hijack a column.
+  return Math.min(Math.max(value, 0.5), 2);
 }
 
 export function ItemCard({ item }: { item: FeedItem }) {
@@ -46,7 +52,7 @@ export function ItemCard({ item }: { item: FeedItem }) {
                 transition={200}
                 style={[
                   styles.image,
-                  { aspectRatio: clampRatio(item.aspectRatio, item.type === 'link' ? 1.25 : 1) },
+                  { aspectRatio: clampRatio(item.aspectRatio, item.type === 'link' ? OG_RATIO : 1) },
                 ]}
               />
             ) : (
@@ -109,21 +115,23 @@ const styles = StyleSheet.create((theme) => ({
     padding: 3,
   },
   card: {
-    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   image: {
     width: '100%',
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
   },
   textFace: {
     padding: theme.gap(1.5),
     minHeight: 96,
     justifyContent: 'center',
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   noteFace: {
     backgroundColor: theme.colors.primarySoft,
@@ -135,8 +143,8 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.foreground,
   },
   caption: {
-    paddingHorizontal: theme.gap(1),
-    paddingVertical: theme.gap(1),
+    paddingHorizontal: theme.gap(0.5),
+    paddingTop: theme.gap(0.75),
     gap: 2,
   },
   captionTitle: {

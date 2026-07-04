@@ -1,4 +1,4 @@
-import { GlassIconButton } from '@/components/glass-icon-button';
+import { HeaderButton } from '@/components/header-button';
 import { Stack, useRouter } from 'expo-router';
 import { useUnistyles } from 'react-native-unistyles';
 
@@ -27,7 +27,7 @@ export default function SpacesStackLayout() {
         options={{
           title: 'Spaces',
           headerRight: () => (
-            <GlassIconButton icon="plus" onPress={() => router.push('/new-space')} />
+            <HeaderButton icon="plus" onPress={() => router.push('/new-space')} />
           ),
         }}
       />

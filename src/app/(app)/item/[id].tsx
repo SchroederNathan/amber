@@ -84,7 +84,11 @@ export default function ItemScreen() {
         {heroUri ? (
           <Image
             source={{ uri: heroUri }}
-            style={[styles.hero, { aspectRatio: item.aspectRatio ?? 1.4 }]}
+            style={[
+              styles.hero,
+              // Match the source shape; OG images default to 1200×630 (≈1.91).
+              { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
+            ]}
             transition={200}
           />
         ) : null}

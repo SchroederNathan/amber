@@ -1,9 +1,10 @@
 import { EmptyState } from '@/components/empty-state';
 import { api } from '@convex/_generated/api';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -19,52 +20,53 @@ export default function SpacesScreen() {
   }
 
   return (
-    <ScrollView
+    <FlashList
+      data={spaces}
+      numColumns={2}
+      keyExtractor={(space) => space._id}
       contentInsetAdjustmentBehavior="automatic"
-      style={styles.container}
       contentContainerStyle={styles.content}
-    >
-      {spaces.length === 0 ? (
+      ListEmptyComponent={
         <EmptyState
           icon="rectangle.stack"
           title="Make a space"
           message={'Spaces are shelves for a theme — design inspiration,\nrecipes, gift ideas. New saves file themselves.'}
         />
-      ) : (
-        spaces.map((space, index) => (
-          <Animated.View key={space._id} entering={FadeInDown.delay(index * 60).duration(350)}>
-            <Link href={`/space/${space._id}`} asChild>
-              <Link.Trigger>
-                <Pressable
-                  style={({ pressed }) => [styles.spaceCard, pressed && { opacity: 0.85 }]}
-                >
-                  <View style={styles.previewRow}>
-                    {space.previewImageUrls.length > 0 ? (
-                      space.previewImageUrls.map((url, i) => (
-                        <Image key={i} source={{ uri: url }} style={styles.previewImage} />
-                      ))
-                    ) : (
-                      <View style={[styles.previewImage, styles.previewPlaceholder]}>
-                        <Text style={styles.previewEmoji}>{space.emoji ?? '✶'}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.spaceMeta}>
-                    <Text style={styles.spaceName} numberOfLines={1}>
-                      {space.emoji ? `${space.emoji}  ${space.name}` : space.name}
-                    </Text>
-                    <Text style={styles.spaceCount}>
-                      {space.itemCount === 1 ? '1 save' : `${space.itemCount} saves`}
-                    </Text>
-                  </View>
-                </Pressable>
-              </Link.Trigger>
-              <Link.Preview />
-            </Link>
-          </Animated.View>
-        ))
+      }
+      renderItem={({ item: space, index }) => (
+        <Animated.View
+          style={styles.cell}
+          entering={FadeInDown.delay(index * 60).duration(350)}
+        >
+          <Link href={`/space/${space._id}`} asChild>
+            <Link.Trigger>
+              <Pressable style={({ pressed }) => [styles.spaceCard, pressed && { opacity: 0.85 }]}>
+                <View style={styles.previewRow}>
+                  {space.previewImageUrls.length > 0 ? (
+                    space.previewImageUrls.map((url, i) => (
+                      <Image key={i} source={{ uri: url }} style={styles.previewImage} />
+                    ))
+                  ) : (
+                    <View style={[styles.previewImage, styles.previewPlaceholder]}>
+                      <Text style={styles.previewEmoji}>{space.emoji ?? '✶'}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.spaceMeta}>
+                  <Text style={styles.spaceName} numberOfLines={1}>
+                    {space.emoji ? `${space.emoji}  ${space.name}` : space.name}
+                  </Text>
+                  <Text style={styles.spaceCount}>
+                    {space.itemCount === 1 ? '1 save' : `${space.itemCount} saves`}
+                  </Text>
+                </View>
+              </Pressable>
+            </Link.Trigger>
+            <Link.Preview />
+          </Link>
+        </Animated.View>
       )}
-    </ScrollView>
+    />
   );
 }
 
@@ -74,8 +76,11 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.background,
   },
   content: {
-    padding: theme.gap(2),
-    gap: theme.gap(1.5),
+    padding: theme.gap(1.5),
+  },
+  cell: {
+    flex: 1,
+    padding: theme.gap(0.5),
   },
   loading: {
     flex: 1,

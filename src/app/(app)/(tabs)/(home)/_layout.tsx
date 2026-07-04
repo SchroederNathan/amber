@@ -1,4 +1,4 @@
-import { GlassIconButton } from '@/components/glass-icon-button';
+import { HeaderButton } from '@/components/header-button';
 import { Wordmark } from '@/components/wordmark';
 import { Stack, useRouter } from 'expo-router';
 import { useUnistyles } from 'react-native-unistyles';
@@ -20,10 +20,10 @@ export default function HomeStackLayout() {
         options={{
           headerTitle: () => <Wordmark />,
           headerLeft: () => (
-            <GlassIconButton icon="person" onPress={() => router.push('/profile')} />
+            <HeaderButton icon="person" onPress={() => router.push('/profile')} />
           ),
           headerRight: () => (
-            <GlassIconButton icon="plus" onPress={() => router.push('/add')} />
+            <HeaderButton icon="plus" onPress={() => router.push('/add')} />
           ),
         }}
       />

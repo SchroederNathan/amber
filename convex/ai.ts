@@ -64,6 +64,120 @@ function extractMetaContent(html: string, key: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Read the pixel dimensions straight from an image file's header bytes.
+ * Covers PNG, GIF, WebP (VP8/VP8L/VP8X) and JPEG — no dependencies. Returns
+ * undefined for formats we don't recognize or truncated buffers.
+ */
+function readImageSize(
+  buf: Uint8Array,
+): { width: number; height: number } | undefined {
+  // PNG — IHDR width/height are big-endian uint32 at offset 16/20.
+  if (
+    buf.length >= 24 &&
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  ) {
+    const width = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+    const height = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+    return { width, height };
+  }
+  // GIF — little-endian uint16 at offset 6/8.
+  if (buf.length >= 10 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
+    return { width: buf[6] | (buf[7] << 8), height: buf[8] | (buf[9] << 8) };
+  }
+  // WebP — RIFF container tagged "WEBP", three sub-formats.
+  if (
+    buf.length >= 30 &&
+    buf[0] === 0x52 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x46 &&
+    buf[8] === 0x57 &&
+    buf[9] === 0x45 &&
+    buf[10] === 0x42 &&
+    buf[11] === 0x50
+  ) {
+    const fourCC = String.fromCharCode(buf[12], buf[13], buf[14], buf[15]);
+    if (fourCC === "VP8 ") {
+      const width = (buf[26] | (buf[27] << 8)) & 0x3fff;
+      const height = (buf[28] | (buf[29] << 8)) & 0x3fff;
+      return { width, height };
+    }
+    if (fourCC === "VP8L") {
+      const b0 = buf[21];
+      const b1 = buf[22];
+      const b2 = buf[23];
+      const b3 = buf[24];
+      const width = 1 + (((b1 & 0x3f) << 8) | b0);
+      const height = 1 + (((b3 & 0x0f) << 10) | (b2 << 2) | ((b1 & 0xc0) >> 6));
+      return { width, height };
+    }
+    if (fourCC === "VP8X") {
+      const width = 1 + (buf[24] | (buf[25] << 8) | (buf[26] << 16));
+      const height = 1 + (buf[27] | (buf[28] << 8) | (buf[29] << 16));
+      return { width, height };
+    }
+  }
+  // JPEG — walk segments to the start-of-frame marker.
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let offset = 2;
+    while (offset + 9 < buf.length) {
+      if (buf[offset] !== 0xff) {
+        offset++;
+        continue;
+      }
+      const marker = buf[offset + 1];
+      if (
+        (marker >= 0xc0 && marker <= 0xc3) ||
+        (marker >= 0xc5 && marker <= 0xc7) ||
+        (marker >= 0xc9 && marker <= 0xcb) ||
+        (marker >= 0xcd && marker <= 0xcf)
+      ) {
+        const height = (buf[offset + 5] << 8) | buf[offset + 6];
+        const width = (buf[offset + 7] << 8) | buf[offset + 8];
+        return { width, height };
+      }
+      const segLen = (buf[offset + 2] << 8) | buf[offset + 3];
+      if (segLen <= 0) {
+        break;
+      }
+      offset += 2 + segLen;
+    }
+  }
+  return undefined;
+}
+
+/** Fetch just enough of an image to read its real width/height ratio. */
+async function fetchImageAspectRatio(
+  imageUrl: string,
+): Promise<number | undefined> {
+  try {
+    const response = await fetch(imageUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        // Header bytes live at the front; 128KB covers even large EXIF blocks.
+        Range: "bytes=0-131071",
+      },
+    });
+    if (!response.ok && response.status !== 206) {
+      return undefined;
+    }
+    const size = readImageSize(new Uint8Array(await response.arrayBuffer()));
+    if (size && size.width > 0 && size.height > 0) {
+      return size.width / size.height;
+    }
+  } catch {
+    // Best-effort — a missing ratio just falls back to a sensible default.
+  }
+  return undefined;
+}
+
 function extractTitle(html: string): string | undefined {
   const ogTitle = extractMetaContent(html, "og:title");
   if (ogTitle) {
@@ -146,6 +260,7 @@ type PageData = {
   title?: string;
   description?: string;
   heroImageUrl?: string;
+  heroAspectRatio?: number;
   siteName?: string;
   content?: string;
 };
@@ -173,12 +288,33 @@ async function fetchPage(url: string): Promise<PageData> {
     extractMetaContent(html, "og:description") ??
     extractMetaContent(html, "description");
 
-  let heroImageUrl = extractMetaContent(html, "og:image");
+  let heroImageUrl =
+    extractMetaContent(html, "og:image") ??
+    extractMetaContent(html, "og:image:url") ??
+    extractMetaContent(html, "twitter:image");
   if (heroImageUrl) {
     try {
       heroImageUrl = new URL(heroImageUrl, finalUrl).toString();
     } catch {
       heroImageUrl = undefined;
+    }
+  }
+
+  // Match the preview to the OG image's real shape. Prefer the dimensions the
+  // page declares; if absent, read them from the image file itself.
+  let heroAspectRatio: number | undefined;
+  if (heroImageUrl) {
+    const ogWidth = Number(extractMetaContent(html, "og:image:width"));
+    const ogHeight = Number(extractMetaContent(html, "og:image:height"));
+    if (
+      Number.isFinite(ogWidth) &&
+      Number.isFinite(ogHeight) &&
+      ogWidth > 0 &&
+      ogHeight > 0
+    ) {
+      heroAspectRatio = ogWidth / ogHeight;
+    } else {
+      heroAspectRatio = await fetchImageAspectRatio(heroImageUrl);
     }
   }
 
@@ -197,6 +333,7 @@ async function fetchPage(url: string): Promise<PageData> {
     title,
     description,
     heroImageUrl,
+    heroAspectRatio,
     siteName,
     content: content !== "" ? content : undefined,
   };
@@ -341,6 +478,10 @@ export const processItem = internalAction({
         content: item.type === "link" ? page?.content : undefined,
         siteName: item.type === "link" ? page?.siteName : undefined,
         heroImageUrl: item.type === "link" ? page?.heroImageUrl : undefined,
+        // Links: the OG image's shape. Images/notes: preserve the ratio the
+        // client captured on upload (patching undefined would drop the field).
+        aspectRatio:
+          item.type === "link" ? page?.heroAspectRatio : item.aspectRatio,
         status: "ready",
       });
       if (spaceIds.length > 0) {
@@ -354,6 +495,38 @@ export const processItem = internalAction({
       await ctx.runMutation(internal.items.failItem, { itemId: args.itemId });
     }
     return null;
+  },
+});
+
+/**
+ * One-off: fill in aspectRatio for existing image items that don't have one
+ * (older saves whose ratio was dropped before it was persisted). Reads the
+ * stored file's header bytes directly — no re-upload needed.
+ */
+export const backfillImageAspectRatios = internalAction({
+  args: {},
+  returns: v.object({ scanned: v.number(), updated: v.number() }),
+  handler: async (ctx): Promise<{ scanned: number; updated: number }> => {
+    const targets = await ctx.runQuery(
+      internal.items.listImagesNeedingRatioInternal,
+      {},
+    );
+    let updated = 0;
+    for (const target of targets) {
+      const blob = await ctx.storage.get(target.storageId);
+      if (blob === null) {
+        continue;
+      }
+      const size = readImageSize(new Uint8Array(await blob.arrayBuffer()));
+      if (size && size.width > 0 && size.height > 0) {
+        await ctx.runMutation(internal.items.setAspectRatioInternal, {
+          itemId: target._id,
+          aspectRatio: size.width / size.height,
+        });
+        updated++;
+      }
+    }
+    return { scanned: targets.length, updated };
   },
 });
 

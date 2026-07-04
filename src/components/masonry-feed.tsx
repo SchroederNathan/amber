@@ -3,16 +3,17 @@ import { ItemCard, type FeedItem } from './item-card';
 
 type Props = {
   items: FeedItem[];
+  numColumns?: number;
   ListEmptyComponent?: React.ComponentType | React.ReactElement;
   ListHeaderComponent?: React.ComponentType | React.ReactElement;
 };
 
-export function MasonryFeed({ items, ListEmptyComponent, ListHeaderComponent }: Props) {
+export function MasonryFeed({ items, numColumns = 3, ListEmptyComponent, ListHeaderComponent }: Props) {
   return (
     <FlashList
       data={items}
       masonry
-      numColumns={3}
+      numColumns={numColumns}
       optimizeItemArrangement
       keyExtractor={(item) => item._id}
       renderItem={({ item }) => <ItemCard item={item} />}

@@ -323,6 +323,38 @@ export const finalizeItem = internalMutation({
   },
 });
 
+export const listImagesNeedingRatioInternal = internalQuery({
+  args: {},
+  returns: v.array(v.object({ _id: v.id("items"), storageId: v.id("_storage") })),
+  handler: async (ctx) => {
+    const items = await ctx.db.query("items").take(LIST_CAP);
+    const out: { _id: Id<"items">; storageId: Id<"_storage"> }[] = [];
+    for (const item of items) {
+      if (
+        item.type === "image" &&
+        item.storageId !== undefined &&
+        item.aspectRatio === undefined
+      ) {
+        out.push({ _id: item._id, storageId: item.storageId });
+      }
+    }
+    return out;
+  },
+});
+
+export const setAspectRatioInternal = internalMutation({
+  args: { itemId: v.id("items"), aspectRatio: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.itemId);
+    if (item === null) {
+      return null;
+    }
+    await ctx.db.patch(args.itemId, { aspectRatio: args.aspectRatio });
+    return null;
+  },
+});
+
 export const failItem = internalMutation({
   args: { itemId: v.id("items") },
   returns: v.null(),
