@@ -49,7 +49,7 @@ export default function AppLayout() {
             presentation: 'formSheet',
             headerShown: false,
             sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.55, 1.0],
+            sheetAllowedDetents: 'fitToContents',
             sheetCornerRadius: 28,
             contentStyle: { backgroundColor: 'transparent' },
           }}

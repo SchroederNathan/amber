@@ -11,8 +11,8 @@ const shared = {
   radius: {
     sm: 8,
     md: 11,
-    lg: 22,
-    xl: 28,
+    lg: 16,
+    xl: 24,
   },
 } as const;
 
