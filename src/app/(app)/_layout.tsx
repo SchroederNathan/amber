@@ -51,7 +51,7 @@ export default function AppLayout() {
             sheetGrabberVisible: true,
             sheetAllowedDetents: 'fitToContents',
             sheetCornerRadius: 28,
-            contentStyle: { backgroundColor: 'transparent' },
+            contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
         <Stack.Screen
@@ -62,7 +62,7 @@ export default function AppLayout() {
             sheetGrabberVisible: true,
             sheetAllowedDetents: [0.5, 1.0],
             sheetCornerRadius: 28,
-            contentStyle: { backgroundColor: 'transparent' },
+            contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
         <Stack.Screen
@@ -73,7 +73,7 @@ export default function AppLayout() {
             sheetGrabberVisible: true,
             sheetAllowedDetents: [0.5],
             sheetCornerRadius: 28,
-            contentStyle: { backgroundColor: 'transparent' },
+            contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
         <Stack.Screen
@@ -81,7 +81,7 @@ export default function AppLayout() {
           options={{
             presentation: 'fullScreenModal',
             headerShown: false,
-            contentStyle: { backgroundColor: '#000' },
+            contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
       </Stack.Protected>
