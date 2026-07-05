@@ -6,6 +6,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { ProgressiveBlurHeader } from 'progressive-blur';
 import { ActivityIndicator, Alert, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -79,6 +80,7 @@ export default function SpaceScreen() {
             />
           }
         />
+        <ProgressiveBlurHeader />
       </View>
     </>
   );

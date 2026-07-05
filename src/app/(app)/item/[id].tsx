@@ -14,6 +14,7 @@ import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/build/react-navigation';
 import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
+import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -226,6 +227,7 @@ export default function ItemScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <ProgressiveBlurHeader />
     </View>
   );
 }
