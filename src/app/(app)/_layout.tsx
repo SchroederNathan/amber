@@ -50,7 +50,6 @@ export default function AppLayout() {
             headerShown: false,
             sheetGrabberVisible: true,
             sheetAllowedDetents: 'fitToContents',
-            sheetCornerRadius: 28,
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
@@ -61,7 +60,6 @@ export default function AppLayout() {
             headerShown: false,
             sheetGrabberVisible: true,
             sheetAllowedDetents: [0.5, 1.0],
-            sheetCornerRadius: 28,
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
@@ -72,7 +70,6 @@ export default function AppLayout() {
             headerShown: false,
             sheetGrabberVisible: true,
             sheetAllowedDetents: [0.5],
-            sheetCornerRadius: 28,
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
