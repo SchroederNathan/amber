@@ -54,7 +54,24 @@
       "@clerk/expo",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-sharing"
+      [
+        "expo-sharing",
+        {
+          "ios": {
+            "enabled": true,
+            "activationRule": {
+              "supportsImageWithMaxCount": 10,
+              "supportsWebUrlWithMaxCount": 1,
+              "supportsText": true
+            }
+          },
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["image/*", "text/*"],
+            "multipleShareMimeTypes": ["image/*"]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

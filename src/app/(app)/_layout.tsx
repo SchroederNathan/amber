@@ -26,6 +26,7 @@ export default function AppLayout() {
     >
       <Stack.Protected guard={onboarded}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="share" options={{ headerShown: false }} />
         <Stack.Screen
           name="item/[id]"
           options={{
