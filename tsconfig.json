@@ -5,7 +5,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@convex/*": ["./convex/*"],
-      "subject-lift": ["./modules/subject-lift"]
+      "subject-lift": ["./modules/subject-lift"],
+      "progressive-blur": ["./modules/progressive-blur"]
     }
   },
   "include": [

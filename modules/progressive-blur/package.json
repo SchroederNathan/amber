@@ -1,0 +1,7 @@
+{
+  "name": "progressive-blur",
+  "version": "1.0.0",
+  "description": "iOS progressive/variable blur band for transparent headers.",
+  "main": "index.tsx",
+  "private": true
+}

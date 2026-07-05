@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { ProgressiveBlurHeader } from 'progressive-blur';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -70,79 +71,82 @@ export default function SpacesScreen() {
   }
 
   return (
-    <FlashList
-      data={spaces}
-      keyExtractor={(space) => space._id}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={styles.content}
-      renderItem={({ item: space, index }) => {
-        // `previews` can be briefly absent when the offline cache rehydrates an
-        // older query shape before the live refetch lands.
-        const previews = (space.previews ?? []).slice(0, 3);
-        return (
-          <Animated.View
-            style={styles.card}
-            entering={FadeInDown.delay(index * 60).duration(350)}
-          >
-            <Link href={`/space/${space._id}`} asChild>
-              <Link.Trigger>
-                <View style={styles.cardInner}>
-                  <View style={styles.topRow}>
-                    <View style={styles.meta}>
-                      <SymbolView name="clock" size={16} tintColor={theme.colors.muted} />
-                      <Text style={styles.metaText}>{timeAgo(space._creationTime)}</Text>
-                    </View>
-                    <View style={styles.meta}>
-                      <SymbolView
-                        name="square.stack"
-                        size={16}
-                        tintColor={theme.colors.muted}
-                      />
-                      <Text style={styles.metaText}>{space.itemCount}</Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.title} numberOfLines={1}>
-                    {space.name}
-                  </Text>
-                  {space.description ? (
-                    <Text style={styles.subtitle} numberOfLines={1}>
-                      {space.description}
-                    </Text>
-                  ) : null}
-
-                  <View style={styles.covers}>
-                    {previews.length > 0 ? (
-                      previews.map((preview, i) => (
-                        <Image
-                          key={preview.url}
-                          source={{ uri: preview.url }}
-                          style={[
-                            styles.cover,
-                            {
-                              aspectRatio: clampRatio(
-                                preview.aspectRatio,
-                                preview.type === 'link' ? OG_RATIO : 1,
-                              ),
-                            },
-                            coverTransform(i, previews.length),
-                          ]}
-                        />
-                      ))
-                    ) : (
-                      <View style={[styles.cover, styles.coverPlaceholder]}>
-                        <Text style={styles.coverEmoji}>✶</Text>
+    <View style={styles.container}>
+      <FlashList
+        data={spaces}
+        keyExtractor={(space) => space._id}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}
+        renderItem={({ item: space, index }) => {
+          // `previews` can be briefly absent when the offline cache rehydrates an
+          // older query shape before the live refetch lands.
+          const previews = (space.previews ?? []).slice(0, 3);
+          return (
+            <Animated.View
+              style={styles.card}
+              entering={FadeInDown.delay(index * 60).duration(350)}
+            >
+              <Link href={`/space/${space._id}`} asChild>
+                <Link.Trigger>
+                  <View style={styles.cardInner}>
+                    <View style={styles.topRow}>
+                      <View style={styles.meta}>
+                        <SymbolView name="clock" size={16} tintColor={theme.colors.muted} />
+                        <Text style={styles.metaText}>{timeAgo(space._creationTime)}</Text>
                       </View>
-                    )}
+                      <View style={styles.meta}>
+                        <SymbolView
+                          name="square.stack"
+                          size={16}
+                          tintColor={theme.colors.muted}
+                        />
+                        <Text style={styles.metaText}>{space.itemCount}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.title} numberOfLines={1}>
+                      {space.name}
+                    </Text>
+                    {space.description ? (
+                      <Text style={styles.subtitle} numberOfLines={1}>
+                        {space.description}
+                      </Text>
+                    ) : null}
+
+                    <View style={styles.covers}>
+                      {previews.length > 0 ? (
+                        previews.map((preview, i) => (
+                          <Image
+                            key={preview.url}
+                            source={{ uri: preview.url }}
+                            style={[
+                              styles.cover,
+                              {
+                                aspectRatio: clampRatio(
+                                  preview.aspectRatio,
+                                  preview.type === 'link' ? OG_RATIO : 1,
+                                ),
+                              },
+                              coverTransform(i, previews.length),
+                            ]}
+                          />
+                        ))
+                      ) : (
+                        <View style={[styles.cover, styles.coverPlaceholder]}>
+                          <Text style={styles.coverEmoji}>✶</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                </View>
-              </Link.Trigger>
-              <Link.Preview />
-            </Link>
-          </Animated.View>
-        );
-      }}
-    />
+                </Link.Trigger>
+                <Link.Preview />
+              </Link>
+            </Animated.View>
+          );
+        }}
+      />
+      <ProgressiveBlurHeader />
+    </View>
   );
 }
 
