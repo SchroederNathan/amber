@@ -9,13 +9,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
-import * as Sharing from 'expo-sharing';
 import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/build/react-navigation';
+import * as Sharing from 'expo-sharing';
 import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import { ProgressiveBlurHeader } from 'progressive-blur';
-import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -24,13 +23,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const { theme } = useUnistyles();
   const { data: item } = useQuery(
@@ -100,14 +97,14 @@ export default function ItemScreen() {
           unstable_headerRightItems: () => [
             ...(item.imageUrl || item.url
               ? [
-                  {
-                    type: 'button' as const,
-                    label: 'Share',
-                    icon: { type: 'sfSymbol', name: 'square.and.arrow.up' } as const,
-                    tintColor: theme.colors.primary,
-                    onPress: onShare,
-                  },
-                ]
+                {
+                  type: 'button' as const,
+                  label: 'Share',
+                  icon: { type: 'sfSymbol', name: 'square.and.arrow.up' } as const,
+                  tintColor: theme.colors.primary,
+                  onPress: onShare,
+                },
+              ]
               : []),
             {
               type: 'button' as const,
@@ -139,7 +136,7 @@ export default function ItemScreen() {
                   // Match the source shape; OG images default to 1200×630 (≈1.91).
                   { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
                 ]}
-                // transition={200}
+              // transition={200}
               />
             </Link.AppleZoomTarget>
           </View>

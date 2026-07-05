@@ -71,7 +71,11 @@ type AppThemes = typeof appThemes;
 type AppBreakpoints = typeof breakpoints;
 
 declare module 'react-native-unistyles' {
+  // Module augmentation requires empty extending interfaces (type aliases can't
+  // merge across declarations), so the empty-object-type rule doesn't apply.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface UnistylesThemes extends AppThemes {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface UnistylesBreakpoints extends AppBreakpoints {}
 }
 

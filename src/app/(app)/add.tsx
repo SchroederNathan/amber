@@ -1,10 +1,11 @@
+import { AnimatedText } from '@/components/animated-text';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
 import { useMutation } from 'convex/react';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
@@ -118,24 +119,48 @@ export default function AddScreen() {
     }
   };
 
-  if (mode === 'note' || mode === 'article') {
-    const isArticle = mode === 'article';
-    return (
-      <View style={styles.content}>
-        <View style={styles.composerHeader}>
-          <Pressable onPress={() => setMode('menu')} hitSlop={8} disabled={saving}>
-            <SymbolView name="chevron.left" size={22} tintColor={theme.colors.foreground} />
-          </Pressable>
-          <Text style={styles.heading}>{isArticle ? 'Save an article' : 'New note'}</Text>
-          <Pressable
-            onPress={save}
-            disabled={!canSave}
-            style={[styles.saveButton, !canSave && { opacity: 0.4 }]}
-          >
-            <Text style={styles.saveLabel}>Save</Text>
-          </Pressable>
-        </View>
+  const isComposer = mode === 'note' || mode === 'article';
+  const isArticle = mode === 'article';
+  const title = isArticle ? 'Save an article' : mode === 'note' ? 'New note' : 'Save something';
 
+  return (
+    <View style={styles.content}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: false,
+          headerStyle: { backgroundColor: theme.colors.background },
+          // Animated title persists across mode changes so the text cascades
+          // between "Save something" / "New note" / "Save an article".
+          headerTitle: () => <AnimatedText text={title} style={styles.heading} />,
+          unstable_headerLeftItems: () =>
+            isComposer
+              ? [
+                  {
+                    type: 'button' as const,
+                    label: 'Back',
+                    icon: { type: 'sfSymbol', name: 'chevron.left' } as const,
+                    tintColor: theme.colors.primary,
+                    onPress: () => setMode('menu'),
+                  },
+                ]
+              : [],
+          unstable_headerRightItems: () =>
+            isComposer
+              ? [
+                  {
+                    type: 'button' as const,
+                    label: 'Save',
+                    icon: { type: 'sfSymbol', name: 'checkmark' } as const,
+                    tintColor: canSave ? theme.colors.primary : theme.colors.muted,
+                    onPress: save,
+                  },
+                ]
+              : [],
+        }}
+      />
+
+      {isComposer ? (
         <TextInput
           style={isArticle ? styles.articleInput : styles.noteInput}
           value={value}
@@ -151,43 +176,37 @@ export default function AddScreen() {
           onSubmitEditing={isArticle ? save : undefined}
           editable={!saving}
         />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.content}>
-      <Text style={[styles.heading, styles.menuHeading]}>Save something</Text>
-
-      <View style={styles.actions}>
-        <ActionButton
-          icon="square.and.pencil"
-          label="Note"
-          onPress={() => openComposer('note')}
-          disabled={saving}
-        />
-        <ActionButton
-          icon="link"
-          label="Article"
-          onPress={() => openComposer('article')}
-          disabled={saving}
-        />
-        <ActionButton
-          icon="photo.on.rectangle"
-          label="Photos"
-          onPress={pickImages}
-          disabled={saving}
-        />
-        <ActionButton
-          icon="camera"
-          label="Camera"
-          onPress={() => {
-            router.back();
-            router.push('/camera');
-          }}
-          disabled={saving}
-        />
-      </View>
+      ) : (
+        <View style={styles.actions}>
+          <ActionButton
+            icon="square.and.pencil"
+            label="Note"
+            onPress={() => openComposer('note')}
+            disabled={saving}
+          />
+          <ActionButton
+            icon="link"
+            label="Article"
+            onPress={() => openComposer('article')}
+            disabled={saving}
+          />
+          <ActionButton
+            icon="photo.on.rectangle"
+            label="Photos"
+            onPress={pickImages}
+            disabled={saving}
+          />
+          <ActionButton
+            icon="camera"
+            label="Camera"
+            onPress={() => {
+              router.back();
+              router.push('/camera');
+            }}
+            disabled={saving}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -195,17 +214,13 @@ export default function AddScreen() {
 const styles = StyleSheet.create((theme) => ({
   content: {
     padding: theme.gap(2.5),
-    paddingTop: theme.gap(4),
+    paddingTop: theme.gap(2),
     gap: theme.gap(1.5),
   },
   heading: {
     fontFamily: theme.fonts.display,
     fontSize: 24,
     color: theme.colors.foreground,
-  },
-  menuHeading: {
-    marginBottom: theme.gap(1),
-    textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
@@ -227,12 +242,6 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
     color: theme.colors.foreground,
     textAlign: 'center',
-  },
-  composerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.gap(1),
   },
   noteInput: {
     fontFamily: theme.fonts.regular,
@@ -257,17 +266,5 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  saveButton: {
-    paddingHorizontal: theme.gap(2),
-    paddingVertical: theme.gap(0.75),
-    borderRadius: theme.radius.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
-  },
-  saveLabel: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 15,
-    color: theme.colors.background,
   },
 }));

@@ -1,10 +1,8 @@
 import { Stack } from 'expo-router';
 import { Text } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 export default function SearchStackLayout() {
-  const { theme } = useUnistyles();
-
   return (
     <Stack
       screenOptions={{

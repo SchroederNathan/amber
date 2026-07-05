@@ -47,7 +47,9 @@ export default function AppLayout() {
           name="add"
           options={{
             presentation: 'formSheet',
-            headerShown: false,
+            headerShown: true,
+            headerTransparent: false,
+            headerStyle: { backgroundColor: theme.colors.background },
             sheetGrabberVisible: true,
             sheetAllowedDetents: 'fitToContents',
             contentStyle: { backgroundColor: theme.colors.background },
