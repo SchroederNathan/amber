@@ -84,11 +84,8 @@ export function ItemDetail({ item, isZoomTarget }: Props) {
           </View>
         ) : null}
 
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>
-            {item.title ?? item.note ?? displayHost(item.url)}
-          </Text>
-          {item.url ? (
+        {item.url ? (
+          <View style={styles.titleContainer}>
             <Pressable
               style={styles.sourceRow}
               onPress={() => WebBrowser.openBrowserAsync(item.url!)}
@@ -103,8 +100,8 @@ export function ItemDetail({ item, isZoomTarget }: Props) {
                 tintColor={theme.colors.faint}
               />
             </Pressable>
-          ) : null}
-        </View>
+          </View>
+        ) : null}
 
         {item.description ? (
           <Text style={styles.description}>{item.description}</Text>
@@ -196,12 +193,6 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(1),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  title: {
-    fontFamily: theme.fonts.display,
-    fontSize: 32,
-    textAlign: 'center',
-    color: theme.colors.foreground,
   },
   sourceRow: {
     flexDirection: 'row',
