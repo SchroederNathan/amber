@@ -11,7 +11,7 @@ import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Share,
@@ -85,19 +85,49 @@ export default function ItemScreen() {
   const [activeId, setActiveId] = useState(id);
   const [editing, setEditing] = useState(false);
 
+  // Keeping the route `id` param in sync writes navigation state, which
+  // re-renders the entire native-stack tree — a ~16ms cascade profiled as the
+  // single most expensive JS event per swipe. `activeId` (local state) already
+  // drives the header/toolbar/actions, so only the deep-link/restore URL needs
+  // the param. Debounce it so a run of swipes writes once, after it settles,
+  // instead of paying the cascade on every page.
+  const paramTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onViewable = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken<DetailItem>[] }) => {
       const first = viewableItems[0]?.item as DetailItem | undefined;
-      if (first) {
-        setActiveId(first._id);
+      if (!first) return;
+      setActiveId(first._id);
+      if (paramTimer.current) clearTimeout(paramTimer.current);
+      paramTimer.current = setTimeout(() => {
         router.setParams({ id: first._id });
-      }
+      }, 350);
     },
     [router],
+  );
+  useEffect(
+    () => () => {
+      if (paramTimer.current) clearTimeout(paramTimer.current);
+    },
+    [],
   );
   const viewabilityConfig = useMemo(
     () => ({ itemVisiblePercentThreshold: 60 }),
     [],
+  );
+
+  // Stable so an ItemScreen re-render (setActiveId on every swipe) doesn't hand
+  // FlashList a fresh renderItem/style and force every mounted page to re-render.
+  const pageStyle = useMemo(() => ({ width, height }), [width, height]);
+  const keyExtractor = useCallback((item: DetailItem) => item._id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: DetailItem }) => (
+      // Each page is bounded to the screen so the inner vertical ScrollView
+      // has a fixed height to scroll within (rather than growing to fit).
+      <View style={pageStyle}>
+        <ItemDetail item={item} isZoomTarget={item._id === pushedId} />
+      </View>
+    ),
+    [pageStyle, pushedId],
   );
 
   const activeItem = items?.find((i) => i._id === activeId) ?? items?.[0];
@@ -204,15 +234,9 @@ export default function ItemScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item._id}
+        keyExtractor={keyExtractor}
         initialScrollIndex={startIndex >= 0 ? startIndex : 0}
-        renderItem={({ item }) => (
-          // Each page is bounded to the screen so the inner vertical ScrollView
-          // has a fixed height to scroll within (rather than growing to fit).
-          <View style={{ width, height }}>
-            <ItemDetail item={item} isZoomTarget={item._id === pushedId} />
-          </View>
-        )}
+        renderItem={renderItem}
         onViewableItemsChanged={onViewable}
         viewabilityConfig={viewabilityConfig}
       />

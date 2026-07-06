@@ -9,6 +9,7 @@ import { useHeaderHeight } from 'expo-router/build/react-navigation';
 import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import type { FunctionReturnType } from 'convex/server';
+import { memo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -24,7 +25,11 @@ type Props = {
   isZoomTarget: boolean;
 };
 
-export function ItemDetail({ item, isZoomTarget }: Props) {
+// Memoized: this is a FlashList page in a horizontal pager, and its `item` ref
+// is stable across swipes (Convex query data, staleTime Infinity). Without this,
+// every parent re-render (setActiveId on each swipe) re-rendered every mounted
+// page and its ~100+ paragraph Text nodes — the dominant swipe cost profiled.
+export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props) {
   const headerHeight = useHeaderHeight();
   const { theme } = useUnistyles();
 
@@ -145,7 +150,7 @@ export function ItemDetail({ item, isZoomTarget }: Props) {
       </View>
     </ScrollView>
   );
-}
+});
 
 const styles = StyleSheet.create((theme) => ({
   container: {

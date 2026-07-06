@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Text as RNText,
   StyleSheet as RNStyleSheet,
@@ -81,7 +81,10 @@ type CharGlyphProps = {
   onExited: (key: string) => void;
 };
 
-function CharGlyph({
+// Memoized so removing one exited glyph (a setCells that keeps every other
+// cell's reference) doesn't re-render the whole string — only cells whose props
+// actually changed (e.g. a new x on a text swap, which drives the glide) rerun.
+const CharGlyph = memo(function CharGlyph({
   cell,
   font,
   color,
@@ -148,7 +151,7 @@ function CharGlyph({
       <BlurMask blur={bl} style="normal" />
     </Group>
   );
-}
+});
 
 export type AnimatedTextProps = {
   text: string;
@@ -217,7 +220,10 @@ export function AnimatedText({
     setCells([...present, ...exiting]);
   }, [text, font, width]);
 
-  const removeCell = (key: string) => setCells((prev) => prev.filter((c) => c.key !== key));
+  const removeCell = useCallback(
+    (key: string) => setCells((prev) => prev.filter((c) => c.key !== key)),
+    [],
+  );
 
   // Until the Skia font loads, fall back to plain text so the title still shows.
   if (!font) {
