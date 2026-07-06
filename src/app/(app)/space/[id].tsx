@@ -74,6 +74,7 @@ export default function SpaceScreen() {
         <MasonryFeed
           items={space.items}
           source={{ from: 'space', spaceId: id }}
+          firstItemZoomTarget
           ListEmptyComponent={
             <EmptyState
               title="Nothing filed yet"
