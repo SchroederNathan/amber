@@ -11,7 +11,12 @@ import { parseHTML } from "linkedom";
 
 // Bare model-id strings route through the Vercel AI Gateway automatically
 // (authenticated via the AI_GATEWAY_API_KEY deployment env var).
-const MODEL = "google/gemini-2.5-flash-lite";
+const MODEL = "google/gemini-3.1-flash-lite";
+
+const SYSTEM_PROMPT =
+  "You are the classifier for Amber, a save-it-for-later app. Titles must be short and " +
+  "punchy — like a label on a folder, not a headline. Aim for 2-4 words, never a full " +
+  "sentence, and never end with a period.";
 
 // How much extracted text to feed the classifier. The model only needs enough
 // to understand the piece — it doesn't read the whole thing.
@@ -391,7 +396,11 @@ async function fetchPage(url: string): Promise<PageData> {
 // ---------------------------------------------------------------------------
 
 const itemAnalysisSchema = z.object({
-  title: z.string().describe("A short, evocative title for the saved item"),
+  title: z
+    .string()
+    .describe(
+      "A very short title, ideally 2-4 words and never more than ~6. No trailing punctuation, no full sentences.",
+    ),
   description: z
     .string()
     .describe("A 1-2 sentence summary of what this item is"),
@@ -445,6 +454,7 @@ export const processItem = internalAction({
         page = await fetchPage(item.url);
         const { object } = await generateObject({
           model: MODEL,
+          system: SYSTEM_PROMPT,
           schema: itemAnalysisSchema,
           prompt: [
             "You are helping organize a save-it-for-later app. Analyze this saved web page and produce a title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.",
@@ -471,6 +481,7 @@ export const processItem = internalAction({
         }
         const { object } = await generateObject({
           model: MODEL,
+          system: SYSTEM_PROMPT,
           schema: itemAnalysisSchema,
           messages: [
             {
@@ -495,6 +506,7 @@ export const processItem = internalAction({
         }
         const { object } = await generateObject({
           model: MODEL,
+          system: SYSTEM_PROMPT,
           schema: itemAnalysisSchema,
           prompt: [
             "You are helping organize a save-it-for-later app. Analyze this saved note and produce a short evocative title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.",

@@ -1,6 +1,6 @@
 import { EmptyState } from '@/components/empty-state';
 import { ItemDetail, type DetailItem } from '@/components/item-detail';
-import { Wordmark } from '@/components/wordmark';
+import { ItemHeader } from '@/components/item-header';
 import { convexQuery } from '@convex-dev/react-query';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
@@ -81,6 +81,7 @@ export default function ItemScreen() {
   // so swiping (which rewrites the `id` param) never re-pairs the transition.
   const [pushedId] = useState(id);
   const [activeId, setActiveId] = useState(id);
+  const [editing, setEditing] = useState(false);
 
   const onViewable = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken<DetailItem>[] }) => {
@@ -163,30 +164,12 @@ export default function ItemScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: () => <Wordmark />,
+          headerTitle: () => <ItemHeader item={activeItem} />,
           headerBackButtonDisplayMode: 'minimal',
-          unstable_headerRightItems: () => [
-            ...(activeItem && (activeItem.imageUrl || activeItem.url)
-              ? [
-                  {
-                    type: 'button' as const,
-                    label: 'Share',
-                    icon: { type: 'sfSymbol', name: 'square.and.arrow.up' } as const,
-                    tintColor: theme.colors.primary,
-                    onPress: shareActive,
-                  },
-                ]
-              : []),
-            {
-              type: 'button' as const,
-              label: 'Delete',
-              icon: { type: 'sfSymbol', name: 'trash' } as const,
-              tintColor: theme.colors.primary,
-              onPress: onDelete,
-            },
-          ],
+
         }}
       />
+      
       <FlashList
         ref={listRef}
         style={styles.container}

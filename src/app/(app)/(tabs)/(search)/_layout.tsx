@@ -10,10 +10,11 @@ export default function SearchStackLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{ headerTitle: () => <Text style={styles.title}>search</Text> }}
-      />
+      <Stack.Screen name="index">
+        <Stack.Title asChild>
+          <Text style={styles.title}>search</Text>
+        </Stack.Title>
+      </Stack.Screen>
     </Stack>
   );
 }

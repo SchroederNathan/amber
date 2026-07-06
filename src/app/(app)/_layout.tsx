@@ -61,7 +61,7 @@ export default function AppLayout() {
             presentation: 'formSheet',
             headerShown: false,
             sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.5, 1.0],
+            sheetAllowedDetents: 'fitToContents',
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
@@ -71,7 +71,7 @@ export default function AppLayout() {
             presentation: 'formSheet',
             headerShown: false,
             sheetGrabberVisible: true,
-            sheetAllowedDetents: [0.5],
+            sheetAllowedDetents: 'fitToContents',
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />

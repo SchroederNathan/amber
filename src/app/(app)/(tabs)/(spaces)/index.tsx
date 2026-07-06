@@ -290,7 +290,8 @@ const styles = StyleSheet.create((theme) => ({
   title: {
     flex: 1,
     fontFamily: theme.fonts.bold,
-    fontSize: 15,
+    fontSize: 10,
+    lineHeight: 12,
     color: theme.colors.foreground,
   },
   menuButton: {

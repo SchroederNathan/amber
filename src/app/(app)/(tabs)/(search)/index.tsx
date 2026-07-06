@@ -3,7 +3,7 @@ import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation } from 'expo-router';
+import { Stack } from 'expo-router';
 import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';

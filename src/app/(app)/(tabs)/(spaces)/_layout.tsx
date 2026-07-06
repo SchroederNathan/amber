@@ -22,21 +22,20 @@ export default function SpacesStackLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{
-          headerTitle: () => <Text style={styles.title}>spaces</Text>,
-          unstable_headerRightItems: () => [
-            {
-              type: 'button',
-              label: 'New space',
-              icon: { type: 'sfSymbol', name: 'plus' } as const,
-              tintColor: PlatformColor('label'),
-              onPress: newSpace,
-            },
-          ],
-        }}
-      />
+      <Stack.Screen name="index">
+        <Stack.Title asChild>
+          <Text style={styles.title}>spaces</Text>
+        </Stack.Title>
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon="plus"
+            tintColor={PlatformColor('label')}
+            onPress={newSpace}
+          >
+            New space
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      </Stack.Screen>
     </Stack>
   );
 }

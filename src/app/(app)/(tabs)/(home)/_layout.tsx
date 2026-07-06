@@ -22,30 +22,29 @@ export default function HomeStackLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{
-          headerTitle: () => <Wordmark />,
-          unstable_headerLeftItems: () => [
-            {
-              type: 'button',
-              label: 'Profile',
-              icon: { type: 'sfSymbol', name: 'person' } as const,
-              tintColor: PlatformColor('label'),
-              onPress: tap('/profile'),
-            },
-          ],
-          unstable_headerRightItems: () => [
-            {
-              type: 'button',
-              label: 'Add',
-              icon: { type: 'sfSymbol', name: 'plus' } as const,
-              tintColor: PlatformColor('label'),
-              onPress: tap('/add'),
-            },
-          ],
-        }}
-      />
+      <Stack.Screen name="index">
+        <Stack.Title asChild>
+          <Wordmark />
+        </Stack.Title>
+        <Stack.Toolbar placement="left">
+          <Stack.Toolbar.Button
+            icon="person"
+            tintColor={PlatformColor('label')}
+            onPress={tap('/profile')}
+          >
+            Profile
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon="plus"
+            tintColor={PlatformColor('label')}
+            onPress={tap('/add')}
+          >
+            Add
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      </Stack.Screen>
     </Stack>
   );
 }

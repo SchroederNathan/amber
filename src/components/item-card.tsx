@@ -223,7 +223,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: 2,
   },
   captionTitle: {
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.bold,
     fontSize: 10,
     lineHeight: 12,
     color: theme.colors.foreground,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   captionHost: {
     flexShrink: 1,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.bold,
     fontSize: 10,
     lineHeight: 12,
     color: theme.colors.muted,

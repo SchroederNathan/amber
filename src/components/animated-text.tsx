@@ -155,6 +155,8 @@ export type AnimatedTextProps = {
   style?: StyleProp<TextStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   width?: number;
+  /** Canvas height; shrink it to sit the morph in a compact slot like a header. */
+  height?: number;
   staggerMs?: number;
   blurMax?: number;
 };
@@ -164,6 +166,7 @@ export function AnimatedText({
   style,
   containerStyle,
   width = DEFAULT_WIDTH,
+  height = CANVAS_HEIGHT,
   staggerMs = STAGGER_MS,
   blurMax = BLUR_MAX,
 }: AnimatedTextProps) {
@@ -173,7 +176,7 @@ export function AnimatedText({
   const color = typeof flat.color === 'string' ? flat.color : theme.colors.foreground;
   const font = useFont(FONT, fontSize);
 
-  const baselineY = CANVAS_HEIGHT / 2 + fontSize * 0.34;
+  const baselineY = height / 2 + fontSize * 0.34;
 
   const seenRef = useRef<Map<string, Cell>>(new Map());
   const [cells, setCells] = useState<Cell[]>([]);
@@ -227,7 +230,7 @@ export function AnimatedText({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <Canvas style={{ width, height: CANVAS_HEIGHT }}>
+      <Canvas style={{ width, height }}>
         {cells.map((cell) => (
           <CharGlyph
             key={cell.key}

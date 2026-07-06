@@ -11,6 +11,8 @@ export type LocalImage = {
   mimeType?: string;
   /** Marks a subject-lifted die-cut PNG so the feed renders it as a sticker. */
   isSticker?: boolean;
+  /** Original camera-roll capture time (epoch ms), read from EXIF on import. */
+  capturedAt?: number;
 };
 
 /**
@@ -39,7 +41,12 @@ export function useSaveImages() {
           const { storageId } = await result.json();
           const aspectRatio =
             image.width && image.height ? image.width / image.height : undefined;
-          await createImageItem({ storageId, aspectRatio, isSticker: image.isSticker });
+          await createImageItem({
+            storageId,
+            aspectRatio,
+            isSticker: image.isSticker,
+            capturedAt: image.capturedAt,
+          });
         }),
       );
     },

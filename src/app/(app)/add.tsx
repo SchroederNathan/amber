@@ -1,4 +1,5 @@
 import { AnimatedText } from '@/components/animated-text';
+import { parseExifDate } from '@/lib/date';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
 import { useMutation } from 'convex/react';
@@ -99,6 +100,7 @@ export default function AddScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 10,
       quality: 0.8,
+      exif: true,
     });
     if (result.canceled || result.assets.length === 0) return;
     setSaving(true);
@@ -109,6 +111,7 @@ export default function AddScreen() {
           width: asset.width,
           height: asset.height,
           mimeType: asset.mimeType,
+          capturedAt: parseExifDate(asset.exif),
         })),
       );
       success();

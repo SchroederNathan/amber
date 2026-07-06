@@ -1,3 +1,4 @@
+import { parseExifDate } from '@/lib/date';
 import { useSaveImages } from '@/lib/use-save-image';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -83,6 +84,7 @@ export default function CameraScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 10,
       quality: 0.8,
+      exif: true,
     });
     if (result.canceled || result.assets.length === 0) return;
     setBusy(true);
@@ -93,6 +95,7 @@ export default function CameraScreen() {
           width: asset.width,
           height: asset.height,
           mimeType: asset.mimeType,
+          capturedAt: parseExifDate(asset.exif),
         })),
       );
       router.back();
