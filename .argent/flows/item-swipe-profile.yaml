@@ -1,0 +1,49 @@
+executionPrerequisite: Item detail screen open on the first Home-feed item ("The
+  Value of Craft"), reached by tapping the first masonry card on the Home tab.
+  The horizontal paging FlashList must be at index 0.
+steps:
+  - tool: gesture-swipe
+    args:
+      udid: E80C189E-C97F-4A3E-83F9-4AC73AFED27F
+      fromX: 0.88
+      fromY: 0.5
+      toX: 0.12
+      toY: 0.5
+      durationMs: 250
+    delayMs: 1500
+  - tool: gesture-swipe
+    args:
+      udid: E80C189E-C97F-4A3E-83F9-4AC73AFED27F
+      fromX: 0.88
+      fromY: 0.5
+      toX: 0.12
+      toY: 0.5
+      durationMs: 250
+    delayMs: 1500
+  - tool: gesture-swipe
+    args:
+      udid: E80C189E-C97F-4A3E-83F9-4AC73AFED27F
+      fromX: 0.88
+      fromY: 0.5
+      toX: 0.12
+      toY: 0.5
+      durationMs: 250
+    delayMs: 1500
+  - tool: gesture-swipe
+    args:
+      udid: E80C189E-C97F-4A3E-83F9-4AC73AFED27F
+      fromX: 0.88
+      fromY: 0.5
+      toX: 0.12
+      toY: 0.5
+      durationMs: 250
+    delayMs: 1500
+  - tool: gesture-swipe
+    args:
+      udid: E80C189E-C97F-4A3E-83F9-4AC73AFED27F
+      fromX: 0.88
+      fromY: 0.5
+      toX: 0.12
+      toY: 0.5
+      durationMs: 250
+    delayMs: 1500
