@@ -7,7 +7,9 @@ import type { Id } from '@convex/_generated/dataModel';
 import { FlashList, type FlashListRef, type ViewToken } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
+import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -127,6 +129,14 @@ export default function ItemScreen() {
     }
   }, [activeItem]);
 
+  const copyLink = useCallback(async () => {
+    if (!activeItem?.url) return;
+    await Clipboard.setStringAsync(activeItem.url);
+    if (process.env.EXPO_OS === 'ios') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [activeItem]);
+
   const onDelete = useCallback(async () => {
     if (!activeItem || !items) return;
     const idx = items.findIndex((i) => i._id === activeItem._id);
@@ -164,12 +174,29 @@ export default function ItemScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: () => <ItemHeader item={activeItem} />,
           headerBackButtonDisplayMode: 'minimal',
-
         }}
       />
-      
+      <Stack.Title asChild>
+        <ItemHeader item={activeItem} />
+      </Stack.Title>
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Menu icon="ellipsis">
+          <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={shareActive}>
+            Share
+          </Stack.Toolbar.MenuAction>
+          {activeItem?.url ? (
+            <Stack.Toolbar.MenuAction icon="doc.on.doc" onPress={copyLink}>
+              Copy link
+            </Stack.Toolbar.MenuAction>
+          ) : null}
+          <Stack.Toolbar.MenuAction icon="trash" destructive onPress={onDelete}>
+            Delete
+          </Stack.Toolbar.MenuAction>
+        </Stack.Toolbar.Menu>
+      </Stack.Toolbar>
+
+
       <FlashList
         ref={listRef}
         style={styles.container}

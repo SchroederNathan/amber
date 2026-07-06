@@ -19,27 +19,20 @@ function useDebounced<T>(value: T, delay: number): T {
 }
 
 export default function SearchScreen() {
-  const navigation = useNavigation();
   const [search, setSearch] = useState('');
   const query = useDebounced(search.trim(), 250);
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerSearchBarOptions: {
-        placeholder: 'Search your saves',
-        autoCapitalize: 'none',
-        hideWhenScrolling: false,
-        onChangeText: (e: { nativeEvent: { text: string } }) =>
-          setSearch(e.nativeEvent.text),
-        onCancelButtonPress: () => setSearch(''),
-      },
-    });
-  }, [navigation]);
 
   const { data: results } = useQuery(convexQuery(api.items.searchItems, { query }));
 
   return (
     <View style={styles.container}>
+      <Stack.SearchBar
+        placeholder="Search your saves"
+        autoCapitalize="none"
+        hideWhenScrolling={false}
+        onChangeText={(e) => setSearch(e.nativeEvent.text)}
+        onCancelButtonPress={() => setSearch('')}
+      />
       {query.length === 0 ? (
         <EmptyState
           title="Find anything"

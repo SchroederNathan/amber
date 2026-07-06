@@ -52,24 +52,23 @@ export default function SpaceScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: space.name,
-          headerTitleStyle: {
-            fontFamily: theme.fonts.display,
-            color: theme.colors.foreground,
-          },
-          unstable_headerRightItems: () => [
-            {
-              type: 'button',
-              label: 'Delete',
-              icon: { type: 'sfSymbol', name: 'trash' } as const,
-              tintColor: theme.colors.danger,
-              onPress: confirmDelete,
-            },
-          ],
+      <Stack.Title
+        style={{
+          fontFamily: theme.fonts.display,
+          color: theme.colors.foreground,
         }}
-      />
+      >
+        {space.name}
+      </Stack.Title>
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon="trash"
+          tintColor={theme.colors.danger}
+          onPress={confirmDelete}
+        >
+          Delete
+        </Stack.Toolbar.Button>
+      </Stack.Toolbar>
       <View style={styles.container}>
         <MasonryFeed
           items={space.items}

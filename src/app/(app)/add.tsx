@@ -133,35 +133,35 @@ export default function AddScreen() {
           headerShown: true,
           headerTransparent: false,
           headerStyle: { backgroundColor: theme.colors.background },
-          // Animated title persists across mode changes so the text cascades
-          // between "Save something" / "New note" / "Save an article".
-          headerTitle: () => <AnimatedText text={title} style={styles.heading} />,
-          unstable_headerLeftItems: () =>
-            isComposer
-              ? [
-                  {
-                    type: 'button' as const,
-                    label: 'Back',
-                    icon: { type: 'sfSymbol', name: 'chevron.left' } as const,
-                    tintColor: theme.colors.primary,
-                    onPress: () => setMode('menu'),
-                  },
-                ]
-              : [],
-          unstable_headerRightItems: () =>
-            isComposer
-              ? [
-                  {
-                    type: 'button' as const,
-                    label: 'Save',
-                    icon: { type: 'sfSymbol', name: 'checkmark' } as const,
-                    tintColor: canSave ? theme.colors.primary : theme.colors.muted,
-                    onPress: save,
-                  },
-                ]
-              : [],
         }}
       />
+      {/* Animated title persists across mode changes so the text cascades
+          between "Save something" / "New note" / "Save an article". */}
+      <Stack.Title asChild>
+        <AnimatedText text={title} style={styles.heading} />
+      </Stack.Title>
+      {isComposer && (
+        <>
+          <Stack.Toolbar placement="left">
+            <Stack.Toolbar.Button
+              icon="chevron.left"
+              tintColor={theme.colors.primary}
+              onPress={() => setMode('menu')}
+            >
+              Back
+            </Stack.Toolbar.Button>
+          </Stack.Toolbar>
+          <Stack.Toolbar placement="right">
+            <Stack.Toolbar.Button
+              icon="checkmark"
+              tintColor={canSave ? theme.colors.primary : theme.colors.muted}
+              onPress={save}
+            >
+              Save
+            </Stack.Toolbar.Button>
+          </Stack.Toolbar>
+        </>
+      )}
 
       {isComposer ? (
         <TextInput
