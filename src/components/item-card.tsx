@@ -24,6 +24,13 @@ export type FeedItem = {
   tags: string[];
 };
 
+// Describes which list a card belongs to, so the detail screen can rebuild the
+// same ordered sibling set for horizontal swipe-paging.
+export type ItemSource =
+  | { from: 'home' }
+  | { from: 'space'; spaceId: string }
+  | { from: 'search'; q: string };
+
 // Standard OpenGraph image shape (1200×630) — the default when a link's real
 // hero dimensions weren't captured.
 const OG_RATIO = 1.91;
@@ -35,7 +42,7 @@ function clampRatio(ratio: number | undefined, fallback: number) {
   return Math.min(Math.max(value, 0.5), 2);
 }
 
-export function ItemCard({ item }: { item: FeedItem }) {
+export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource }) {
   const { theme } = useUnistyles();
   const deleteItem = useMutation(api.items.deleteItem);
 
@@ -57,7 +64,10 @@ export function ItemCard({ item }: { item: FeedItem }) {
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.cell}>
-      <Link href={`/item/${item._id}`} asChild>
+      <Link
+        href={{ pathname: '/item/[id]', params: { id: item._id, ...source } }}
+        asChild
+      >
         <Link.Trigger withAppleZoom>
           <Pressable
             style={({ pressed }) => [

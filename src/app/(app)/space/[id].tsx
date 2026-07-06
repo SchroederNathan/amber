@@ -73,6 +73,7 @@ export default function SpaceScreen() {
       <View style={styles.container}>
         <MasonryFeed
           items={space.items}
+          source={{ from: 'space', spaceId: id }}
           ListEmptyComponent={
             <EmptyState
               title="Nothing filed yet"

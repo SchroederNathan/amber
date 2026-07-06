@@ -51,7 +51,7 @@ export default function SearchScreen() {
           message={`No saves match “${query}”.`}
         />
       ) : (
-        <MasonryFeed items={results ?? []} />
+        <MasonryFeed items={results ?? []} source={{ from: 'search', q: query }} />
       )}
       <ProgressiveBlurHeader />
     </View>
