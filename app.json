@@ -55,6 +55,12 @@
       "expo-secure-store",
       "expo-web-browser",
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Amber adds events to your calendar from things you've saved."
+        }
+      ],
+      [
         "expo-sharing",
         {
           "ios": {

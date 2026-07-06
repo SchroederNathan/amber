@@ -25,6 +25,26 @@ const itemStatusValidator = v.union(
   v.literal("failed"),
 );
 
+// A pressable action the AI attaches to an item. `kind` is a closed set so the
+// client can map each one to a guaranteed-executable handler and a valid icon;
+// `label` is the button text and `value` is the payload (URL, text, number…).
+export const intentKindValidator = v.union(
+  v.literal("open_url"),
+  v.literal("copy"),
+  v.literal("web_search"),
+  v.literal("open_maps"),
+  v.literal("call"),
+  v.literal("email"),
+  v.literal("message"),
+  v.literal("add_event"),
+);
+
+export const intentValidator = v.object({
+  kind: intentKindValidator,
+  label: v.string(),
+  value: v.string(),
+});
+
 const itemFields = {
   _id: v.id("items"),
   _creationTime: v.number(),
@@ -43,6 +63,7 @@ const itemFields = {
   siteName: v.optional(v.string()),
   heroImageUrl: v.optional(v.string()),
   note: v.optional(v.string()),
+  intents: v.optional(v.array(intentValidator)),
   searchText: v.string(),
 };
 
@@ -299,6 +320,7 @@ export const finalizeItem = internalMutation({
     siteName: v.optional(v.string()),
     heroImageUrl: v.optional(v.string()),
     aspectRatio: v.optional(v.number()),
+    intents: v.optional(v.array(intentValidator)),
     status: itemStatusValidator,
   },
   returns: v.null(),
@@ -307,6 +329,8 @@ export const finalizeItem = internalMutation({
     if (item === null) {
       return null;
     }
+    // Intents are actions, not descriptive text — deliberately kept out of
+    // searchText so labels like "Open in X" don't skew search relevance.
     const searchText = buildSearchText({
       title: args.title,
       description: args.description,
@@ -321,6 +345,7 @@ export const finalizeItem = internalMutation({
       siteName: args.siteName,
       heroImageUrl: args.heroImageUrl,
       aspectRatio: args.aspectRatio,
+      intents: args.intents,
       status: args.status,
       searchText,
     });

@@ -22,6 +22,26 @@ export default defineSchema({
     siteName: v.optional(v.string()),
     heroImageUrl: v.optional(v.string()),
     note: v.optional(v.string()),
+    // AI-proposed pressable actions. Optional so pre-existing rows validate
+    // without a backfill. `kind` is a closed union (mirrors items.ts).
+    intents: v.optional(
+      v.array(
+        v.object({
+          kind: v.union(
+            v.literal("open_url"),
+            v.literal("copy"),
+            v.literal("web_search"),
+            v.literal("open_maps"),
+            v.literal("call"),
+            v.literal("email"),
+            v.literal("message"),
+            v.literal("add_event"),
+          ),
+          label: v.string(),
+          value: v.string(),
+        }),
+      ),
+    ),
     searchText: v.string(),
   })
     .index("by_user", ["userId"])

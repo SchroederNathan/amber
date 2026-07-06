@@ -1,4 +1,6 @@
+import { IntentChip } from '@/components/intent-chip';
 import { TagChip } from '@/components/tag-chip';
+import { runIntent } from '@/lib/intents';
 import { displayHost } from '@/lib/url';
 import { convexQuery } from '@convex-dev/react-query';
 import { api } from '@convex/_generated/api';
@@ -112,6 +114,21 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           <Text style={styles.description}>{item.description}</Text>
         ) : null}
 
+        {item.intents && item.intents.length > 0 ? (
+          <View style={styles.intentsRow}>
+            {item.intents.map((intent, index) => (
+              <IntentChip
+                key={`${intent.kind}-${index}`}
+                kind={intent.kind}
+                label={intent.label}
+                onPress={() => {
+                  void runIntent(intent.kind, intent.value).catch(() => {});
+                }}
+              />
+            ))}
+          </View>
+        ) : null}
+
         {item.tags.length > 0 ? (
           <View style={styles.chipsRow}>
             {item.tags.map((tag) => (
@@ -220,6 +237,12 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.gap(0.75),
+    justifyContent: 'center',
+  },
+  intentsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.gap(1),
     justifyContent: 'center',
   },
   article: {

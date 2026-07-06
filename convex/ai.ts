@@ -18,6 +18,35 @@ const SYSTEM_PROMPT =
   "punchy — like a label on a folder, not a headline. Aim for 2-4 words, never a full " +
   "sentence, and never end with a period.";
 
+// The closed set of intent kinds the model may emit. Kept in sync with the
+// Convex validator in items.ts; anything outside this set is dropped before
+// finalize so a hallucinated kind can never reach the DB.
+const INTENT_KINDS = [
+  "open_url",
+  "copy",
+  "web_search",
+  "open_maps",
+  "call",
+  "email",
+  "message",
+  "add_event",
+] as const;
+
+// Appended to every classification prompt. Describes the catalog and the rules
+// that keep intents genuinely useful (and, for social posts, honest).
+const INTENTS_PROMPT_BLOCK = [
+  "Also propose up to 5 useful actions ('intents') the user could take on this item. Only include ones that clearly apply — an empty list is fine, and do not pad. Each intent has a kind, a short label (1-3 words, no trailing punctuation), and a value (the payload). Available kinds:",
+  "- open_url: open a link, or deep-link into a native app (a social post, video, profile, product page). value must be a full https:// URL. For a social post in a screenshot, if you can clearly read the @handle, link to that profile (e.g. https://x.com/HANDLE) — NEVER invent a post/status id you cannot actually see. If the saved item already has a URL pointing at a specific post, use that exact URL.",
+  "- copy: copy a short, specific string to the clipboard (an address, code, wallet/handle, quoted line). Put the exact text in value.",
+  "- web_search: search the web. value is the query.",
+  "- open_maps: open a place in maps. value is a place name or address.",
+  "- call: call a phone number. value is the phone number.",
+  "- message: text a phone number. value is the phone number.",
+  "- email: email someone. value is the email address.",
+  "- add_event: add a calendar event. value is the event title.",
+  "Give each a concrete label like 'Open in X', 'Copy address', 'Call', or 'Add to calendar'.",
+].join("\n");
+
 // How much extracted text to feed the classifier. The model only needs enough
 // to understand the piece — it doesn't read the whole thing.
 const MAX_CONTENT_CHARS = 8000;
@@ -395,6 +424,24 @@ async function fetchPage(url: string): Promise<PageData> {
 // AI classification
 // ---------------------------------------------------------------------------
 
+const intentSchema = z.object({
+  kind: z
+    .enum(INTENT_KINDS)
+    .describe(
+      "The action type. open_url: open a link / deep-link into a native app via an https URL. copy: copy exact text. web_search: search a term. open_maps: open a place. call/message: a phone number. email: an email address. add_event: add a calendar event.",
+    ),
+  label: z
+    .string()
+    .describe(
+      "Short button text, 1-3 words, e.g. 'Open in X', 'Copy address', 'Call'. No trailing punctuation.",
+    ),
+  value: z
+    .string()
+    .describe(
+      "The payload. open_url: a real https:// URL you can actually see (never a guessed id). copy: the exact text. web_search: the query. open_maps: place/address. call/message: phone number. email: email address. add_event: event title.",
+    ),
+});
+
 const itemAnalysisSchema = z.object({
   title: z
     .string()
@@ -412,7 +459,56 @@ const itemAnalysisSchema = z.object({
     .describe(
       "The names of the provided spaces this item clearly belongs to; empty if none match",
     ),
+  intents: z
+    .array(intentSchema)
+    .describe(
+      "0-5 pressable actions that would be genuinely useful for this item. Empty if none clearly apply; do not pad.",
+    ),
 });
+
+type Intent = z.infer<typeof intentSchema>;
+
+const ALLOWED_INTENT_KINDS = new Set<string>(INTENT_KINDS);
+
+/**
+ * Clean the model's proposed intents before they're persisted: drop unknown
+ * kinds, trim/limit text, require a plausible payload per kind (open_url must
+ * be http(s); email needs an @; call/message need a digit), dedupe, and cap the
+ * count. A rejected intent is simply omitted — never fails the whole finalize.
+ */
+function sanitizeIntents(raw: Intent[] | undefined): Intent[] {
+  const seen = new Set<string>();
+  return (raw ?? [])
+    .filter((i) => ALLOWED_INTENT_KINDS.has(i.kind))
+    .map((i) => ({
+      kind: i.kind,
+      label: i.label.trim().slice(0, 40),
+      value: i.value.trim(),
+    }))
+    .filter((i) => i.label !== "" && i.value !== "")
+    .filter((i) => {
+      switch (i.kind) {
+        case "open_url":
+          return /^https?:\/\//i.test(i.value);
+        case "email":
+          return i.value.includes("@");
+        case "call":
+        case "message":
+          return /\d/.test(i.value);
+        default:
+          return true;
+      }
+    })
+    .filter((i) => {
+      const key = `${i.kind}|${i.value.toLowerCase()}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
+}
 
 function spacesPromptBlock(
   spaces: { name: string; description?: string }[],
@@ -466,6 +562,7 @@ export const processItem = internalAction({
             page.content
               ? `Page content:\n${page.content.slice(0, 6000)}`
               : "No page content could be extracted.",
+            INTENTS_PROMPT_BLOCK,
           ]
             .filter((line) => line !== "")
             .join("\n\n"),
@@ -492,6 +589,7 @@ export const processItem = internalAction({
                   text: [
                     "You are helping organize a save-it-for-later app. Analyze this saved image and produce a short evocative title, a 1-2 sentence description of what it shows, 4-8 lowercase tags (one or two words each), and matching space names.",
                     spacesBlock,
+                    INTENTS_PROMPT_BLOCK,
                   ].join("\n\n"),
                 },
                 { type: "image", image: new URL(imageUrl) },
@@ -512,6 +610,7 @@ export const processItem = internalAction({
             "You are helping organize a save-it-for-later app. Analyze this saved note and produce a short evocative title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.",
             spacesBlock,
             `Note:\n${item.note.slice(0, MAX_CONTENT_CHARS)}`,
+            INTENTS_PROMPT_BLOCK,
           ].join("\n\n"),
         });
         result = object;
@@ -541,6 +640,7 @@ export const processItem = internalAction({
         // client captured on upload (patching undefined would drop the field).
         aspectRatio:
           item.type === "link" ? page?.heroAspectRatio : item.aspectRatio,
+        intents: sanitizeIntents(result.intents),
         status: "ready",
       });
       if (spaceIds.length > 0) {

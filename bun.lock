@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "amber",
@@ -20,6 +21,7 @@
         "expo-apple-authentication": "~57.0.0",
         "expo-auth-session": "~57.0.1",
         "expo-blur": "~57.0.0",
+        "expo-calendar": "~57.0.0",
         "expo-clipboard": "~57.0.0",
         "expo-constants": "~57.0.3",
         "expo-dev-client": "~57.0.5",
@@ -1110,6 +1112,8 @@
     "expo-auth-session": ["expo-auth-session@57.0.1", "", { "dependencies": { "expo-application": "~57.0.0", "expo-constants": "~57.0.2", "expo-crypto": "~57.0.0", "expo-linking": "~57.0.1", "expo-web-browser": "~57.0.0", "invariant": "^2.2.4" }, "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-B4FnqPPBaAVc46/W8V2Ygs9UDauePDW1GXaA7fkVps4dQx63Q7qw01f/0BretiR7Fyli7GpVZB5L2a+7tyhdtQ=="],
 
     "expo-blur": ["expo-blur@57.0.0", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-cn+LlmOdf7swx80v6yngW9AVl7m1F4cQGpfeJx/Jckgb6C4/sdA5jy/f4wBJCGCZs+2qpPEjlUkQ2Q2+7LQiuA=="],
+
+    "expo-calendar": ["expo-calendar@57.0.0", "", { "peerDependencies": { "expo": "*", "react-native": "*" } }, "sha512-0e1PMK1Ds8uNIAbEgg78zL4qH3J6w8/Hue1AbjIZJu3TZ9+9BzzOj2BnsmorGuGkb+/4qyofrEa4v5WGNtStqg=="],
 
     "expo-clipboard": ["expo-clipboard@57.0.0", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-eIt47f6kvR33HOnIEWvs9l1AUAY4GeLY27szwamSuwRl7nntNythSFFbmnrEtiSUaz//y8XVqCG9WLpdMkOpjA=="],
 
