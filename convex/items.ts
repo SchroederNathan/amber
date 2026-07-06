@@ -67,7 +67,9 @@ const itemFields = {
   searchText: v.string(),
 };
 
-const enrichedItemValidator = v.object({
+// Exported so spaces.ts reuses the exact same shape — a second hand-written
+// copy is how `capturedAt`/`intents` drifted out of getSpace's validator.
+export const enrichedItemValidator = v.object({
   ...itemFields,
   imageUrl: v.union(v.string(), v.null()),
 });
