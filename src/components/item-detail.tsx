@@ -12,7 +12,15 @@ import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import type { FunctionReturnType } from 'convex/server';
 import { memo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // A row as returned by the list queries (listItems / searchItems / getSpace) —
@@ -34,6 +42,12 @@ type Props = {
 export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props) {
   const headerHeight = useHeaderHeight();
   const { theme } = useUnistyles();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // Cap the hero so a tall portrait image can't fill the whole screen and hide
+  // the title, description, and actions below it.
+  const maxHeroHeight = height * 0.55;
 
   // The list row already has everything but the item's spaces; fetch those
   // separately (cached and cheap) so the space chips can appear. Everything
@@ -51,15 +65,28 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
       .map((p) => p.trim())
       .filter((p) => p.length > 0) ?? [];
 
+  // Source shape; OG images default to 1200×630 (≈1.91).
+  const heroAspect = item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4);
+
+  // Size the framed photo up front from its aspect ratio: fill the width the
+  // frame allows, but never taller than the cap — and when the cap bites, pull
+  // the width back in too so the image keeps its shape and the frame hugs it
+  // (no cropping, no lopsided gap). The frame insets the image by its own
+  // horizontal margin + padding.
+  const frameInset = theme.gap(2) * 2 + theme.gap(1) * 2;
+  const heroMaxWidth = width - frameInset;
+  const heroHeight = Math.min(heroMaxWidth / heroAspect, maxHeroHeight);
+  const heroWidth = heroHeight * heroAspect;
+
   const hero = heroUri ? (
     <Image
       source={{ uri: heroUri }}
-      contentFit={item.isSticker ? 'contain' : 'cover'}
-      style={[
-        item.isSticker ? styles.hero : styles.heroImage,
-        // Match the source shape; OG images default to 1200×630 (≈1.91).
-        { aspectRatio: item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1.4) },
-      ]}
+      contentFit="contain"
+      style={
+        item.isSticker
+          ? [styles.hero, { aspectRatio: heroAspect, maxHeight: maxHeroHeight }]
+          : [styles.heroImage, { width: heroWidth, height: heroHeight }]
+      }
     />
   ) : null;
 
@@ -67,11 +94,11 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
     <ScrollView
       contentInsetAdjustmentBehavior="never"
       style={[styles.container, { paddingTop: headerHeight + theme.gap(5) }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={{ paddingBottom: insets.bottom + theme.gap(4) }}
       showsVerticalScrollIndicator={false}
     >
       {heroUri ? (
-        <View style={!item.isSticker && styles.heroContainer}>
+        <View style={item.isSticker ? undefined : styles.heroContainer}>
           {isZoomTarget ? <Link.AppleZoomTarget>{hero}</Link.AppleZoomTarget> : hero}
         </View>
       ) : null}
@@ -110,10 +137,6 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           </View>
         ) : null}
 
-        {item.description ? (
-          <Text style={styles.description}>{item.description}</Text>
-        ) : null}
-
         {item.intents && item.intents.length > 0 ? (
           <View style={styles.intentsRow}>
             {item.intents.map((intent, index) => (
@@ -127,6 +150,10 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
               />
             ))}
           </View>
+        ) : null}
+
+        {item.description ? (
+          <Text style={styles.description}>{item.description}</Text>
         ) : null}
 
         {item.tags.length > 0 ? (
@@ -174,9 +201,6 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  content: {
-    paddingBottom: theme.gap(6),
-  },
   hero: {
     width: '100%',
     // Full-bleed so the card image (a die-cut sticker) zooms edge-to-edge.
@@ -185,6 +209,9 @@ const styles = StyleSheet.create((theme) => ({
   // the padded look carries through the Apple zoom into this screen.
   heroContainer: {
     backgroundColor: 'white',
+    // Hug the image so a capped portrait sits as a centered card rather than
+    // leaving a gap in a full-width frame.
+    alignSelf: 'center',
     marginHorizontal: theme.gap(2),
     borderRadius: theme.radius.lg,
     borderCurve: 'continuous',
@@ -192,7 +219,6 @@ const styles = StyleSheet.create((theme) => ({
     boxShadow: `0 0 4px 0 ${theme.colors.imageBorder}`,
   },
   heroImage: {
-    width: '100%',
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
