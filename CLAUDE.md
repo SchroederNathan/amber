@@ -132,3 +132,17 @@ the Clerk JWT issuer configured in `auth.config.ts`.
 Argent MCP tools are configured for this repo — use them (not `xcrun simctl`) to boot simulators,
 tap, screenshot, and verify UI changes. Always call a discovery tool (`describe` /
 `debugger-component-tree`) before tapping; never guess coordinates.
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->
