@@ -1,4 +1,5 @@
 import { api } from '@convex/_generated/api';
+import type { Id } from '@convex/_generated/dataModel';
 import { useMutation } from 'convex/react';
 import { File } from 'expo-file-system';
 import { fetch as expoFetch } from 'expo/fetch';
@@ -17,16 +18,16 @@ export type LocalImage = {
 
 /**
  * Uploads local image files to Convex storage and creates items for them.
- * Returns a function that resolves once every image has been handed off —
- * AI tagging continues server-side afterwards.
+ * Returns a function that resolves with the created item ids once every
+ * image has been handed off — AI tagging continues server-side afterwards.
  */
 export function useSaveImages() {
   const generateUploadUrl = useMutation(api.items.generateUploadUrl);
   const createImageItem = useMutation(api.items.createImageItem);
 
   return useCallback(
-    async (images: LocalImage[]) => {
-      await Promise.all(
+    async (images: LocalImage[]): Promise<Id<'items'>[]> => {
+      return await Promise.all(
         images.map(async (image) => {
           const uploadUrl = await generateUploadUrl();
           const file = new File(image.uri);
@@ -41,7 +42,7 @@ export function useSaveImages() {
           const { storageId } = await result.json();
           const aspectRatio =
             image.width && image.height ? image.width / image.height : undefined;
-          await createImageItem({
+          return await createImageItem({
             storageId,
             aspectRatio,
             isSticker: image.isSticker,

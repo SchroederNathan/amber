@@ -61,6 +61,13 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Amber lets you tidy your photo library — keep, delete, or save photos into your hub.",
+          "savePhotosPermission": "Amber can save images back to your photo library."
+        }
+      ],
+      [
         "expo-sharing",
         {
           "ios": {

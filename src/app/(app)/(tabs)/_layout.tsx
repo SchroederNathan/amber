@@ -21,6 +21,12 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>Spaces</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(tidy)">
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'photo.stack', selected: 'photo.stack.fill' }}
+        />
+        <NativeTabs.Trigger.Label>Tidy</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(search)" role="search">
         <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
