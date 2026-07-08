@@ -42,6 +42,27 @@ export default defineSchema({
         }),
       ),
     ),
+    // Real product results from the user-triggered "Find links" pass
+    // (SerpAPI Google Shopping). `productsStatus` tracks the in-flight action
+    // so the button can show progress; absent = never searched.
+    products: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          url: v.string(),
+          price: v.optional(v.string()),
+          merchant: v.optional(v.string()),
+          thumbnailUrl: v.optional(v.string()),
+        }),
+      ),
+    ),
+    productsStatus: v.optional(
+      v.union(
+        v.literal("searching"),
+        v.literal("ready"),
+        v.literal("failed"),
+      ),
+    ),
     searchText: v.string(),
   })
     .index("by_user", ["userId"])

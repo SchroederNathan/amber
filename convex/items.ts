@@ -46,6 +46,22 @@ export const intentValidator = v.object({
   value: v.string(),
 });
 
+// A real product result from the user-triggered "Find links" pass. Mirrors
+// the schema; price stays a display string ("$1,299.00") — no math happens.
+export const productValidator = v.object({
+  title: v.string(),
+  url: v.string(),
+  price: v.optional(v.string()),
+  merchant: v.optional(v.string()),
+  thumbnailUrl: v.optional(v.string()),
+});
+
+export const productsStatusValidator = v.union(
+  v.literal("searching"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
 const itemFields = {
   _id: v.id("items"),
   _creationTime: v.number(),
@@ -65,6 +81,8 @@ const itemFields = {
   heroImageUrl: v.optional(v.string()),
   note: v.optional(v.string()),
   intents: v.optional(v.array(intentValidator)),
+  products: v.optional(v.array(productValidator)),
+  productsStatus: v.optional(productsStatusValidator),
   searchText: v.string(),
 };
 
@@ -366,6 +384,30 @@ export const createNoteItem = mutation({
   },
 });
 
+/**
+ * User-triggered product search ("Find links"). Explicit button = bounded
+ * cost: one vision/text query + one SerpAPI call per press, never automatic.
+ */
+export const findLinks = mutation({
+  args: { id: v.id("items") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const item = await ctx.db.get(args.id);
+    if (item === null || item.userId !== userId) {
+      throw new Error("Item not found");
+    }
+    if (item.status !== "ready" || item.productsStatus === "searching") {
+      return null;
+    }
+    await ctx.db.patch(item._id, { productsStatus: "searching" });
+    await ctx.scheduler.runAfter(0, internal.ai.findProductLinks, {
+      itemId: item._id,
+    });
+    return null;
+  },
+});
+
 export const deleteItem = mutation({
   args: { id: v.id("items") },
   returns: v.null(),
@@ -487,6 +529,28 @@ export const setAspectRatioInternal = internalMutation({
       return null;
     }
     await ctx.db.patch(args.itemId, { aspectRatio: args.aspectRatio });
+    return null;
+  },
+});
+
+export const setProductsInternal = internalMutation({
+  args: {
+    itemId: v.id("items"),
+    products: v.optional(v.array(productValidator)),
+    productsStatus: productsStatusValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.itemId);
+    if (item === null) {
+      return null;
+    }
+    await ctx.db.patch(args.itemId, {
+      // On failure the previous results (if any) are kept; only the status
+      // flips so the button can offer a retry.
+      ...(args.products !== undefined ? { products: args.products } : {}),
+      productsStatus: args.productsStatus,
+    });
     return null;
   },
 });
