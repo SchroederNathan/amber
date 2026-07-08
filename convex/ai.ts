@@ -794,6 +794,171 @@ export const recommendForSpace = internalAction({
   },
 });
 
+const productQuerySchema = z.object({
+  query: z
+    .string()
+    .describe(
+      "A concise shopping search query for the primary product: brand (if identifiable) + product type + distinguishing attributes, e.g. 'west elm leather sofa cognac'. Empty string if there is no identifiable product.",
+    ),
+});
+
+type Product = {
+  title: string;
+  url: string;
+  price?: string;
+  merchant?: string;
+  thumbnailUrl?: string;
+};
+
+const MAX_PRODUCTS = 5;
+
+/** Pull the fields we render out of SerpAPI's google_shopping response. */
+function parseShoppingResults(payload: unknown): Product[] {
+  const results = (payload as { shopping_results?: unknown[] })
+    ?.shopping_results;
+  if (!Array.isArray(results)) {
+    return [];
+  }
+  const products: Product[] = [];
+  for (const raw of results) {
+    const entry = raw as {
+      title?: unknown;
+      product_link?: unknown;
+      link?: unknown;
+      price?: unknown;
+      source?: unknown;
+      thumbnail?: unknown;
+    };
+    const title = typeof entry.title === "string" ? entry.title.trim() : "";
+    const url =
+      typeof entry.product_link === "string"
+        ? entry.product_link
+        : typeof entry.link === "string"
+          ? entry.link
+          : "";
+    if (title === "" || !/^https?:\/\//i.test(url)) {
+      continue;
+    }
+    products.push({
+      title: title.slice(0, 120),
+      url,
+      price: typeof entry.price === "string" ? entry.price : undefined,
+      merchant: typeof entry.source === "string" ? entry.source : undefined,
+      thumbnailUrl:
+        typeof entry.thumbnail === "string" ? entry.thumbnail : undefined,
+    });
+    if (products.length >= MAX_PRODUCTS) {
+      break;
+    }
+  }
+  return products;
+}
+
+/**
+ * Phase-3 "Find links": user-pressed the button on an item, so identify the
+ * product (vision for images, text otherwise), run one SerpAPI Google
+ * Shopping search, and store the top real results (price, merchant,
+ * thumbnail) on the item.
+ */
+export const findProductLinks = internalAction({
+  args: { itemId: v.id("items") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const fail = () =>
+      ctx.runMutation(internal.items.setProductsInternal, {
+        itemId: args.itemId,
+        productsStatus: "failed",
+      });
+    try {
+      const item = await ctx.runQuery(internal.items.getItemInternal, {
+        itemId: args.itemId,
+      });
+      if (item === null) {
+        return null;
+      }
+      const apiKey = process.env.SERPAPI_KEY;
+      if (!apiKey) {
+        console.error("findProductLinks: SERPAPI_KEY is not set");
+        await fail();
+        return null;
+      }
+
+      // Build the product query. Images go through the vision model; links
+      // and notes already have classified text that describes the thing.
+      let query: string;
+      if (item.type === "image" && item.storageId) {
+        const imageUrl = await ctx.storage.getUrl(item.storageId);
+        if (imageUrl === null) {
+          await fail();
+          return null;
+        }
+        const { object } = await generateObject({
+          model: MODEL,
+          schema: productQuerySchema,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Identify the primary product shown in this image and produce a shopping search query for it. If nothing in the image is a purchasable product, return an empty query.",
+                },
+                { type: "image", image: new URL(imageUrl) },
+              ],
+            },
+          ],
+        });
+        query = object.query.trim();
+      } else {
+        const { object } = await generateObject({
+          model: MODEL,
+          schema: productQuerySchema,
+          prompt: [
+            "Identify the primary purchasable product described by this saved item and produce a shopping search query for it. If it does not describe a product, return an empty query.",
+            `Title: ${item.title ?? "(untitled)"}`,
+            item.description ? `Description: ${item.description}` : "",
+            item.tags.length > 0 ? `Tags: ${item.tags.join(", ")}` : "",
+            item.url ? `URL: ${item.url}` : "",
+            item.note ? `Note: ${item.note.slice(0, 2000)}` : "",
+          ]
+            .filter((line) => line !== "")
+            .join("\n"),
+        });
+        query = object.query.trim();
+      }
+
+      if (query === "") {
+        // Not a product — an empty, successful result (the UI says so).
+        await ctx.runMutation(internal.items.setProductsInternal, {
+          itemId: args.itemId,
+          products: [],
+          productsStatus: "ready",
+        });
+        return null;
+      }
+
+      const response = await fetch(
+        `https://serpapi.com/search.json?engine=google_shopping&gl=us&hl=en&q=${encodeURIComponent(query)}&api_key=${apiKey}`,
+        { signal: AbortSignal.timeout(20000) },
+      );
+      if (!response.ok) {
+        throw new Error(`SerpAPI responded ${response.status}`);
+      }
+      const products = parseShoppingResults(await response.json());
+
+      await ctx.runMutation(internal.items.setProductsInternal, {
+        itemId: args.itemId,
+        products,
+        productsStatus: "ready",
+      });
+    } catch (error) {
+      console.error(`findProductLinks failed for ${args.itemId}:`, error);
+      await fail();
+    }
+    return null;
+  },
+});
+
 const steerSchema = z.object({
   intents: z
     .array(intentSchema)

@@ -6,6 +6,7 @@ import { displayHost } from '@/lib/url';
 import { convexQuery } from '@convex-dev/react-query';
 import { api } from '@convex/_generated/api';
 import { useQuery } from '@tanstack/react-query';
+import { useMutation } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/build/react-navigation';
@@ -211,6 +212,10 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           </View>
         ) : null}
 
+        {item.status === 'ready' ? (
+          <ProductsSection item={item} />
+        ) : null}
+
         {item.type === 'note' && item.note && item.title ? (
           <Text selectable style={styles.paragraph}>
             {item.note}
@@ -237,6 +242,91 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
     </ScrollView>
   );
 });
+
+// Phase-3 "Find links": a user-triggered SerpAPI shopping search. The button
+// only fires on press (bounded cost); results render as product cards.
+function ProductsSection({ item }: { item: DetailItem }) {
+  const { theme } = useUnistyles();
+  const findLinks = useMutation(api.items.findLinks);
+  const products = item.products;
+  const searching = item.productsStatus === 'searching';
+
+  if (searching) {
+    return (
+      <View style={styles.findLinksRow}>
+        <View style={styles.findLinksChip}>
+          <ActivityIndicator size="small" color={theme.colors.primaryText} />
+          <Text style={styles.findLinksLabel}>Finding links…</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (products && products.length > 0) {
+    return (
+      <View style={styles.productsSection}>
+        <Text style={styles.productsTitle}>Shop</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.productsRow}
+        >
+          {products.map((product, index) => (
+            <Pressable
+              key={`${product.url}-${index}`}
+              style={({ pressed }) => [styles.productCard, pressed && { opacity: 0.85 }]}
+              onPress={() => WebBrowser.openBrowserAsync(product.url)}
+            >
+              {product.thumbnailUrl ? (
+                <Image
+                  source={{ uri: product.thumbnailUrl }}
+                  contentFit="cover"
+                  style={styles.productImage}
+                />
+              ) : (
+                <View style={[styles.productImage, styles.productImageEmpty]}>
+                  <SymbolView name="bag" size={22} tintColor={theme.colors.faint} />
+                </View>
+              )}
+              <Text style={styles.productName} numberOfLines={2}>
+                {product.title}
+              </Text>
+              <View style={styles.productMetaRow}>
+                {product.price ? (
+                  <Text style={styles.productPrice}>{product.price}</Text>
+                ) : null}
+                {product.merchant ? (
+                  <Text style={styles.productMerchant} numberOfLines={1}>
+                    {product.merchant}
+                  </Text>
+                ) : null}
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.findLinksRow}>
+      <Pressable
+        style={({ pressed }) => [styles.findLinksChip, pressed && { opacity: 0.7 }]}
+        onPress={() => findLinks({ id: item._id })}
+        hitSlop={6}
+      >
+        <SymbolView name="bag" size={14} tintColor={theme.colors.primaryText} />
+        <Text style={styles.findLinksLabel}>
+          {item.productsStatus === 'failed'
+            ? 'Find links — try again'
+            : products
+              ? 'No matches — search again'
+              : 'Find links'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 
 // A static two-column masonry for the similar-items strip. The page already
 // scrolls (this lives inside the detail ScrollView), so a virtualized list
@@ -387,5 +477,71 @@ const styles = StyleSheet.create((theme) => ({
   },
   similarColumn: {
     flex: 1,
+  },
+  findLinksRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  findLinksChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.primarySoft,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 50,
+  },
+  findLinksLabel: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 13,
+    color: theme.colors.primaryText,
+  },
+  productsSection: {
+    gap: theme.gap(1),
+  },
+  productsTitle: {
+    fontFamily: theme.fonts.display,
+    fontSize: 18,
+    color: theme.colors.foreground,
+  },
+  productsRow: {
+    gap: theme.gap(1.25),
+  },
+  productCard: {
+    width: 150,
+    gap: theme.gap(0.75),
+  },
+  productImage: {
+    width: 150,
+    height: 130,
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  productImageEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productName: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: theme.colors.foreground,
+  },
+  productMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.gap(0.75),
+  },
+  productPrice: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 12,
+    color: theme.colors.foreground,
+  },
+  productMerchant: {
+    flexShrink: 1,
+    fontFamily: theme.fonts.regular,
+    fontSize: 11,
+    color: theme.colors.muted,
   },
 }));
