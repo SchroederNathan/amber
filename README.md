@@ -61,10 +61,12 @@ Set the backend secrets on your Convex deployment (Convex dashboard or `bunx con
 
 ```bash
 bunx convex env set AI_GATEWAY_API_KEY <your-vercel-ai-gateway-key>
+bunx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-clerk-instance>.clerk.accounts.dev
 ```
 
-Point Convex at Clerk by editing the JWT issuer domain in `convex/auth.config.ts` (Clerk JWT
-template must use `applicationID: "convex"`).
+`convex/auth.config.ts` reads the Clerk JWT issuer from `CLERK_JWT_ISSUER_DOMAIN`, so set it per
+deployment (dev and prod each get their own instance's domain). The Clerk JWT template must use
+`applicationID: "convex"`.
 
 ### 3. Run the backend
 

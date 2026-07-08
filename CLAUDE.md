@@ -124,8 +124,9 @@ not deep relative paths.
 ## Environment variables
 
 Client (`.env`, `EXPO_PUBLIC_*`): `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CONVEX_URL`.
-Convex deployment env (set via `bunx convex env set` or dashboard): `AI_GATEWAY_API_KEY`, plus
-the Clerk JWT issuer configured in `auth.config.ts`.
+Convex deployment env (set via `bunx convex env set` or dashboard): `AI_GATEWAY_API_KEY` and
+`CLERK_JWT_ISSUER_DOMAIN` (the Clerk JWT issuer that `auth.config.ts` reads; set per deployment so
+dev and prod each trust their own Clerk instance).
 
 ## Working on the running app
 
