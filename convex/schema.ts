@@ -54,12 +54,47 @@ export default defineSchema({
     userId: v.string(),
     name: v.string(),
     description: v.optional(v.string()),
+    // Dynamic = Amber keeps suggesting new saves into this space. Absent means
+    // false (legacy spaces stay quiet until edited).
+    dynamic: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
 
   spaceItems: defineTable({
     userId: v.string(),
     spaceId: v.id("spaces"),
     itemId: v.id("items"),
+    // The membership state machine. The AI may only ever write `suggested`
+    // rows and only ever touch `suggested` rows; `saved` and `dismissed` are
+    // user-owned, so the pipeline can never clobber a user decision.
+    // Absent = legacy row = "saved".
+    status: v.optional(
+      v.union(
+        v.literal("suggested"),
+        v.literal("saved"),
+        v.literal("dismissed"),
+      ),
+    ),
+    // Purpose-steered actions scoped to THIS space's membership: the same
+    // couch gets a shopping link in "apartment shopping" and nothing extra in
+    // "interior design". Mirrors items.intents; kinds kept in sync with items.ts.
+    intents: v.optional(
+      v.array(
+        v.object({
+          kind: v.union(
+            v.literal("open_url"),
+            v.literal("copy"),
+            v.literal("web_search"),
+            v.literal("open_maps"),
+            v.literal("call"),
+            v.literal("email"),
+            v.literal("message"),
+            v.literal("add_event"),
+          ),
+          label: v.string(),
+          value: v.string(),
+        }),
+      ),
+    ),
   })
     .index("by_space", ["spaceId"])
     .index("by_item", ["itemId"])

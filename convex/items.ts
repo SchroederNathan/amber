@@ -7,8 +7,9 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { requireUserId } from "./model/auth";
+import { effectiveStatus } from "./model/memberships";
 
 /** Practical per-query cap so a very large library can't blow the read limit. */
 const LIST_CAP = 1000;
@@ -145,6 +146,11 @@ export const getItem = query({
       .collect();
     const spaces: { _id: Id<"spaces">; name: string }[] = [];
     for (const join of joins) {
+      // Only real memberships appear as chips — suggestions and dismissals
+      // are space-screen concerns, not part of the item's identity.
+      if (effectiveStatus(join) !== "saved") {
+        continue;
+      }
       const space = await ctx.db.get(join.spaceId);
       if (space !== null) {
         spaces.push({ _id: space._id, name: space.name });
@@ -174,9 +180,97 @@ export const searchItems = query({
   },
 });
 
+// Similar-items v0: lexical overlap, no new infra. Tags carry most of the
+// signal (they're the classifier's own summary), searchText tokens catch the
+// rest. A vector index over real embeddings replaces this in v1.
+const SIMILAR_CANDIDATES = 300;
+const SIMILAR_LIMIT = 10;
+const SIMILAR_MIN_SCORE = 3;
+
+function searchTokens(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length > 3),
+  );
+}
+
+export const similarItems = query({
+  args: { id: v.id("items") },
+  returns: v.array(enrichedItemValidator),
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const item = await ctx.db.get(args.id);
+    if (item === null || item.userId !== userId || item.status !== "ready") {
+      return [];
+    }
+    const tags = new Set(item.tags);
+    const tokens = searchTokens(item.searchText);
+    if (tags.size === 0 && tokens.size === 0) {
+      return [];
+    }
+
+    const candidates = await ctx.db
+      .query("items")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(SIMILAR_CANDIDATES);
+
+    const scored: { item: Doc<"items">; score: number }[] = [];
+    for (const candidate of candidates) {
+      if (candidate._id === item._id || candidate.status !== "ready") {
+        continue;
+      }
+      let score = 0;
+      for (const tag of candidate.tags) {
+        if (tags.has(tag)) {
+          score += 3;
+        }
+      }
+      for (const token of searchTokens(candidate.searchText)) {
+        if (tokens.has(token)) {
+          score += 1;
+        }
+      }
+      if (score >= SIMILAR_MIN_SCORE) {
+        scored.push({ item: candidate, score });
+      }
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return await Promise.all(
+      scored
+        .slice(0, SIMILAR_LIMIT)
+        .map(({ item: match }) => enrichItem(ctx, match)),
+    );
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Public mutations
 // ---------------------------------------------------------------------------
+
+/**
+ * Adding from inside a space files the new item there immediately — a real
+ * `saved` membership, the user's own act, never subject to AI review.
+ */
+async function saveIntoSpace(
+  ctx: MutationCtx,
+  userId: string,
+  itemId: Id<"items">,
+  spaceId: Id<"spaces">,
+): Promise<void> {
+  const space = await ctx.db.get(spaceId);
+  if (space === null || space.userId !== userId) {
+    throw new Error("Space not found");
+  }
+  await ctx.db.insert("spaceItems", {
+    userId,
+    spaceId,
+    itemId,
+    status: "saved",
+  });
+}
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -193,6 +287,7 @@ export const createImageItem = mutation({
     aspectRatio: v.optional(v.number()),
     isSticker: v.optional(v.boolean()),
     capturedAt: v.optional(v.number()),
+    spaceId: v.optional(v.id("spaces")),
   },
   returns: v.id("items"),
   handler: async (ctx, args) => {
@@ -214,13 +309,16 @@ export const createImageItem = mutation({
       tags: [],
       searchText: "",
     });
+    if (args.spaceId !== undefined) {
+      await saveIntoSpace(ctx, userId, itemId, args.spaceId);
+    }
     await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
     return itemId;
   },
 });
 
 export const createLinkItem = mutation({
-  args: { url: v.string() },
+  args: { url: v.string(), spaceId: v.optional(v.id("spaces")) },
   returns: v.id("items"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -236,13 +334,16 @@ export const createLinkItem = mutation({
       tags: [],
       searchText: "",
     });
+    if (args.spaceId !== undefined) {
+      await saveIntoSpace(ctx, userId, itemId, args.spaceId);
+    }
     await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
     return itemId;
   },
 });
 
 export const createNoteItem = mutation({
-  args: { text: v.string() },
+  args: { text: v.string(), spaceId: v.optional(v.id("spaces")) },
   returns: v.id("items"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -257,6 +358,9 @@ export const createNoteItem = mutation({
       tags: [],
       searchText: "",
     });
+    if (args.spaceId !== undefined) {
+      await saveIntoSpace(ctx, userId, itemId, args.spaceId);
+    }
     await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
     return itemId;
   },
@@ -400,6 +504,13 @@ export const failItem = internalMutation({
   },
 });
 
+/**
+ * The classifier's per-item output: which dynamic spaces this new save fits.
+ * Writes are strictly `suggested`-only — rows the user owns (`saved`,
+ * `dismissed`, or legacy status-less rows) are never created, changed, or
+ * removed here, so the pipeline cannot clobber a user decision by
+ * construction. Existing suggestions not in the new set are withdrawn.
+ */
 export const setSpacesForItem = internalMutation({
   args: {
     itemId: v.id("items"),
@@ -411,22 +522,36 @@ export const setSpacesForItem = internalMutation({
     if (item === null) {
       return null;
     }
+    const wanted = new Set(args.spaceIds);
     const existing = await ctx.db
       .query("spaceItems")
       .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
       .collect();
+    const touched = new Set<Id<"spaces">>();
     for (const join of existing) {
-      await ctx.db.delete(join._id);
+      touched.add(join.spaceId);
+      if (effectiveStatus(join) === "suggested" && !wanted.has(join.spaceId)) {
+        await ctx.db.delete(join._id);
+      }
     }
-    const unique = [...new Set(args.spaceIds)];
-    for (const spaceId of unique) {
+    for (const spaceId of wanted) {
+      // Any pre-existing row wins: already saved, already suggested, or
+      // dismissed (the user said no — never re-suggest).
+      if (touched.has(spaceId)) {
+        continue;
+      }
       const space = await ctx.db.get(spaceId);
-      // Only join spaces that exist and belong to the item's owner.
-      if (space !== null && space.userId === item.userId) {
+      // Only suggest into dynamic spaces that exist and belong to the owner.
+      if (
+        space !== null &&
+        space.userId === item.userId &&
+        space.dynamic === true
+      ) {
         await ctx.db.insert("spaceItems", {
           userId: item.userId,
           spaceId,
           itemId: args.itemId,
+          status: "suggested",
         });
       }
     }
@@ -434,7 +559,11 @@ export const setSpacesForItem = internalMutation({
   },
 });
 
-export const addItemsToSpace = internalMutation({
+/**
+ * The recommendation pass for one space (creation, or dynamic toggled on).
+ * Same invariant as setSpacesForItem: suggested rows in, nothing else touched.
+ */
+export const suggestItemsForSpace = internalMutation({
   args: {
     spaceId: v.id("spaces"),
     itemIds: v.array(v.id("items")),
@@ -449,6 +578,8 @@ export const addItemsToSpace = internalMutation({
       .query("spaceItems")
       .withIndex("by_space", (q) => q.eq("spaceId", args.spaceId))
       .collect();
+    // Any existing row blocks a new suggestion — saved and dismissed are
+    // user decisions, and a live suggestion needn't be re-written.
     const existingItemIds = new Set(existing.map((j) => j.itemId));
     const unique = [...new Set(args.itemIds)];
     for (const itemId of unique) {
@@ -461,9 +592,11 @@ export const addItemsToSpace = internalMutation({
           userId: space.userId,
           spaceId: args.spaceId,
           itemId,
+          status: "suggested",
         });
       }
     }
     return null;
   },
 });
+

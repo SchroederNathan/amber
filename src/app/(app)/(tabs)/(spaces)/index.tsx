@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
+import { SuggestedBadge } from '@/components/suggested-badge';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { convexQuery } from '@convex-dev/react-query';
@@ -66,7 +67,9 @@ function CoverStack({
   cover,
   seed,
 }: {
-  cover: { url: string; type: string; aspectRatio?: number } | undefined;
+  cover:
+    | { url: string; type: string; aspectRatio?: number; suggested?: boolean }
+    | undefined;
   seed: string;
 }) {
   const ratio = cover
@@ -103,6 +106,12 @@ function CoverStack({
           ]}
         >
           <Image source={{ uri: cover.url }} style={styles.coverImage} contentFit="cover" />
+          {/* A pile fronted by a not-yet-accepted pick wears the sparkle. */}
+          {cover.suggested ? (
+            <View style={styles.coverBadge}>
+              <SuggestedBadge size={22} />
+            </View>
+          ) : null}
         </View>
       ) : (
         <View
@@ -151,7 +160,7 @@ export default function SpacesScreen() {
       <View style={styles.container}>
         <EmptyState
           title="Make a space"
-          message={'Spaces are shelves for a theme — design inspiration,\nrecipes, gift ideas. New saves file themselves.'}
+          message={'Spaces are shelves for a theme — design inspiration,\nrecipes, gift ideas. Amber suggests saves that fit;\nyou choose what sticks.'}
         />
       </View>
     );
@@ -255,6 +264,11 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: '#ffffff',
     padding: theme.gap(0.5),
     zIndex: 3,
+  },
+  coverBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   coverImage: {
     flex: 1,

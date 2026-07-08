@@ -26,7 +26,10 @@ export function useSaveImages() {
   const createImageItem = useMutation(api.items.createImageItem);
 
   return useCallback(
-    async (images: LocalImage[]): Promise<Id<'items'>[]> => {
+    async (
+      images: LocalImage[],
+      options?: { spaceId?: Id<'spaces'> },
+    ): Promise<Id<'items'>[]> => {
       return await Promise.all(
         images.map(async (image) => {
           const uploadUrl = await generateUploadUrl();
@@ -47,6 +50,8 @@ export function useSaveImages() {
             aspectRatio,
             isSticker: image.isSticker,
             capturedAt: image.capturedAt,
+            // Saving from inside a space files the item there immediately.
+            spaceId: options?.spaceId,
           });
         }),
       );

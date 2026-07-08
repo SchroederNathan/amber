@@ -524,6 +524,7 @@ function spacesPromptBlock(
   return `The user organizes items into spaces. Candidate spaces:\n${lines}\n\nIn spaceNames, include only the exact names of spaces this item CLEARLY belongs to. Only include confident matches. If none clearly match, return an empty array.`;
 }
 
+
 export const processItem = internalAction({
   args: { itemId: v.id("items") },
   returns: v.null(),
@@ -535,9 +536,12 @@ export const processItem = internalAction({
       if (item === null) {
         return null;
       }
-      const spaces = await ctx.runQuery(internal.spaces.listSpacesInternal, {
+      // Only dynamic spaces are visible to the classifier: matches become
+      // pending suggestions. Non-dynamic spaces never hear from the pipeline.
+      const allSpaces = await ctx.runQuery(internal.spaces.listSpacesInternal, {
         userId: item.userId,
       });
+      const spaces = allSpaces.filter((s) => s.dynamic === true);
       const spacesBlock = spacesPromptBlock(spaces);
 
       let page: PageData | undefined;
@@ -649,6 +653,19 @@ export const processItem = internalAction({
           spaceIds,
         });
       }
+
+      // If the user filed this item straight into spaces while it was still
+      // processing, run the purpose-steering pass now that it's classified.
+      const savedSpaceIds = await ctx.runQuery(
+        internal.spaces.listSavedSpaceIdsForItemInternal,
+        { itemId: args.itemId },
+      );
+      for (const spaceId of savedSpaceIds) {
+        await ctx.scheduler.runAfter(0, internal.ai.steerItemForSpace, {
+          itemId: args.itemId,
+          spaceId,
+        });
+      }
     } catch (error) {
       console.error(`processItem failed for ${args.itemId}:`, error);
       await ctx.runMutation(internal.items.failItem, { itemId: args.itemId });
@@ -689,7 +706,7 @@ export const backfillImageAspectRatios = internalAction({
   },
 });
 
-const reclassifySchema = z.object({
+const recommendSchema = z.object({
   itemNumbers: z
     .array(z.number().int())
     .describe(
@@ -697,7 +714,17 @@ const reclassifySchema = z.object({
     ),
 });
 
-export const reclassifyForNewSpace = internalAction({
+// A recommendation pass surfaces "a couple of good picks", not an exhaustive
+// sweep — the user can always add more by hand or ask again later.
+const MAX_RECOMMENDATIONS = 8;
+
+/**
+ * Recommend existing items for a space, off nothing but its title. Runs when
+ * a space is created, and again whenever its dynamic toggle turns on. Writes
+ * `suggested` rows only — the user decides what actually enters the space —
+ * and never re-suggests anything they already filed or dismissed.
+ */
+export const recommendForSpace = internalAction({
   args: { spaceId: v.id("spaces") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -708,10 +735,17 @@ export const reclassifyForNewSpace = internalAction({
       if (space === null) {
         return null;
       }
-      const items = await ctx.runQuery(internal.items.listReadyItemsInternal, {
-        userId: space.userId,
-        limit: 100,
-      });
+      const memberIds = new Set(
+        await ctx.runQuery(internal.spaces.listMemberItemIdsInternal, {
+          spaceId: args.spaceId,
+        }),
+      );
+      const items = (
+        await ctx.runQuery(internal.items.listReadyItemsInternal, {
+          userId: space.userId,
+          limit: 100,
+        })
+      ).filter((item) => !memberIds.has(item._id));
       if (items.length === 0) {
         return null;
       }
@@ -729,11 +763,11 @@ export const reclassifyForNewSpace = internalAction({
 
       const { object } = await generateObject({
         model: MODEL,
-        schema: reclassifySchema,
+        schema: recommendSchema,
         prompt: [
-          "You are helping organize a save-it-for-later app. The user just created a new space (a themed collection).",
+          "You are helping organize a save-it-for-later app. The user just created a space (a themed collection) and Amber recommends a few existing saves for it — the user decides which to keep.",
           `Space name: "${space.name}"${space.description ? `\nSpace description: ${space.description}` : ""}`,
-          "Below is a numbered list of the user's saved items. Return the numbers of the items that CLEARLY belong in this space. Only include confident matches; if nothing clearly fits, return an empty array.",
+          "Below is a numbered list of the user's saved items. Return the numbers of a handful of items that CLEARLY belong in this space — quality over quantity, high-confidence picks only, at most 8. If nothing clearly fits, return an empty array.",
           itemLines,
         ].join("\n\n"),
       });
@@ -743,16 +777,85 @@ export const reclassifyForNewSpace = internalAction({
         if (Number.isInteger(n) && n >= 1 && n <= items.length) {
           itemIds.push(items[n - 1]._id);
         }
+        if (itemIds.length >= MAX_RECOMMENDATIONS) {
+          break;
+        }
       }
       if (itemIds.length > 0) {
-        await ctx.runMutation(internal.items.addItemsToSpace, {
+        await ctx.runMutation(internal.items.suggestItemsForSpace, {
           spaceId: args.spaceId,
           itemIds,
         });
       }
     } catch (error) {
+      console.error(`recommendForSpace failed for ${args.spaceId}:`, error);
+    }
+    return null;
+  },
+});
+
+const steerSchema = z.object({
+  intents: z
+    .array(intentSchema)
+    .describe(
+      "0-3 actions that serve the space's purpose for this item. Empty if none genuinely apply; do not pad.",
+    ),
+});
+
+/**
+ * Phase-2 purpose steering: when an item lands in a space (direct add or an
+ * accepted suggestion), the space's title steers a light enrich pass. The
+ * result is written to that membership row, so the same couch can carry a
+ * shopping link in "apartment shopping list" and nothing extra elsewhere.
+ */
+export const steerItemForSpace = internalAction({
+  args: { itemId: v.id("items"), spaceId: v.id("spaces") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      const [item, space] = await Promise.all([
+        ctx.runQuery(internal.items.getItemInternal, { itemId: args.itemId }),
+        ctx.runQuery(internal.spaces.getSpaceInternal, {
+          spaceId: args.spaceId,
+        }),
+      ]);
+      if (item === null || space === null || item.status !== "ready") {
+        return null;
+      }
+
+      const { object } = await generateObject({
+        model: MODEL,
+        schema: steerSchema,
+        prompt: [
+          `You are helping a save-it-for-later app. The user filed a saved item into their space "${space.name}" — treat that title as a statement of purpose and propose up to 3 actions ('intents') that serve it for this specific item.`,
+          [
+            `Item title: ${item.title ?? "(untitled)"}`,
+            item.description ? `Description: ${item.description}` : "",
+            item.tags.length > 0 ? `Tags: ${item.tags.join(", ")}` : "",
+            item.url ? `URL: ${item.url}` : "",
+          ]
+            .filter((line) => line !== "")
+            .join("\n"),
+          INTENTS_PROMPT_BLOCK,
+          "Steering by space purpose:",
+          "- Shopping/wishlist space: identify the product and include an open_url intent to a Google Shopping search, https://www.google.com/search?tbm=shop&q=PRODUCT+QUERY, labeled like 'Shop this'.",
+          "- Travel space: prefer open_maps for places and open_url for official/booking pages you can actually see.",
+          "- Recipes/cooking space: a web_search for the dish or an open_url to the recipe.",
+          "Only propose intents that genuinely serve this space's purpose — the item's general actions already exist elsewhere. An empty list is fine.",
+        ].join("\n\n"),
+      });
+
+      const intents = sanitizeIntents(object.intents).slice(0, 3);
+      if (intents.length > 0) {
+        await ctx.runMutation(internal.spaces.setMembershipIntentsInternal, {
+          itemId: args.itemId,
+          spaceId: args.spaceId,
+          intents,
+        });
+      }
+    } catch (error) {
       console.error(
-        `reclassifyForNewSpace failed for ${args.spaceId}:`,
+        `steerItemForSpace failed for ${args.itemId} in ${args.spaceId}:`,
         error,
       );
     }
