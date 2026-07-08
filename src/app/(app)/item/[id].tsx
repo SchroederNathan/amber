@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
+import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +23,7 @@ import {
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import Animated, { FadeOutDown, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -299,23 +300,29 @@ export default function ItemScreen() {
       />
 
       {activeIsSuggested ? (
+        // SlideInDown (not a fade) so the bar never mounts at opacity 0 — a
+        // GlassView whose parent starts fully transparent silently fails to
+        // render the liquid glass (expo/expo#41024).
         <Animated.View
-          entering={FadeInDown.duration(250)}
+          entering={SlideInDown.duration(250)}
           exiting={FadeOutDown.duration(200)}
           style={[styles.decisionBar, { bottom: insets.bottom + theme.gap(1.5) }]}
         >
-          <Pressable
-            onPress={onDismiss}
-            style={({ pressed }) => [styles.dismissButton, pressed && { opacity: 0.8 }]}
-          >
-            <Text style={styles.dismissText}>Dismiss</Text>
+          <Pressable onPress={onDismiss} style={styles.dismissWrap}>
+            <GlassView glassEffectStyle="regular" isInteractive style={styles.decisionButton}>
+              <Text style={styles.dismissText}>Dismiss</Text>
+            </GlassView>
           </Pressable>
-          <Pressable
-            onPress={onAccept}
-            style={({ pressed }) => [styles.acceptButton, pressed && { opacity: 0.8 }]}
-          >
-            <SymbolView name="sparkles" size={15} tintColor="#fff" />
-            <Text style={styles.acceptText}>Add to space</Text>
+          <Pressable onPress={onAccept} style={styles.acceptWrap}>
+            <GlassView
+              glassEffectStyle="regular"
+              isInteractive
+              tintColor={theme.colors.primary}
+              style={styles.decisionButton}
+            >
+              <SymbolView name="sparkles" size={15} tintColor="#fff" />
+              <Text style={styles.acceptText}>Add to space</Text>
+            </GlassView>
           </Pressable>
         </Animated.View>
       ) : null}
@@ -341,25 +348,15 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     gap: theme.gap(1),
   },
-  dismissButton: {
+  dismissWrap: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.gap(1.75),
-    borderRadius: theme.radius.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
   },
-  dismissText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 15,
-    color: theme.colors.muted,
-  },
-  acceptButton: {
+  acceptWrap: {
     flex: 2,
+  },
+  // Shared glass surface for both decision buttons. No backgroundColor/border —
+  // the liquid glass provides the material; the amber CTA sets it via tintColor.
+  decisionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -367,8 +364,12 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.gap(1.75),
     borderRadius: theme.radius.lg,
     borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
-    boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+    overflow: 'hidden',
+  },
+  dismissText: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 15,
+    color: theme.colors.foreground,
   },
   acceptText: {
     fontFamily: theme.fonts.bold,
