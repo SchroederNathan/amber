@@ -2,11 +2,12 @@ import { AnimatedText } from '@/components/animated-text';
 import { parseExifDate } from '@/lib/date';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
+import type { Id } from '@convex/_generated/dataModel';
 import { useMutation } from 'convex/react';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
@@ -43,6 +44,9 @@ function ActionButton({
 export default function AddScreen() {
   const router = useRouter();
   const { theme } = useUnistyles();
+  // Opened from inside a space: everything saved here is pre-pinned to it.
+  const { spaceId } = useLocalSearchParams<{ spaceId?: string }>();
+  const pinnedSpaceId = spaceId as Id<'spaces'> | undefined;
   const [mode, setMode] = useState<Mode>('menu');
   const [saving, setSaving] = useState(false);
   const [value, setValue] = useState('');
@@ -83,9 +87,9 @@ export default function AddScreen() {
     setSaving(true);
     try {
       if (mode === 'article') {
-        await createLinkItem({ url: trimmed });
+        await createLinkItem({ url: trimmed, spaceId: pinnedSpaceId });
       } else {
-        await createNoteItem({ text: trimmed });
+        await createNoteItem({ text: trimmed, spaceId: pinnedSpaceId });
       }
       success();
     } catch {
@@ -113,6 +117,7 @@ export default function AddScreen() {
           mimeType: asset.mimeType,
           capturedAt: parseExifDate(asset.exif),
         })),
+        { spaceId: pinnedSpaceId },
       );
       success();
     } catch (err) {
@@ -204,7 +209,10 @@ export default function AddScreen() {
             label="Camera"
             onPress={() => {
               router.back();
-              router.push('/camera');
+              router.push({
+                pathname: '/camera',
+                params: pinnedSpaceId ? { spaceId: pinnedSpaceId } : {},
+              });
             }}
             disabled={saving}
           />

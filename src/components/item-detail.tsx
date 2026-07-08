@@ -1,4 +1,5 @@
 import { IntentChip } from '@/components/intent-chip';
+import { ItemCard } from '@/components/item-card';
 import { TagChip } from '@/components/tag-chip';
 import { runIntent } from '@/lib/intents';
 import { displayHost } from '@/lib/url';
@@ -25,8 +26,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // A row as returned by the list queries (listItems / searchItems / getSpace) —
 // carries every display field except the space memberships, which only
-// getItem resolves.
-export type DetailItem = FunctionReturnType<typeof api.items.listItems>[number];
+// getItem resolves. Rows from getSpace additionally carry `spaceIntents`:
+// purpose-steered actions scoped to that space's membership.
+export type DetailItem = FunctionReturnType<typeof api.items.listItems>[number] & {
+  spaceIntents?: FunctionReturnType<typeof api.items.listItems>[number]['intents'];
+};
 
 type Props = {
   item: DetailItem;
@@ -57,7 +61,26 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
   );
   const spaces = withSpaces?.spaces ?? [];
 
+  // Lexical-similarity strip for the bottom of the page (v0 — a vector index
+  // upgrade slots in behind the same query). Only ready items have signal.
+  const { data: similar } = useQuery({
+    ...convexQuery(api.items.similarItems, { id: item._id }),
+    enabled: item.status === 'ready',
+  });
+
   const heroUri = item.imageUrl ?? item.heroImageUrl;
+
+  // The item's own actions, plus any purpose-steered ones from the space this
+  // page was opened through (deduped — steering may echo a general intent).
+  const intents = (() => {
+    const base = item.intents ?? [];
+    const scoped = item.spaceIntents ?? [];
+    const seen = new Set(base.map((i) => `${i.kind}|${i.value.toLowerCase()}`));
+    return [
+      ...base,
+      ...scoped.filter((i) => !seen.has(`${i.kind}|${i.value.toLowerCase()}`)),
+    ];
+  })();
 
   const paragraphs =
     item.content
@@ -137,9 +160,9 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           </View>
         ) : null}
 
-        {item.intents && item.intents.length > 0 ? (
+        {intents.length > 0 ? (
           <View style={styles.intentsRow}>
-            {item.intents.map((intent, index) => (
+            {intents.map((intent, index) => (
               <IntentChip
                 key={`${intent.kind}-${index}`}
                 kind={intent.kind}
@@ -164,7 +187,7 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           </View>
         ) : null}
 
-        {spaces.length > 0 ? (
+        {item.status === 'ready' ? (
           <View style={styles.chipsRow}>
             {spaces.map((space) => (
               <Link key={space._id} href={`/space/${space._id}`} asChild>
@@ -173,6 +196,18 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
                 </Pressable>
               </Link>
             ))}
+            {/* Entry to the per-space membership toggles. */}
+            <Link
+              href={{ pathname: '/manage-spaces', params: { itemId: item._id } }}
+              asChild
+            >
+              <Pressable style={styles.manageSpacesChip}>
+                <SymbolView name="plus" size={11} tintColor={theme.colors.primaryText} />
+                <Text style={styles.manageSpacesLabel}>
+                  {spaces.length > 0 ? 'Spaces' : 'Add to space'}
+                </Text>
+              </Pressable>
+            </Link>
           </View>
         ) : null}
 
@@ -191,10 +226,46 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
             ))}
           </View>
         ) : null}
+
+        {similar && similar.length > 0 ? (
+          <View style={styles.similarSection}>
+            <Text style={styles.similarTitle}>More like this</Text>
+            <SimilarGrid items={similar} />
+          </View>
+        ) : null}
       </View>
     </ScrollView>
   );
 });
+
+// A static two-column masonry for the similar-items strip. The page already
+// scrolls (this lives inside the detail ScrollView), so a virtualized list
+// can't be nested here; ten cards render fine as plain views. Columns are
+// balanced by estimated card height from each item's aspect ratio.
+function SimilarGrid({ items }: { items: DetailItem[] }) {
+  const columns: [DetailItem[], DetailItem[]] = [[], []];
+  const heights = [0, 0];
+  for (const item of items) {
+    const ratio = Math.min(
+      Math.max(item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1), 0.5),
+      2,
+    );
+    const column = heights[0] <= heights[1] ? 0 : 1;
+    columns[column].push(item);
+    heights[column] += 1 / ratio;
+  }
+  return (
+    <View style={styles.similarGrid}>
+      {columns.map((column, index) => (
+        <View key={index} style={styles.similarColumn}>
+          {column.map((item) => (
+            <ItemCard key={item._id} item={item} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create((theme) => ({
   container: {
@@ -282,5 +353,39 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 16,
     lineHeight: 25,
     color: theme.colors.foreground,
+  },
+  manageSpacesChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: theme.colors.primarySoft,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 50,
+  },
+  manageSpacesLabel: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 13,
+    color: theme.colors.primaryText,
+  },
+  similarSection: {
+    gap: theme.gap(1),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.gap(2.5),
+  },
+  similarTitle: {
+    fontFamily: theme.fonts.display,
+    fontSize: 18,
+    color: theme.colors.foreground,
+    paddingHorizontal: 4,
+  },
+  similarGrid: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginHorizontal: -4,
+  },
+  similarColumn: {
+    flex: 1,
   },
 }));

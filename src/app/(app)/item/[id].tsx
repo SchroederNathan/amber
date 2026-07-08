@@ -9,16 +9,22 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
+import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   Share,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
+import { SymbolView } from 'expo-symbols';
+import Animated, { FadeOutDown, SlideInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ItemScreen() {
@@ -31,7 +37,10 @@ export default function ItemScreen() {
   const router = useRouter();
   const { theme } = useUnistyles();
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const deleteItem = useMutation(api.items.deleteItem);
+  const acceptSuggestion = useMutation(api.spaces.acceptSuggestion);
+  const dismissSuggestion = useMutation(api.spaces.dismissSuggestion);
   const listRef = useRef<FlashListRef<DetailItem>>(null);
 
   // Rebuild the ordered sibling list from whichever list the user opened from.
@@ -56,12 +65,21 @@ export default function ItemScreen() {
     convexQuery(api.items.getItem, { id: id as Id<'items'> }),
   );
 
+  // Mirror the space screen's feed order exactly (suggestions first, then
+  // saved) so swiping pages through what the user saw in the grid.
   const list: DetailItem[] | undefined =
     from === 'space'
-      ? spaceQ.data?.items
+      ? spaceQ.data
+        ? [...spaceQ.data.suggestions, ...spaceQ.data.items]
+        : undefined
       : from === 'search'
         ? searchQ.data
         : listQ.data;
+
+  const suggestedIds = useMemo(
+    () => new Set(spaceQ.data?.suggestions.map((i) => i._id) ?? []),
+    [spaceQ.data],
+  );
 
   const startIndex = list ? list.findIndex((i) => i._id === id) : -1;
 
@@ -167,6 +185,46 @@ export default function ItemScreen() {
     }
   }, [activeItem]);
 
+  // Suggested items (opened from a space) trade the normal footer for an
+  // Add / Dismiss decision bar. Accepting keeps the page open — the bar just
+  // drops away as the suggestion becomes a real membership.
+  const activeIsSuggested =
+    from === 'space' &&
+    !!spaceId &&
+    !!activeId &&
+    suggestedIds.has(activeId as Id<'items'>);
+
+  const onAccept = useCallback(() => {
+    if (!spaceId || !activeId) return;
+    if (process.env.EXPO_OS === 'ios') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    acceptSuggestion({
+      itemId: activeId as Id<'items'>,
+      spaceId: spaceId as Id<'spaces'>,
+    });
+  }, [spaceId, activeId, acceptSuggestion]);
+
+  const onDismiss = useCallback(async () => {
+    if (!spaceId || !activeId || !items) return;
+    // The dismissed item leaves the space's list; slide to a neighbour first,
+    // mirroring delete, so the pager never lands on a vanished page.
+    const idx = items.findIndex((i) => i._id === activeId);
+    const neighbor = items[idx + 1] ?? items[idx - 1];
+    const dismissedId = activeId as Id<'items'>;
+    if (neighbor) {
+      listRef.current?.scrollToIndex({ index: items.indexOf(neighbor), animated: true });
+      setActiveId(neighbor._id);
+      router.setParams({ id: neighbor._id });
+    } else {
+      router.back();
+    }
+    await dismissSuggestion({
+      itemId: dismissedId,
+      spaceId: spaceId as Id<'spaces'>,
+    });
+  }, [spaceId, activeId, items, dismissSuggestion, router]);
+
   const onDelete = useCallback(async () => {
     if (!activeItem || !items) return;
     const idx = items.findIndex((i) => i._id === activeItem._id);
@@ -240,6 +298,34 @@ export default function ItemScreen() {
         onViewableItemsChanged={onViewable}
         viewabilityConfig={viewabilityConfig}
       />
+
+      {activeIsSuggested ? (
+        // SlideInDown (not a fade) so the bar never mounts at opacity 0 — a
+        // GlassView whose parent starts fully transparent silently fails to
+        // render the liquid glass (expo/expo#41024).
+        <Animated.View
+          entering={SlideInDown.duration(250)}
+          exiting={FadeOutDown.duration(200)}
+          style={[styles.decisionBar, { bottom: insets.bottom + theme.gap(1.5) }]}
+        >
+          <Pressable onPress={onDismiss} style={styles.dismissWrap}>
+            <GlassView glassEffectStyle="regular" isInteractive style={styles.decisionButton}>
+              <Text style={styles.dismissText}>Dismiss</Text>
+            </GlassView>
+          </Pressable>
+          <Pressable onPress={onAccept} style={styles.acceptWrap}>
+            <GlassView
+              glassEffectStyle="regular"
+              isInteractive
+              tintColor={theme.colors.primary}
+              style={styles.decisionButton}
+            >
+              <SymbolView name="sparkles" size={15} tintColor="#fff" />
+              <Text style={styles.acceptText}>Add to space</Text>
+            </GlassView>
+          </Pressable>
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -254,5 +340,40 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
+  },
+  decisionBar: {
+    position: 'absolute',
+    left: theme.gap(2),
+    right: theme.gap(2),
+    flexDirection: 'row',
+    gap: theme.gap(1),
+  },
+  dismissWrap: {
+    flex: 1,
+  },
+  acceptWrap: {
+    flex: 2,
+  },
+  // Shared glass surface for both decision buttons. No backgroundColor/border —
+  // the liquid glass provides the material; the amber CTA sets it via tintColor.
+  decisionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.gap(0.75),
+    paddingVertical: theme.gap(1.75),
+    borderRadius: theme.radius.lg,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  dismissText: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 15,
+    color: theme.colors.foreground,
+  },
+  acceptText: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 15,
+    color: '#fff',
   },
 }));

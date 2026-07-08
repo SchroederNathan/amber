@@ -1,12 +1,14 @@
+import { SuggestedBadge } from '@/components/suggested-badge';
 import { displayHost } from '@/lib/url';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { useMutation } from 'convex/react';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { ActionSheetIOS, ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, ZoomOut } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export type FeedItem = {
@@ -22,6 +24,9 @@ export type FeedItem = {
   aspectRatio?: number;
   isSticker?: boolean;
   tags: string[];
+  // Amber recommended this item into the current space; it isn't a member
+  // until the user accepts. Only ever set by the space screen.
+  suggested?: boolean;
 };
 
 // Describes which list a card belongs to, so the detail screen can rebuild the
@@ -45,19 +50,62 @@ function clampRatio(ratio: number | undefined, fallback: number) {
 export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource }) {
   const { theme } = useUnistyles();
   const deleteItem = useMutation(api.items.deleteItem);
+  const acceptSuggestion = useMutation(api.spaces.acceptSuggestion);
+  const dismissSuggestion = useMutation(api.spaces.dismissSuggestion);
+  const removeItemFromSpace = useMutation(api.spaces.removeItemFromSpace);
+
+  const spaceId =
+    source?.from === 'space' ? (source.spaceId as Id<'spaces'>) : undefined;
+  const isSuggested = item.suggested === true && spaceId !== undefined;
 
   const imageUri = item.imageUrl ?? item.heroImageUrl;
   const captionTitle = item.title ?? item.note ?? (item.url ? displayHost(item.url) : undefined);
 
+  // The primary accept gesture: tap the sparkle, the item is in. The badge's
+  // exit animation is the confirmation — no navigation, no dialog.
+  const accept = () => {
+    if (spaceId === undefined) return;
+    if (process.env.EXPO_OS === 'ios') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    acceptSuggestion({ itemId: item._id, spaceId });
+  };
+
+  const dismiss = () => {
+    if (spaceId === undefined) return;
+    dismissSuggestion({ itemId: item._id, spaceId });
+  };
+
   const openMenu = () => {
-    const options = item.url ? ['Share', 'Delete', 'Cancel'] : ['Delete', 'Cancel'];
-    const destructiveButtonIndex = item.url ? 1 : 0;
-    const cancelButtonIndex = options.length - 1;
+    const actions: { label: string; destructive?: boolean; run: () => void }[] = [];
+    if (isSuggested) {
+      actions.push({ label: 'Add to space', run: accept });
+      actions.push({ label: 'Dismiss suggestion', destructive: true, run: dismiss });
+    } else {
+      if (item.url) {
+        actions.push({ label: 'Share', run: () => Share.share({ url: item.url! }) });
+      }
+      if (spaceId !== undefined) {
+        actions.push({
+          label: 'Remove from space',
+          run: () => removeItemFromSpace({ itemId: item._id, spaceId }),
+        });
+      }
+      actions.push({
+        label: 'Delete',
+        destructive: true,
+        run: () => deleteItem({ id: item._id }),
+      });
+    }
+    const destructiveIndex = actions.findIndex((a) => a.destructive);
     ActionSheetIOS.showActionSheetWithOptions(
-      { options, destructiveButtonIndex, cancelButtonIndex },
+      {
+        options: [...actions.map((a) => a.label), 'Cancel'],
+        destructiveButtonIndex: destructiveIndex >= 0 ? destructiveIndex : undefined,
+        cancelButtonIndex: actions.length,
+      },
       (index) => {
-        if (item.url && index === 0) Share.share({ url: item.url });
-        else if (index === destructiveButtonIndex) deleteItem({ id: item._id });
+        actions[index]?.run();
       },
     );
   };
@@ -128,6 +176,17 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
               </Pressable>
             </View>
 
+            {isSuggested && (
+              // The badge pops off with a spring when the suggestion resolves
+              // (accepted here or anywhere else — the prop flip unmounts it).
+              <Animated.View
+                exiting={ZoomOut.springify().damping(14).stiffness(300)}
+                style={styles.suggestedBadge}
+              >
+                <SuggestedBadge onPress={accept} />
+              </Animated.View>
+            )}
+
             {item.status === 'processing' && (
               <View style={styles.processing}>
                 <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -137,19 +196,40 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
         </Link.Trigger>
         <Link.Preview />
         <Link.Menu>
-          {item.url ? (
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => Share.share({ url: item.url! })}
-            />
-          ) : null}
-          <Link.MenuAction
-            title="Delete"
-            icon="trash"
-            destructive
-            onPress={() => deleteItem({ id: item._id })}
-          />
+          {isSuggested ? (
+            <>
+              <Link.MenuAction title="Add to space" icon="plus" onPress={accept} />
+              <Link.MenuAction
+                title="Dismiss suggestion"
+                icon="xmark"
+                destructive
+                onPress={dismiss}
+              />
+            </>
+          ) : (
+            <>
+              {item.url ? (
+                <Link.MenuAction
+                  title="Share"
+                  icon="square.and.arrow.up"
+                  onPress={() => Share.share({ url: item.url! })}
+                />
+              ) : null}
+              {spaceId !== undefined ? (
+                <Link.MenuAction
+                  title="Remove from space"
+                  icon="tray.and.arrow.up"
+                  onPress={() => removeItemFromSpace({ itemId: item._id, spaceId })}
+                />
+              ) : null}
+              <Link.MenuAction
+                title="Delete"
+                icon="trash"
+                destructive
+                onPress={() => deleteItem({ id: item._id })}
+              />
+            </>
+          )}
         </Link.Menu>
       </Link>
     </Animated.View>
@@ -243,6 +323,11 @@ const styles = StyleSheet.create((theme) => ({
   menuButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  suggestedBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
   },
   processing: {
     position: 'absolute',

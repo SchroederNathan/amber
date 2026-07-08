@@ -1,8 +1,9 @@
 import { parseExifDate } from '@/lib/date';
 import { useSaveImages } from '@/lib/use-save-image';
+import type { Id } from '@convex/_generated/dataModel';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
@@ -33,6 +34,9 @@ const INACTIVE = 'rgba(255,255,255,0.55)';
 export default function CameraScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // Opened from a space's add flow: captures are pre-pinned to that space.
+  const { spaceId } = useLocalSearchParams<{ spaceId?: string }>();
+  const pinnedSpace = { spaceId: spaceId as Id<'spaces'> | undefined };
   const { hasPermission, requestPermission } = useCameraPermission();
   const [position, setPosition] = useState<'back' | 'front'>('back');
   const device = useCameraDevice(position);
@@ -97,6 +101,7 @@ export default function CameraScreen() {
           mimeType: asset.mimeType,
           capturedAt: parseExifDate(asset.exif),
         })),
+        pinnedSpace,
       );
       router.back();
     } catch {
@@ -125,17 +130,20 @@ export default function CameraScreen() {
           setBusy(false);
           return;
         }
-        await saveImages([
-          {
-            uri: sticker.uri,
-            width: sticker.width,
-            height: sticker.height,
-            mimeType: 'image/png',
-            isSticker: true,
-          },
-        ]);
+        await saveImages(
+          [
+            {
+              uri: sticker.uri,
+              width: sticker.width,
+              height: sticker.height,
+              mimeType: 'image/png',
+              isSticker: true,
+            },
+          ],
+          pinnedSpace,
+        );
       } else {
-        await saveImages([{ uri }]);
+        await saveImages([{ uri }], pinnedSpace);
       }
       router.back();
     } catch {

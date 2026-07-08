@@ -66,6 +66,16 @@ export default function AppLayout() {
           }}
         />
         <Stack.Screen
+          name="manage-spaces"
+          options={{
+            presentation: 'formSheet',
+            headerShown: false,
+            sheetGrabberVisible: true,
+            sheetAllowedDetents: 'fitToContents',
+            contentStyle: { backgroundColor: theme.colors.background },
+          }}
+        />
+        <Stack.Screen
           name="profile"
           options={{
             presentation: 'formSheet',
