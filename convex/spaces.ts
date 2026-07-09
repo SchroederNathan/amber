@@ -45,13 +45,8 @@ async function loadItems(
   ctx: QueryCtx,
   joins: Doc<"spaceItems">[],
 ): Promise<Doc<"items">[]> {
-  const items: Doc<"items">[] = [];
-  for (const join of joins) {
-    const item = await ctx.db.get(join.itemId);
-    if (item !== null) {
-      items.push(item);
-    }
-  }
+  const rows = await Promise.all(joins.map((join) => ctx.db.get(join.itemId)));
+  const items = rows.filter((item): item is Doc<"items"> => item !== null);
   items.sort((a, b) => b._creationTime - a._creationTime);
   return items;
 }
@@ -86,56 +81,58 @@ export const listSpaces = query({
       .order("desc")
       .collect();
 
-    const results = [];
-    for (const space of spaces) {
-      const { saved, suggested } = await splitJoins(ctx, space._id);
-      const savedItems = await loadItems(ctx, saved);
-      const suggestedItems = await loadItems(ctx, suggested);
+    return await Promise.all(
+      spaces.map(async (space) => {
+        const { saved, suggested } = await splitJoins(ctx, space._id);
+        const [savedItems, suggestedItems] = await Promise.all([
+          loadItems(ctx, saved),
+          loadItems(ctx, suggested),
+        ]);
 
-      // Saved items front the pile; a fresh space with only suggestions still
-      // gets covers (sparkled client-side) instead of looking dead.
-      const pool: { item: Doc<"items">; suggested: boolean }[] = [
-        ...savedItems.map((item) => ({ item, suggested: false })),
-        ...suggestedItems.map((item) => ({ item, suggested: true })),
-      ];
-      const previews: {
-        url: string;
-        type: Doc<"items">["type"];
-        aspectRatio?: number;
-        suggested: boolean;
-      }[] = [];
-      for (const { item, suggested: isSuggested } of pool) {
-        if (previews.length >= 3) {
-          break;
-        }
-        if (item.storageId) {
-          const url = await ctx.storage.getUrl(item.storageId);
-          if (url !== null) {
+        // Saved items front the pile; a fresh space with only suggestions still
+        // gets covers (sparkled client-side) instead of looking dead.
+        const pool: { item: Doc<"items">; suggested: boolean }[] = [
+          ...savedItems.map((item) => ({ item, suggested: false })),
+          ...suggestedItems.map((item) => ({ item, suggested: true })),
+        ];
+        const previews: {
+          url: string;
+          type: Doc<"items">["type"];
+          aspectRatio?: number;
+          suggested: boolean;
+        }[] = [];
+        for (const { item, suggested: isSuggested } of pool) {
+          if (previews.length >= 3) {
+            break;
+          }
+          if (item.storageId) {
+            const url = await ctx.storage.getUrl(item.storageId);
+            if (url !== null) {
+              previews.push({
+                url,
+                type: item.type,
+                aspectRatio: item.aspectRatio,
+                suggested: isSuggested,
+              });
+            }
+          } else if (item.heroImageUrl) {
             previews.push({
-              url,
+              url: item.heroImageUrl,
               type: item.type,
               aspectRatio: item.aspectRatio,
               suggested: isSuggested,
             });
           }
-        } else if (item.heroImageUrl) {
-          previews.push({
-            url: item.heroImageUrl,
-            type: item.type,
-            aspectRatio: item.aspectRatio,
-            suggested: isSuggested,
-          });
         }
-      }
 
-      results.push({
-        ...space,
-        itemCount: saved.length,
-        suggestionCount: suggested.length,
-        previews,
-      });
-    }
-    return results;
+        return {
+          ...space,
+          itemCount: saved.length,
+          suggestionCount: suggested.length,
+          previews,
+        };
+      }),
+    );
   },
 });
 
@@ -396,13 +393,18 @@ export const acceptAllSuggestions = mutation({
       throw new Error("Space not found");
     }
     const { suggested } = await splitJoins(ctx, space._id);
-    for (const row of suggested) {
-      await ctx.db.patch(row._id, { status: "saved" });
-      const item = await ctx.db.get(row.itemId);
-      if (item !== null) {
-        await scheduleSteering(ctx, item, args.spaceId);
-      }
-    }
+    const items = await Promise.all(
+      suggested.map((row) => ctx.db.get(row.itemId)),
+    );
+    await Promise.all(
+      suggested.map(async (row, i) => {
+        await ctx.db.patch(row._id, { status: "saved" });
+        const item = items[i];
+        if (item !== null) {
+          await scheduleSteering(ctx, item, args.spaceId);
+        }
+      }),
+    );
     return null;
   },
 });
