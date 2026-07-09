@@ -371,25 +371,39 @@ function SimilarItemCard({ item }: { item: DetailItem }) {
 
   return (
     <Link href={{ pathname: '/item/[id]', params: { id: item._id } }} asChild>
-      <Pressable style={({ pressed }) => [styles.similarCard, pressed && styles.similarCardPressed]}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.similarCard,
+          item.isSticker && styles.similarCardSticker,
+          pressed && styles.similarCardPressed,
+        ]}
+      >
         {imageUri ? (
-          <>
+          item.isSticker ? (
             <Image
               source={{ uri: imageUri }}
-              contentFit={item.isSticker ? 'contain' : 'cover'}
-              style={[styles.similarImage, { aspectRatio }]}
+              contentFit="contain"
+              style={[styles.similarSticker, { aspectRatio }]}
             />
-            <Text style={styles.similarCardTitle} numberOfLines={2}>
-              {title}
-            </Text>
-          </>
+          ) : (
+            <View style={styles.similarImageFrame}>
+              <Image
+                source={{ uri: imageUri }}
+                contentFit="cover"
+                style={[styles.similarImage, { aspectRatio }]}
+              />
+            </View>
+          )
         ) : (
-          <View style={styles.similarTextFace}>
+          <View style={[styles.similarTextFace, item.type === 'note' && styles.similarNoteFace]}>
             <Text style={styles.similarTextFaceTitle} numberOfLines={4}>
               {title}
             </Text>
           </View>
         )}
+        <Text style={styles.similarCardTitle} numberOfLines={2}>
+          {title}
+        </Text>
       </Pressable>
     </Link>
   );
@@ -517,39 +531,67 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     gap: theme.gap(2),
   },
+  // Mirrors the home feed's ItemCard treatment: matted frame for photos, bare
+  // silhouette for stickers, muted face for text — so the strip reads as a
+  // miniature of the feed rather than a third card style.
   similarCard: {
-    overflow: 'hidden',
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.md,
     borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.imageBorder,
-    backgroundColor: theme.colors.surface,
+    overflow: 'hidden',
+  },
+  // Let the sticker's silhouette shadow spill past the card bounds instead of
+  // being clipped.
+  similarCardSticker: {
+    overflow: 'visible',
   },
   similarCardPressed: {
     opacity: 0.85,
   },
+  similarImageFrame: {
+    backgroundColor: 'white',
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
+    padding: theme.gap(0.5),
+    boxShadow: `0 0 4px 0 ${theme.colors.imageBorder}`,
+  },
   similarImage: {
     width: '100%',
+    borderRadius: theme.radius.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
   },
+  // No fill / border / rounding: the white die-cut edge is baked into the PNG,
+  // and the iOS layer shadow hugs the opaque pixels.
+  similarSticker: {
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
   similarTextFace: {
-    aspectRatio: 1,
+    minHeight: 96,
     justifyContent: 'center',
-    padding: theme.gap(2),
+    padding: theme.gap(1.5),
+    borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceMuted,
+  },
+  similarNoteFace: {
+    backgroundColor: theme.colors.primarySoft,
   },
   similarTextFaceTitle: {
     fontFamily: theme.fonts.medium,
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 18,
     color: theme.colors.foreground,
   },
   similarCardTitle: {
-    paddingHorizontal: theme.gap(1.5),
-    paddingVertical: theme.gap(1.25),
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
-    lineHeight: 17,
+    paddingHorizontal: theme.gap(0.5),
+    paddingTop: theme.gap(0.75),
+    fontFamily: theme.fonts.bold,
+    fontSize: 10,
+    lineHeight: 12,
     color: theme.colors.foreground,
   },
   findLinksRow: {
