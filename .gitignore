@@ -43,3 +43,5 @@ yarn-error.*
 # Local builds
 *.ipa
 *.apk
+# EAS Simulator session (carries a token - do not commit)
+.env.eas-simulator
