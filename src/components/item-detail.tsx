@@ -348,7 +348,9 @@ function SimilarGrid({ items }: { items: DetailItem[] }) {
       {columns.map((column, index) => (
         <View key={index} style={styles.similarColumn}>
           {column.map((item) => (
-            <SimilarItemCard key={item._id} item={item} />
+            <View key={item._id} style={styles.similarCell}>
+              <SimilarItemCard item={item} />
+            </View>
           ))}
         </View>
       ))}
@@ -529,7 +531,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   similarColumn: {
     flex: 1,
-    gap: theme.gap(2),
+  },
+  // Same gutter scheme as the home feed: every cell pads 4 on all sides, so
+  // neighbors sit 8 apart and the grid's -4 margins realign the outer edges.
+  similarCell: {
+    padding: 4,
   },
   // Mirrors the home feed's ItemCard treatment: matted frame for photos, bare
   // silhouette for stickers, muted face for text — so the strip reads as a
