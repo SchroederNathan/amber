@@ -1,5 +1,4 @@
 import { IntentChip } from '@/components/intent-chip';
-import { ItemCard } from '@/components/item-card';
 import { TagChip } from '@/components/tag-chip';
 import { runIntent } from '@/lib/intents';
 import { displayHost } from '@/lib/url';
@@ -349,11 +348,50 @@ function SimilarGrid({ items }: { items: DetailItem[] }) {
       {columns.map((column, index) => (
         <View key={index} style={styles.similarColumn}>
           {column.map((item) => (
-            <ItemCard key={item._id} item={item} />
+            <SimilarItemCard key={item._id} item={item} />
           ))}
         </View>
       ))}
     </View>
+  );
+}
+
+// Related items are a navigation affordance inside an already-open detail
+// page. Rendering the full feed card here would also mount its preview, menu,
+// mutations, and entering animation for every related item. Keep this variant
+// intentionally small so opening a detail page does not eagerly build that
+// interaction stack below the fold.
+function SimilarItemCard({ item }: { item: DetailItem }) {
+  const imageUri = item.imageUrl ?? item.heroImageUrl;
+  const aspectRatio = Math.min(
+    Math.max(item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1), 0.5),
+    2,
+  );
+  const title = item.title ?? item.note ?? (item.url ? displayHost(item.url) : 'Untitled item');
+
+  return (
+    <Link href={{ pathname: '/item/[id]', params: { id: item._id } }} asChild>
+      <Pressable style={({ pressed }) => [styles.similarCard, pressed && styles.similarCardPressed]}>
+        {imageUri ? (
+          <>
+            <Image
+              source={{ uri: imageUri }}
+              contentFit={item.isSticker ? 'contain' : 'cover'}
+              style={[styles.similarImage, { aspectRatio }]}
+            />
+            <Text style={styles.similarCardTitle} numberOfLines={2}>
+              {title}
+            </Text>
+          </>
+        ) : (
+          <View style={styles.similarTextFace}>
+            <Text style={styles.similarTextFaceTitle} numberOfLines={4}>
+              {title}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Link>
   );
 }
 
@@ -477,6 +515,42 @@ const styles = StyleSheet.create((theme) => ({
   },
   similarColumn: {
     flex: 1,
+    gap: theme.gap(2),
+  },
+  similarCard: {
+    overflow: 'hidden',
+    borderRadius: theme.radius.lg,
+    borderCurve: 'continuous',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.imageBorder,
+    backgroundColor: theme.colors.surface,
+  },
+  similarCardPressed: {
+    opacity: 0.85,
+  },
+  similarImage: {
+    width: '100%',
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  similarTextFace: {
+    aspectRatio: 1,
+    justifyContent: 'center',
+    padding: theme.gap(2),
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  similarTextFaceTitle: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    lineHeight: 19,
+    color: theme.colors.foreground,
+  },
+  similarCardTitle: {
+    paddingHorizontal: theme.gap(1.5),
+    paddingVertical: theme.gap(1.25),
+    fontFamily: theme.fonts.medium,
+    fontSize: 13,
+    lineHeight: 17,
+    color: theme.colors.foreground,
   },
   findLinksRow: {
     flexDirection: 'row',
