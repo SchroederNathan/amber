@@ -74,6 +74,8 @@ const itemFields = {
   storageId: v.optional(v.id("_storage")),
   aspectRatio: v.optional(v.number()),
   capturedAt: v.optional(v.number()),
+  latitude: v.optional(v.number()),
+  longitude: v.optional(v.number()),
   isSticker: v.optional(v.boolean()),
   tags: v.array(v.string()),
   content: v.optional(v.string()),
@@ -305,6 +307,8 @@ export const createImageItem = mutation({
     aspectRatio: v.optional(v.number()),
     isSticker: v.optional(v.boolean()),
     capturedAt: v.optional(v.number()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
     spaceId: v.optional(v.id("spaces")),
   },
   returns: v.id("items"),
@@ -316,6 +320,19 @@ export const createImageItem = mutation({
     ) {
       throw new Error("Invalid aspectRatio");
     }
+    // Location is all-or-nothing: a lone latitude can't be plotted.
+    const hasLocation =
+      args.latitude !== undefined && args.longitude !== undefined;
+    if (
+      (args.latitude !== undefined || args.longitude !== undefined) &&
+      (!hasLocation ||
+        !Number.isFinite(args.latitude) ||
+        Math.abs(args.latitude!) > 90 ||
+        !Number.isFinite(args.longitude) ||
+        Math.abs(args.longitude!) > 180)
+    ) {
+      throw new Error("Invalid location");
+    }
     const itemId = await ctx.db.insert("items", {
       userId,
       type: "image",
@@ -324,6 +341,8 @@ export const createImageItem = mutation({
       aspectRatio: args.aspectRatio,
       isSticker: args.isSticker,
       capturedAt: args.capturedAt,
+      latitude: args.latitude,
+      longitude: args.longitude,
       tags: [],
       searchText: "",
     });

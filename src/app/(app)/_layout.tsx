@@ -44,6 +44,13 @@ export default function AppLayout() {
           }}
         />
         <Stack.Screen
+          name="map"
+          options={{
+            title: 'Map',
+            headerBackButtonDisplayMode: 'minimal',
+          }}
+        />
+        <Stack.Screen
           name="add"
           options={{
             presentation: 'formSheet',

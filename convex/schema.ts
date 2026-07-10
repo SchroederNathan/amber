@@ -16,6 +16,10 @@ export default defineSchema({
     storageId: v.optional(v.id("_storage")),
     aspectRatio: v.optional(v.number()),
     capturedAt: v.optional(v.number()),
+    // Where the photo was taken (signed decimal degrees, from EXIF GPS on
+    // import). Always set together; absent for images without location data.
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
     isSticker: v.optional(v.boolean()),
     tags: v.array(v.string()),
     content: v.optional(v.string()),

@@ -1,4 +1,5 @@
 import { parseExifDate } from '@/lib/date';
+import { parseExifLocation } from '@/lib/exif';
 import { useSaveImages } from '@/lib/use-save-image';
 import type { Id } from '@convex/_generated/dataModel';
 import * as Haptics from 'expo-haptics';
@@ -100,6 +101,7 @@ export default function CameraScreen() {
           height: asset.height,
           mimeType: asset.mimeType,
           capturedAt: parseExifDate(asset.exif),
+          ...parseExifLocation(asset.exif),
         })),
         pinnedSpace,
       );

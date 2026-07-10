@@ -8,7 +8,7 @@ export default function HomeStackLayout() {
 
   // Native bar-button items don't run JS on tap the way a Pressable does, so
   // the light haptic HeaderButton used to give is fired here instead.
-  const tap = (href: '/profile' | '/add') => () => {
+  const tap = (href: '/profile' | '/add' | '/map') => () => {
     if (process.env.EXPO_OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -36,6 +36,13 @@ export default function HomeStackLayout() {
           </Stack.Toolbar.Button>
         </Stack.Toolbar>
         <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon="map"
+            tintColor={PlatformColor('label')}
+            onPress={tap('/map')}
+          >
+            Map
+          </Stack.Toolbar.Button>
           <Stack.Toolbar.Button
             icon="plus"
             tintColor={PlatformColor('label')}
