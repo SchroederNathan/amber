@@ -14,6 +14,10 @@ export type LocalImage = {
   isSticker?: boolean;
   /** Original camera-roll capture time (epoch ms), read from EXIF on import. */
   capturedAt?: number;
+  /** Where the photo was taken (signed decimal degrees), read from EXIF or
+   * the media library on import. Set both or neither. */
+  latitude?: number;
+  longitude?: number;
 };
 
 /**
@@ -50,6 +54,8 @@ export function useSaveImages() {
             aspectRatio,
             isSticker: image.isSticker,
             capturedAt: image.capturedAt,
+            latitude: image.latitude,
+            longitude: image.longitude,
             // Saving from inside a space files the item there immediately.
             spaceId: options?.spaceId,
           });

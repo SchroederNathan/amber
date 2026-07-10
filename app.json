@@ -80,11 +80,17 @@
           },
           "android": {
             "enabled": true,
-            "singleShareMimeTypes": ["image/*", "text/*"],
-            "multipleShareMimeTypes": ["image/*"]
+            "singleShareMimeTypes": [
+              "image/*",
+              "text/*"
+            ],
+            "multipleShareMimeTypes": [
+              "image/*"
+            ]
           }
         }
-      ]
+      ],
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true,
