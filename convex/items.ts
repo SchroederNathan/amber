@@ -160,7 +160,7 @@ export const getItem = query({
     }
     const joins = await ctx.db
       .query("spaceItems")
-      .withIndex("by_item", (q) => q.eq("itemId", item._id))
+      .withIndex("by_item_and_space", (q) => q.eq("itemId", item._id))
       .collect();
     const spaces: { _id: Id<"spaces">; name: string }[] = [];
     for (const join of joins) {
@@ -419,7 +419,7 @@ export const deleteItem = mutation({
     }
     const joins = await ctx.db
       .query("spaceItems")
-      .withIndex("by_item", (q) => q.eq("itemId", item._id))
+      .withIndex("by_item_and_space", (q) => q.eq("itemId", item._id))
       .collect();
     for (const join of joins) {
       await ctx.db.delete(join._id);
@@ -589,7 +589,7 @@ export const setSpacesForItem = internalMutation({
     const wanted = new Set(args.spaceIds);
     const existing = await ctx.db
       .query("spaceItems")
-      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .withIndex("by_item_and_space", (q) => q.eq("itemId", args.itemId))
       .collect();
     const touched = new Set<Id<"spaces">>();
     for (const join of existing) {

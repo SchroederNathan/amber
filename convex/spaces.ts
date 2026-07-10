@@ -458,7 +458,7 @@ export const listSavedSpaceIdsForItemInternal = internalQuery({
   handler: async (ctx, args) => {
     const joins = await ctx.db
       .query("spaceItems")
-      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .withIndex("by_item_and_space", (q) => q.eq("itemId", args.itemId))
       .collect();
     return joins
       .filter((join) => effectiveStatus(join) === "saved")
