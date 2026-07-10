@@ -118,6 +118,7 @@ export default defineSchema({
     ),
   })
     .index("by_space", ["spaceId"])
-    .index("by_item", ["itemId"])
+    // Also serves itemId-only queries as a prefix, so no separate by_item.
+    .index("by_item_and_space", ["itemId", "spaceId"])
     .index("by_user", ["userId"]),
 });
