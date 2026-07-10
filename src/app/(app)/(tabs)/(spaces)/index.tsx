@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { ProgressiveBlurHeader } from 'progressive-blur';
+import { memo, useMemo } from 'react';
 import { ActionSheetIOS, ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -63,7 +64,7 @@ const BACKS = [
 // real cover, barely rotated, on top. The pile's box takes the cover's aspect
 // ratio so the masonry feed packs spaces at their true proportions, exactly like
 // the home cards. An empty space shows a dashed placeholder cover.
-function CoverStack({
+const CoverStack = memo(function CoverStack({
   cover,
   seed,
 }: {
@@ -76,6 +77,16 @@ function CoverStack({
     ? clampRatio(cover.aspectRatio, cover.type === 'link' ? OG_RATIO : 1)
     : 1;
   const position = CARD_POSITION;
+
+  // The jitter is a pure function of the seed — hash once per pile, not on
+  // every render (and not per card while the list scrolls).
+  const rotations = useMemo(
+    () => ({
+      backs: BACKS.map((back, i) => back.rot + seededUnit(`${seed}-b${i}`) * 1.5),
+      top: seededUnit(`${seed}-top`) * 2,
+    }),
+    [seed],
+  );
 
   return (
     <View style={[styles.stack, { aspectRatio: ratio }]}>
@@ -90,7 +101,7 @@ function CoverStack({
               transform: [
                 { translateX: back.tx },
                 { translateY: back.ty },
-                { rotate: `${back.rot + seededUnit(`${seed}-b${i}`) * 1.5}deg` },
+                { rotate: `${rotations.backs[i]}deg` },
               ],
             },
           ]}
@@ -102,7 +113,7 @@ function CoverStack({
             styles.card,
             styles.coverFrame,
             position,
-            { transform: [{ rotate: `${seededUnit(`${seed}-top`) * 2}deg` }] },
+            { transform: [{ rotate: `${rotations.top}deg` }] },
           ]}
         >
           <Image source={{ uri: cover.url }} style={styles.coverImage} contentFit="cover" />
@@ -119,13 +130,13 @@ function CoverStack({
             styles.card,
             styles.cardEmpty,
             position,
-            { transform: [{ rotate: `${seededUnit(`${seed}-top`) * 2}deg` }] },
+            { transform: [{ rotate: `${rotations.top}deg` }] },
           ]}
         />
       )}
     </View>
   );
-}
+});
 
 export default function SpacesScreen() {
   const { theme } = useUnistyles();
