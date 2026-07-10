@@ -1,0 +1,39 @@
+executionPrerequisite: Amber is running on the iPhone 17 simulator, logged in,
+  and the Home tab is visible.
+steps:
+  - echo: From the Home tab, open the Spaces tab.
+  - tool: gesture-tap
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      x: 0.413
+      y: 0.941
+  - echo: On Spaces, open the Apartment Shopping List space tile.
+  - tool: gesture-tap
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      x: 0.26
+      y: 0.33
+  - echo: On Apartment Shopping List, open the Favorite Person Mug card.
+  - tool: gesture-tap
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      x: 0.25
+      y: 0.31
+  - echo: Scroll the selected space feed to exercise masonry/list rendering.
+  - tool: gesture-swipe
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      fromX: 0.5
+      fromY: 0.78
+      toX: 0.5
+      toY: 0.35
+      durationMs: 450
+  - echo: Navigate back to the Spaces grid with the iOS back swipe.
+  - tool: gesture-swipe
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      fromX: 0.02
+      fromY: 0.5
+      toX: 0.78
+      toY: 0.5
+      durationMs: 350

@@ -1,0 +1,125 @@
+executionPrerequisite: Amber open on Tidy tab with a loaded photo batch (progress like 0/24), deck visible and ready to swipe. Photo library permission already granted.
+steps:
+  - echo: Swipe keep/delete/save through ~14 cards, then undo
+  - tool: run-sequence
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      steps:
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.95
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.05
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.58
+            toX: 0.5
+            toY: 0.08
+            durationMs: 320
+          delayMs: 550
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.95
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.05
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.95
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.58
+            toX: 0.5
+            toY: 0.08
+            durationMs: 320
+          delayMs: 550
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.05
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.95
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.05
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.58
+            toX: 0.5
+            toY: 0.08
+            durationMs: 320
+          delayMs: 550
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.95
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.05
+            toY: 0.48
+            durationMs: 280
+          delayMs: 500
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.48
+            toX: 0.95
+            toY: 0.48
+            durationMs: 280
+          delayMs: 600
+  - tool: gesture-tap
+    args:
+      udid: 97AAD3EA-ECED-43E2-A465-DDD7A96DDF22
+      x: 0.095
+      y: 0.097
+    delayMs: 400
