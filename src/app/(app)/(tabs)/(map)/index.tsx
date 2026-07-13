@@ -2,20 +2,65 @@ import { EmptyState } from '@/components/empty-state';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
+import { ClipOp, Skia } from '@shopify/react-native-skia';
+import type { SharedRefType } from 'expo';
+import { Image } from 'expo-image';
 import { AppleMaps, GoogleMaps } from 'expo-maps';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 // The amber accent matches theme.colors.primary (identical in both themes).
 const AMBER = '#e6a23c';
 
+// Apple Maps stretches an annotation icon into a fixed 50x50pt frame, so
+// thumbnails are pre-composited to a square: the photo aspect-fit (contained)
+// on a transparent canvas and clipped to rounded corners. 150px = 50pt @3x.
+const THUMB_SIZE = 150;
+const THUMB_RADIUS = 24;
+
+async function makeThumb(
+  url: string,
+): Promise<SharedRefType<'image'> | null> {
+  const data = await Skia.Data.fromURI(url);
+  const source = Skia.Image.MakeImageFromEncoded(data);
+  if (!source) return null;
+
+  const scale = Math.min(
+    THUMB_SIZE / source.width(),
+    THUMB_SIZE / source.height(),
+  );
+  const w = source.width() * scale;
+  const h = source.height() * scale;
+  const x = (THUMB_SIZE - w) / 2;
+  const y = (THUMB_SIZE - h) / 2;
+
+  const surface = Skia.Surface.MakeOffscreen(THUMB_SIZE, THUMB_SIZE);
+  if (!surface) return null;
+  const canvas = surface.getCanvas();
+  canvas.clipRRect(
+    Skia.RRectXY(Skia.XYWHRect(x, y, w, h), THUMB_RADIUS, THUMB_RADIUS),
+    ClipOp.Intersect,
+    true,
+  );
+  const paint = Skia.Paint();
+  canvas.drawImageRect(
+    source,
+    Skia.XYWHRect(0, 0, source.width(), source.height()),
+    Skia.XYWHRect(x, y, w, h),
+    paint,
+  );
+  const base64 = surface.makeImageSnapshot().encodeToBase64();
+  return Image.loadAsync({ uri: `data:image/png;base64,${base64}` });
+}
+
 type Located = {
   id: string;
   title: string;
   latitude: number;
   longitude: number;
+  imageUrl: string | null;
 };
 
 /** Frames every marker: bounding-box midpoint, zoomed so the widest span
@@ -53,9 +98,29 @@ export default function MapScreen() {
           title: i.title ?? 'Saved photo',
           latitude: i.latitude!,
           longitude: i.longitude!,
+          imageUrl: i.imageUrl,
         })),
     [items],
   );
+
+  // Marker icons must be native image refs, not sources, so each item's photo
+  // is loaded imperatively (useImage is a hook and can't run per-item).
+  const requested = useRef(new Set<string>());
+  const [thumbs, setThumbs] = useState<
+    Record<string, SharedRefType<'image'>>
+  >({});
+
+  useEffect(() => {
+    for (const item of located) {
+      if (!item.imageUrl || requested.current.has(item.id)) continue;
+      requested.current.add(item.id);
+      makeThumb(item.imageUrl)
+        .then((ref) => {
+          if (ref) setThumbs((prev) => ({ ...prev, [item.id]: ref }));
+        })
+        .catch(() => requested.current.delete(item.id));
+    }
+  }, [located]);
 
   const cameraPosition = useMemo(
     () => (located.length > 0 ? fitCamera(located) : undefined),
@@ -88,18 +153,27 @@ export default function MapScreen() {
     router.push({ pathname: '/item/[id]', params: { id } });
   };
 
+  const withThumb = located.filter((item) => thumbs[item.id]);
+  const withoutThumb = located.filter((item) => !thumbs[item.id]);
+
   if (process.env.EXPO_OS === 'ios') {
     return (
       <AppleMaps.View
         style={styles.container}
         cameraPosition={cameraPosition}
-        markers={located.map((item) => ({
+        annotations={withThumb.map((item) => ({
+          id: item.id,
+          coordinates: { latitude: item.latitude, longitude: item.longitude },
+          icon: thumbs[item.id],
+        }))}
+        markers={withoutThumb.map((item) => ({
           id: item.id,
           coordinates: { latitude: item.latitude, longitude: item.longitude },
           title: item.title,
           systemImage: 'photo.fill',
           tintColor: AMBER,
         }))}
+        onAnnotationClick={(annotation) => openItem(annotation.id)}
         onMarkerClick={(marker) => openItem(marker.id)}
       />
     );
@@ -113,6 +187,8 @@ export default function MapScreen() {
         id: item.id,
         coordinates: { latitude: item.latitude, longitude: item.longitude },
         title: item.title,
+        icon: thumbs[item.id],
+        anchor: thumbs[item.id] ? { x: 0.5, y: 0.5 } : undefined,
       }))}
       onMarkerClick={(marker) => openItem(marker.id)}
     />
