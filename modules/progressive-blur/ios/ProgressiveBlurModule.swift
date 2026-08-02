@@ -5,10 +5,9 @@ public class ProgressiveBlurModule: Module {
     Name("ProgressiveBlur")
 
     View(ProgressiveBlurView.self) {
-      // Max blur radius (points) at the fully-blurred top edge.
-      Prop("intensity") { (view: ProgressiveBlurView, intensity: Double) in
-        view.maxBlurRadius = CGFloat(intensity)
-      }
+      // No tunable props: the view renders a fixed public UIBlurEffect whose
+      // opacity feathers out via a gradient mask. iOS exposes no public API to
+      // map a numeric radius onto a UIBlurEffect, so there is nothing to set.
     }
   }
 }
