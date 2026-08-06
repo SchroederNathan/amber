@@ -9,18 +9,27 @@
       "distribution": "internal",
       "ios": {
         "image": "macos-tahoe-26.5-xcode-26.6"
+      },
+      "env": {
+        "APP_VARIANT": "development"
       }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "image": "macos-tahoe-26.5-xcode-26.6"
+      },
+      "env": {
+        "APP_VARIANT": "preview"
       }
     },
     "production": {
       "autoIncrement": true,
       "ios": {
         "image": "macos-tahoe-26.5-xcode-26.6"
+      },
+      "env": {
+        "APP_VARIANT": "production"
       }
     }
   },
