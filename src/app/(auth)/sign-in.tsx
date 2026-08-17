@@ -1,14 +1,26 @@
-import { useSSO, useSignIn } from '@clerk/expo';
+import { isClerkAPIResponseError, useSSO, useSignIn } from '@clerk/expo';
 import { useSignInWithApple } from '@clerk/expo/apple';
 import React from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+
+// Release builds have no console, so every auth failure has to reach the
+// screen. Clerk API errors carry the useful text in `longMessage`.
+function describeError(err: unknown) {
+  if (isClerkAPIResponseError(err)) {
+    const first = err.errors[0];
+    return first?.longMessage ?? first?.message ?? err.message;
+  }
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 export default function Page() {
   const { startSSOFlow } = useSSO();
   const { startAppleAuthenticationFlow } = useSignInWithApple();
   const { signIn } = useSignIn();
   const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const handleDevLogin = async () => {
     if (!signIn) return;
@@ -18,45 +30,55 @@ export default function Page() {
       return;
     }
     setPending(true);
+    setError(null);
     try {
-      const { error } = await signIn.password({
+      const { error: signInError } = await signIn.password({
         identifier: 'dev+clerk_test@example.com',
         password,
       });
-      if (error) {
-        console.error('Dev login failed:', error);
+      if (signInError) {
+        setError(describeError(signInError));
       } else if (signIn.status === 'complete') {
         await signIn.finalize();
       } else {
-        console.warn('Dev login incomplete:', signIn.status);
+        setError(`Dev login incomplete: ${signIn.status}`);
       }
     } catch (err) {
-      console.error('Dev login error:', err);
+      setError(describeError(err));
     } finally {
       setPending(false);
     }
   };
 
+  // A null createdSessionId is ambiguous: the user cancelled, or the flow ran
+  // but stopped short of a session (Clerk needs more sign-up data). Report the
+  // second case, stay silent on a cancel.
   const activate = async ({
     createdSessionId,
     setActive,
-  }: Pick<Awaited<ReturnType<typeof startSSOFlow>>, 'createdSessionId' | 'setActive'>) => {
-    // A null createdSessionId means the user cancelled — not an error
+    signIn: attempt,
+    signUp,
+  }: Awaited<ReturnType<typeof startSSOFlow>>) => {
     if (createdSessionId && setActive) {
       await setActive({ session: createdSessionId });
+      return;
+    }
+    if (attempt?.status || signUp?.status) {
+      setError(`Sign-in did not complete (sign in: ${attempt?.status ?? 'none'}, sign up: ${signUp?.status ?? 'none'})`);
     }
   };
 
   const handleApple = async () => {
     setPending(true);
+    setError(null);
     try {
       if (Platform.OS === 'ios') {
-        await activate(await startAppleAuthenticationFlow());
+        await activate({ ...(await startAppleAuthenticationFlow()), authSessionResult: null });
       } else {
         await activate(await startSSOFlow({ strategy: 'oauth_apple' }));
       }
     } catch (err) {
-      console.error(err);
+      setError(describeError(err));
     } finally {
       setPending(false);
     }
@@ -64,10 +86,11 @@ export default function Page() {
 
   const handleGoogle = async () => {
     setPending(true);
+    setError(null);
     try {
       await activate(await startSSOFlow({ strategy: 'oauth_google' }));
     } catch (err) {
-      console.error(err);
+      setError(describeError(err));
     } finally {
       setPending(false);
     }
@@ -116,6 +139,12 @@ export default function Page() {
           </Pressable>
         )}
       </View>
+
+      {error && (
+        <Text style={styles.error} selectable>
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -166,6 +195,14 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.foreground,
     fontFamily: theme.fonts.medium,
     fontSize: 16,
+  },
+  error: {
+    alignSelf: 'stretch',
+    marginTop: theme.gap(2),
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    textAlign: 'center',
   },
   buttonDisabled: {
     opacity: 0.5,

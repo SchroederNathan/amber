@@ -17,8 +17,11 @@ function getName(base: string) {
 
 function getAppId() {
   switch (process.env.APP_VARIANT) {
+    // Must stay `com.schroedernathan.amber`: it is the App Store Connect
+    // record, and Clerk verifies the Apple identity token's `aud` claim
+    // against this exact bundle identifier for native Sign in with Apple.
     case "production":
-      return APP_ID_PREFIX;
+      return `${APP_ID_PREFIX}.amber`;
     case "preview":
       return `${APP_ID_PREFIX}.preview`;
     default:
