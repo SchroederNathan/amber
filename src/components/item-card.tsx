@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { memo, useCallback } from 'react';
 import { ActionSheetIOS, ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
 import Animated, { FadeIn, ZoomOut } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -47,7 +48,18 @@ function clampRatio(ratio: number | undefined, fallback: number) {
   return Math.min(Math.max(value, 0.5), 2);
 }
 
-export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource }) {
+// Every call site builds `source` inline, so plain reference equality would
+// never match — compare it by value (item stays by reference: the query layer
+// keeps item objects stable until their data actually changes).
+function sameSource(a?: ItemSource, b?: ItemSource) {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || a.from !== b.from) return false;
+  if (a.from === 'space' && b.from === 'space') return a.spaceId === b.spaceId;
+  if (a.from === 'search' && b.from === 'search') return a.q === b.q;
+  return true;
+}
+
+export const ItemCard = memo(function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource }) {
   const { theme } = useUnistyles();
   const deleteItem = useMutation(api.items.deleteItem);
   const acceptSuggestion = useMutation(api.spaces.acceptSuggestion);
@@ -63,20 +75,20 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
 
   // The primary accept gesture: tap the sparkle, the item is in. The badge's
   // exit animation is the confirmation — no navigation, no dialog.
-  const accept = () => {
+  const accept = useCallback(() => {
     if (spaceId === undefined) return;
     if (process.env.EXPO_OS === 'ios') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     acceptSuggestion({ itemId: item._id, spaceId });
-  };
+  }, [acceptSuggestion, item._id, spaceId]);
 
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     if (spaceId === undefined) return;
     dismissSuggestion({ itemId: item._id, spaceId });
-  };
+  }, [dismissSuggestion, item._id, spaceId]);
 
-  const openMenu = () => {
+  const openMenu = useCallback(() => {
     const actions: { label: string; destructive?: boolean; run: () => void }[] = [];
     if (isSuggested) {
       actions.push({ label: 'Add to space', run: accept });
@@ -108,7 +120,16 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
         actions[index]?.run();
       },
     );
-  };
+  }, [
+    accept,
+    deleteItem,
+    dismiss,
+    isSuggested,
+    item._id,
+    item.url,
+    removeItemFromSpace,
+    spaceId,
+  ]);
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.cell}>
@@ -234,7 +255,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
       </Link>
     </Animated.View>
   );
-}
+}, (prev, next) => prev.item === next.item && sameSource(prev.source, next.source));
 
 const styles = StyleSheet.create((theme) => ({
   cell: {
