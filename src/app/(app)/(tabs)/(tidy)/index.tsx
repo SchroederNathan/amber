@@ -237,8 +237,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: theme.gap(1),
   },
   progressText: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.muted,
   },
   deckArea: {
@@ -259,8 +258,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors.surfaceMuted,
   },
   limitedText: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
+    ...theme.type.caption,
     color: theme.colors.muted,
     textAlign: 'center',
   },
@@ -279,9 +277,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors.primary,
   },
   gateButtonText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 16,
-    color: 'white',
+    ...theme.type.button,
+    color: theme.colors.onTint,
   },
   loading: {
     flex: 1,

@@ -9,10 +9,7 @@ import { AppleMaps, GoogleMaps } from 'expo-maps';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-
-// The amber accent matches theme.colors.primary (identical in both themes).
-const AMBER = '#e6a23c';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Apple Maps stretches an annotation icon into a fixed 50x50pt frame, so
 // thumbnails are pre-composited to a square: the photo aspect-fit (contained)
@@ -87,6 +84,7 @@ function fitCamera(items: Located[]) {
 
 export default function MapScreen() {
   const router = useRouter();
+  const { theme } = useUnistyles();
   const { data: items } = useQuery(convexQuery(api.items.listItems, {}));
 
   const located = useMemo(
@@ -171,7 +169,7 @@ export default function MapScreen() {
           coordinates: { latitude: item.latitude, longitude: item.longitude },
           title: item.title,
           systemImage: 'photo.fill',
-          tintColor: AMBER,
+          tintColor: theme.colors.primary,
         }))}
         onAnnotationClick={(annotation) => openItem(annotation.id)}
         onMarkerClick={(marker) => openItem(marker.id)}

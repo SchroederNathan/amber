@@ -1,3 +1,4 @@
+import { fadeOut, motion } from '@/styles/motion';
 import { EmptyState } from '@/components/empty-state';
 import { ItemDetail, type DetailItem } from '@/components/item-detail';
 import { ItemHeader } from '@/components/item-header';
@@ -23,9 +24,13 @@ import {
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { SymbolView } from 'expo-symbols';
-import Animated, { FadeOutDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { SlideInDown, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+
+const decisionBarEnter = SlideInDown.duration(motion.duration.enter)
+  .easing(motion.easing.out)
+  .reduceMotion(ReduceMotion.System);
 
 export default function ItemScreen() {
   const { id, from, spaceId, q } = useLocalSearchParams<{
@@ -36,6 +41,7 @@ export default function ItemScreen() {
   }>();
   const router = useRouter();
   const { theme } = useUnistyles();
+  const reducedMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const deleteItem = useMutation(api.items.deleteItem);
@@ -304,8 +310,8 @@ export default function ItemScreen() {
         // GlassView whose parent starts fully transparent silently fails to
         // render the liquid glass (expo/expo#41024).
         <Animated.View
-          entering={SlideInDown.duration(250)}
-          exiting={FadeOutDown.duration(200)}
+          entering={reducedMotion ? undefined : decisionBarEnter}
+          exiting={fadeOut}
           style={[styles.decisionBar, { bottom: insets.bottom + theme.gap(1.5) }]}
         >
           <Pressable onPress={onDismiss} style={styles.dismissWrap}>
@@ -320,7 +326,7 @@ export default function ItemScreen() {
               tintColor={theme.colors.primary}
               style={styles.decisionButton}
             >
-              <SymbolView name="sparkles" size={15} tintColor="#fff" />
+              <SymbolView name="sparkles" size={15} tintColor={theme.colors.onTint} />
               <Text style={styles.acceptText}>Add to space</Text>
             </GlassView>
           </Pressable>
@@ -367,13 +373,11 @@ const styles = StyleSheet.create((theme) => ({
     overflow: 'hidden',
   },
   dismissText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 15,
+    ...theme.type.subheadStrong,
     color: theme.colors.foreground,
   },
   acceptText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 15,
-    color: '#fff',
+    ...theme.type.subheadStrong,
+    color: theme.colors.onTint,
   },
 }));

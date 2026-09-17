@@ -231,8 +231,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(1.5),
   },
   heading: {
-    fontFamily: theme.fonts.display,
-    fontSize: 24,
+    ...theme.type.sheetTitle,
     color: theme.colors.foreground,
   },
   actions: {
@@ -251,14 +250,12 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
   },
   actionLabel: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 12,
+    ...theme.type.captionLabel,
     color: theme.colors.foreground,
     textAlign: 'center',
   },
   noteInput: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 18,
+    ...theme.type.reader,
     color: theme.colors.foreground,
     minHeight: 120,
     padding: theme.gap(1.5),
@@ -270,8 +267,7 @@ const styles = StyleSheet.create((theme) => ({
     textAlignVertical: 'top',
   },
   articleInput: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 18,
+    ...theme.type.reader,
     color: theme.colors.foreground,
     padding: theme.gap(1.5),
     borderRadius: theme.radius.lg,

@@ -1,3 +1,5 @@
+import { motion, motionCSS } from '@/styles/motion';
+import { scheduleOnRN } from 'react-native-worklets';
 import { parseExifDate } from '@/lib/date';
 import { parseExifLocation } from '@/lib/exif';
 import { useSaveImages } from '@/lib/use-save-image';
@@ -6,18 +8,12 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  interpolateColor,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevice,
@@ -28,12 +24,9 @@ import { isAvailable as stickerLiftAvailable, liftSubject } from 'subject-lift';
 
 type CaptureMode = 'photo' | 'sticker';
 
-// The amber accent matches theme.colors.primary (identical in both themes).
-const AMBER = '#e6a23c';
-const INACTIVE = 'rgba(255,255,255,0.55)';
-
 export default function CameraScreen() {
   const router = useRouter();
+  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   // Opened from a space's add flow: captures are pre-pinned to that space.
   const { spaceId } = useLocalSearchParams<{ spaceId?: string }>();
@@ -45,12 +38,6 @@ export default function CameraScreen() {
   const saveImages = useSaveImages();
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<CaptureMode>('photo');
-
-  // Slides the active-label highlight between Photo (0) and Sticker (1).
-  const progress = useSharedValue(0);
-  useEffect(() => {
-    progress.value = withTiming(mode === 'sticker' ? 1 : 0, { duration: 200 });
-  }, [mode, progress]);
 
   const switchMode = useCallback((next: CaptureMode) => {
     if (next === 'sticker' && !stickerLiftAvailable) return;
@@ -70,18 +57,11 @@ export default function CameraScreen() {
         .activeOffsetX([-20, 20])
         .onEnd((event) => {
           'worklet';
-          if (event.translationX < -40) runOnJS(switchMode)('sticker');
-          else if (event.translationX > 40) runOnJS(switchMode)('photo');
+          if (event.translationX < -40) scheduleOnRN(switchMode, 'sticker');
+          else if (event.translationX > 40) scheduleOnRN(switchMode, 'photo');
         }),
     [switchMode],
   );
-
-  const photoLabelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(progress.value, [0, 1], [AMBER, INACTIVE]),
-  }));
-  const stickerLabelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(progress.value, [0, 1], [INACTIVE, AMBER]),
-  }));
 
   const pickFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -156,7 +136,7 @@ export default function CameraScreen() {
 
   const renderFallback = (title: string, message: string, action?: React.ReactNode) => (
     <View style={styles.fallback}>
-      <SymbolView name="camera" size={40} tintColor="#8d8271" />
+      <SymbolView name="camera" size={40} tintColor={theme.media.muted} />
       <Text style={styles.fallbackTitle}>{title}</Text>
       <Text style={styles.fallbackMessage}>{message}</Text>
       {action}
@@ -172,7 +152,7 @@ export default function CameraScreen() {
       'Camera access needed',
       'Amber uses the camera to capture things you want to keep.',
       <Pressable style={[styles.fallbackButton, styles.fallbackPrimary]} onPress={requestPermission}>
-        <Text style={[styles.fallbackButtonText, { color: '#fff' }]}>Allow camera</Text>
+        <Text style={[styles.fallbackButtonText, { color: theme.colors.onTint }]}>Allow camera</Text>
       </Pressable>,
     );
   } else if (device == null) {
@@ -202,7 +182,7 @@ export default function CameraScreen() {
 
       <View style={[styles.topBar, { top: insets.top + 8 }]}>
         <Pressable style={styles.roundButton} onPress={() => router.back()}>
-          <SymbolView name="xmark" size={17} tintColor="#fff" weight="semibold" />
+          <SymbolView name="xmark" size={17} tintColor={theme.colors.onTint} weight="semibold" />
         </Pressable>
         {showControls ? (
           <Pressable
@@ -212,7 +192,7 @@ export default function CameraScreen() {
             <SymbolView
               name="arrow.triangle.2.circlepath.camera"
               size={17}
-              tintColor="#fff"
+              tintColor={theme.colors.onTint}
             />
           </Pressable>
         ) : null}
@@ -223,12 +203,12 @@ export default function CameraScreen() {
           {stickerLiftAvailable ? (
             <View style={[styles.modeSelector, { bottom: insets.bottom + 118 }]}>
               <Pressable hitSlop={10} onPress={() => switchMode('photo')}>
-                <Animated.Text style={[styles.modeLabel, photoLabelStyle]}>
+                <Animated.Text style={[styles.modeLabel, { transitionProperty: 'color', transitionDuration: motion.duration.state, transitionTimingFunction: motionCSS.out }, { color: mode === 'photo' ? theme.colors.primary : theme.media.inactive }]}>
                   PHOTO
                 </Animated.Text>
               </Pressable>
               <Pressable hitSlop={10} onPress={() => switchMode('sticker')}>
-                <Animated.Text style={[styles.modeLabel, stickerLabelStyle]}>
+                <Animated.Text style={[styles.modeLabel, { transitionProperty: 'color', transitionDuration: motion.duration.state, transitionTimingFunction: motionCSS.out }, { color: mode === 'sticker' ? theme.colors.primary : theme.media.inactive }]}>
                   STICKER
                 </Animated.Text>
               </Pressable>
@@ -237,11 +217,11 @@ export default function CameraScreen() {
 
           <View style={[styles.bottomBar, { bottom: insets.bottom + 24 }]}>
             <Pressable style={styles.libraryButton} onPress={pickFromLibrary}>
-              <SymbolView name="photo.on.rectangle" size={20} tintColor="#fff" />
+              <SymbolView name="photo.on.rectangle" size={20} tintColor={theme.colors.onTint} />
             </Pressable>
             <Pressable style={styles.shutter} onPress={capture} disabled={busy}>
               {busy ? (
-                <ActivityIndicator color="#1a1712" />
+                <ActivityIndicator color={theme.media.background} />
               ) : (
                 <View style={styles.shutterInner} />
               )}
@@ -257,7 +237,7 @@ export default function CameraScreen() {
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: theme.media.background,
   },
   preview: {
     flex: 1,
@@ -276,7 +256,7 @@ const styles = StyleSheet.create((theme) => ({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: theme.media.overlay,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -290,8 +270,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(3),
   },
   modeLabel: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 13,
+    ...theme.type.labelStrong,
     letterSpacing: 1.5,
   },
   bottomBar: {
@@ -306,7 +285,7 @@ const styles = StyleSheet.create((theme) => ({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: theme.media.overlay,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -314,10 +293,10 @@ const styles = StyleSheet.create((theme) => ({
     width: 74,
     height: 74,
     borderRadius: 37,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.onTint,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+    boxShadow: theme.shadows.camera,
   },
   shutterInner: {
     width: 62,
@@ -325,7 +304,7 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: 31,
     borderWidth: 3,
     borderColor: theme.colors.primary,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.onTint,
   },
   fallback: {
     flex: 1,
@@ -333,32 +312,29 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
     padding: theme.gap(4),
     gap: theme.gap(1.5),
-    backgroundColor: '#12100c',
+    backgroundColor: theme.media.surface,
   },
   fallbackTitle: {
-    fontFamily: theme.fonts.display,
-    fontSize: 22,
-    color: '#f4eddd',
+    ...theme.type.title,
+    color: theme.media.foreground,
   },
   fallbackMessage: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    ...theme.type.subhead,
     lineHeight: 21,
-    color: '#a2977f',
+    color: theme.media.muted,
     textAlign: 'center',
   },
   fallbackButton: {
     paddingVertical: theme.gap(1.25),
     paddingHorizontal: theme.gap(2.5),
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.media.control,
   },
   fallbackPrimary: {
     backgroundColor: theme.colors.primary,
   },
   fallbackButtonText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 15,
-    color: '#f4eddd',
+    ...theme.type.subheadStrong,
+    color: theme.media.foreground,
   },
 }));

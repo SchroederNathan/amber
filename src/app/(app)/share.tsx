@@ -85,8 +85,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.background,
   },
   label: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 15,
+    ...theme.type.subheadLabel,
     color: theme.colors.muted,
   },
 }));

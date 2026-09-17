@@ -1,4 +1,5 @@
-import { AnimatedSwitch } from '@/components/ui/animated-switch';
+import { ThemedText } from '@/components/ui/themed-text';
+import { Button } from '@/components/ui/button';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { convexQuery } from '@convex-dev/react-query';
@@ -8,11 +9,9 @@ import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
-  Text,
+  Switch,
   TextInput,
   View,
 } from 'react-native';
@@ -76,11 +75,11 @@ export default function NewSpaceScreen() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.content}
     >
-      <Text style={styles.heading}>{editing ? 'Edit space' : 'New space'}</Text>
-      <Text style={styles.subheading}>
+      <ThemedText variant="sheetTitle" style={styles.heading}>{editing ? 'Edit space' : 'New space'}</ThemedText>
+      <ThemedText variant="footnote" style={styles.subheading}>
         Give it a title — Amber will suggest a few of your saves that fit. You
         choose what sticks.
-      </Text>
+      </ThemedText>
 
       <TextInput
         style={styles.nameInput}
@@ -93,48 +92,38 @@ export default function NewSpaceScreen() {
 
       <View style={styles.dynamicRow}>
         <View style={styles.dynamicText}>
-          <Text style={styles.dynamicLabel}>Dynamic</Text>
-          <Text style={styles.dynamicHint}>
+          <ThemedText variant="subheadStrong" style={styles.dynamicLabel}>Dynamic</ThemedText>
+          <ThemedText variant="caption" style={styles.dynamicHint}>
             Amber keeps suggesting things that fit
-          </Text>
+          </ThemedText>
         </View>
-        <AnimatedSwitch value={dynamic} onValueChange={setDynamic} />
+        <Switch
+          accessibilityLabel="Dynamic suggestions"
+          value={dynamic}
+          onValueChange={setDynamic}
+          trackColor={{ true: theme.colors.primary }}
+        />
       </View>
 
-      <Pressable
+      <Button
+        title={editing ? 'Save changes' : 'Create space'}
         onPress={save}
-        disabled={!name.trim() || saving}
-        style={({ pressed }) => [
-          styles.saveButton,
-          (!name.trim() || saving) && { opacity: 0.4 },
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>
-            {editing ? 'Save changes' : 'Create space'}
-          </Text>
-        )}
-      </Pressable>
+        disabled={!name.trim()}
+        loading={saving}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
   content: {
-    padding: theme.gap(2.5),
-    gap: theme.gap(1.5),
+    padding: theme.spacing.xl,
+    gap: theme.spacing.md,
   },
   heading: {
-    fontFamily: theme.fonts.display,
-    fontSize: 24,
     color: theme.colors.foreground,
   },
   subheading: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
     lineHeight: 20,
     color: theme.colors.muted,
   },
@@ -144,47 +133,30 @@ const styles = StyleSheet.create((theme) => ({
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.gap(1.5),
-    fontFamily: theme.fonts.bold,
-    fontSize: 17,
+    padding: theme.spacing.md,
+    ...theme.type.headline,
     color: theme.colors.foreground,
   },
   dynamicRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.gap(1.5),
+    gap: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.gap(1.5),
+    padding: theme.spacing.md,
   },
   dynamicText: {
     flex: 1,
-    gap: 2,
+    gap: theme.spacing.xs,
   },
   dynamicLabel: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 15,
     color: theme.colors.foreground,
   },
   dynamicHint: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
     lineHeight: 18,
     color: theme.colors.muted,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    borderCurve: 'continuous',
-    paddingVertical: theme.gap(1.75),
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 16,
-    color: '#fff',
   },
 }));

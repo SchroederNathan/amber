@@ -36,8 +36,11 @@ export function SuggestedBadge({
   }
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Add suggestion to space"
       onPress={onPress}
-      hitSlop={10}
+      hitSlop={Math.max(0, (theme.control.minHeight - size) / 2)}
+      pressRetentionOffset={theme.control.pressRetentionOffset}
       style={({ pressed }) => pressed && styles.pressed}
     >
       {circle}
@@ -45,13 +48,13 @@ export function SuggestedBadge({
   );
 }
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create((theme) => ({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

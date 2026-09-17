@@ -1,4 +1,3 @@
-import { AnimatedSwitch } from '@/components/ui/animated-switch';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { convexQuery } from '@convex-dev/react-query';
@@ -6,12 +5,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { ActivityIndicator, ScrollView, Switch, Text, View } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Per-space membership toggles for one item. Every write here is the user's
 // hand — `saved` rows only; flipping a space on also overrides a dismissal.
 export default function ManageSpacesScreen() {
+  const { theme } = useUnistyles();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const id = itemId as Id<'items'>;
 
@@ -61,7 +61,9 @@ export default function ManageSpacesScreen() {
               <Text style={styles.rowLabel} numberOfLines={1}>
                 {space.name}
               </Text>
-              <AnimatedSwitch
+              <Switch
+                accessibilityLabel={space.name}
+                trackColor={{ true: theme.colors.primary }}
                 value={members.has(space._id)}
                 onValueChange={(next) => toggle(space._id, next)}
               />
@@ -79,13 +81,11 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(1.5),
   },
   heading: {
-    fontFamily: theme.fonts.display,
-    fontSize: 24,
+    ...theme.type.sheetTitle,
     color: theme.colors.foreground,
   },
   subheading: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
+    ...theme.type.footnote,
     lineHeight: 20,
     color: theme.colors.muted,
   },
@@ -93,8 +93,7 @@ const styles = StyleSheet.create((theme) => ({
     marginVertical: theme.gap(3),
   },
   empty: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
+    ...theme.type.footnote,
     color: theme.colors.muted,
     marginVertical: theme.gap(2),
   },
@@ -117,8 +116,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   rowLabel: {
     flex: 1,
-    fontFamily: theme.fonts.medium,
-    fontSize: 15,
+    ...theme.type.subheadLabel,
     color: theme.colors.foreground,
   },
 }));

@@ -1,6 +1,8 @@
 import { type FC } from 'react';
-import { ActivityIndicator, Pressable, Text } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { Text } from 'react-native';
+import { Button } from '@/components/ui/button';
+import { fadeIn } from '@/styles/motion';
+import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 import type { TidyCounts } from '@/lib/tidy/use-tidy-actions';
@@ -36,7 +38,7 @@ export const TidyDone: FC<Props> = ({
   ].join('  ·  ');
 
   return (
-    <Animated.View entering={FadeIn.duration(250)} style={styles.container}>
+    <Animated.View entering={fadeIn} style={styles.container}>
       <Text style={styles.title}>{empty ? 'All tidied' : 'Batch tidied'}</Text>
       <Text style={styles.summary}>
         {empty ? `Nothing left to sort in ${sourceTitle}. Pick another source above.` : summary}
@@ -49,13 +51,7 @@ export const TidyDone: FC<Props> = ({
         </Text>
       )}
       {!empty && (
-        <Pressable style={styles.button} onPress={onContinue} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.buttonText}>Keep going</Text>
-          )}
-        </Pressable>
+        <Button title="Keep going" style={styles.button} onPress={onContinue} loading={loading} />
       )}
     </Animated.View>
   );
@@ -71,35 +67,21 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.background,
   },
   title: {
-    fontFamily: theme.fonts.display,
-    fontSize: 26,
+    ...theme.type.largeTitle,
     color: theme.colors.foreground,
   },
   summary: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 15,
+    ...theme.type.subhead,
     color: theme.colors.muted,
     textAlign: 'center',
   },
   note: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
+    ...theme.type.caption,
     color: theme.colors.faint,
     textAlign: 'center',
   },
   button: {
-    marginTop: theme.gap(2),
+    marginTop: theme.spacing.lg,
     minWidth: 160,
-    alignItems: 'center',
-    paddingHorizontal: theme.gap(3),
-    paddingVertical: theme.gap(1.5),
-    borderRadius: theme.radius.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
-  },
-  buttonText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 16,
-    color: 'white',
   },
 }));

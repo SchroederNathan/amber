@@ -46,8 +46,7 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'center',
   },
   slogan: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
+    ...theme.type.footnote,
     color: theme.colors.muted,
     marginBottom: theme.gap(1),
   },
@@ -73,8 +72,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   email: {
     flex: 1,
-    fontFamily: theme.fonts.medium,
-    fontSize: 15,
+    ...theme.type.subheadLabel,
     color: theme.colors.foreground,
   },
   signOut: {
@@ -88,8 +86,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.surface,
   },
   signOutText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 15,
+    ...theme.type.subheadStrong,
     color: theme.colors.danger,
   },
 }));

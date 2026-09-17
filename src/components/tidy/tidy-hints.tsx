@@ -1,3 +1,4 @@
+import { motion } from '@/styles/motion';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 import { type FC } from 'react';
@@ -21,8 +22,6 @@ const BADGE_SIZE = 60;
 const STROKE_WIDTH = 3;
 const ICON_SIZE = 24;
 
-const KEEP_TINT = '#34d399';
-const KEEP_ACCENT = '#065f46';
 
 type Direction = 'keep' | 'delete' | 'save';
 
@@ -74,12 +73,12 @@ const Badge: FC<BadgeProps> = ({ direction, label, icon, accentColor }) => {
   const rCircleStyle = useAnimatedStyle(() => ({
     backgroundColor: withTiming(
       progress.get() + buffer > 1 ? 'white' : 'transparent',
-      { duration: 50 },
+      motion.timing.fade,
     ),
   }));
 
   const rAccentIconStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(progress.get() + buffer > 1 ? 1 : 0, { duration: 200 }),
+    opacity: withTiming(progress.get() + buffer > 1 ? 1 : 0, motion.timing.fade),
   }));
 
   const arcPath = useDerivedValue(() => {
@@ -129,11 +128,11 @@ export const TidyHints: FC = () => {
 
   return (
     <View style={styles.container} pointerEvents="none">
-      <Tint direction="keep" color={KEEP_TINT} />
+      <Tint direction="keep" color={theme.colors.keep} />
       <Tint direction="delete" color={theme.colors.danger} />
       <Tint direction="save" color={theme.colors.primary} />
       <View style={styles.topRow}>
-        <Badge direction="keep" label="Keep" icon="checkmark" accentColor={KEEP_ACCENT} />
+        <Badge direction="keep" label="Keep" icon="checkmark" accentColor={theme.colors.onKeep} />
         <Badge
           direction="delete"
           label="Delete"
@@ -204,10 +203,8 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
   },
   badgeLabel: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 17,
-    color: 'white',
-    textShadowColor: 'rgba(0,0,0,0.35)',
-    textShadowRadius: 6,
+    ...theme.type.headline,
+    color: theme.colors.onTint,
+    ...theme.shadows.text,
   },
 }));

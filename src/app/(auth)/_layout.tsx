@@ -1,8 +1,10 @@
+import { useReducedMotion } from 'react-native-reanimated';
 import { useAuth } from '@clerk/expo';
 import { Redirect, Stack } from 'expo-router';
 
 export default function AuthRoutesLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  const reducedMotion = useReducedMotion();
 
   if (!isLoaded) {
     return null;
@@ -12,5 +14,5 @@ export default function AuthRoutesLayout() {
     return <Redirect href={'/'} />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ animation: reducedMotion ? 'fade' : 'default', headerShown: false }} />;
 }

@@ -1,5 +1,6 @@
-import { Text } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { fadeIn } from '@/styles/motion';
+import { ThemedText } from '@/components/ui/themed-text';
+import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 type Props = {
@@ -9,9 +10,9 @@ type Props = {
 
 export function EmptyState({ title, message }: Props) {
   return (
-    <Animated.View entering={FadeIn.duration(400)} style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+    <Animated.View entering={fadeIn} style={styles.container}>
+      <ThemedText variant="title" style={styles.title}>{title}</ThemedText>
+      <ThemedText variant="subhead" style={styles.message}>{message}</ThemedText>
     </Animated.View>
   );
 }
@@ -26,13 +27,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.gap(1),
   },
   title: {
-    fontFamily: theme.fonts.display,
-    fontSize: 22,
     color: theme.colors.foreground,
   },
   message: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 15,
     color: theme.colors.muted,
     textAlign: 'center',
     lineHeight: 21,

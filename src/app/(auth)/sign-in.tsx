@@ -157,13 +157,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
   },
   title: {
-    fontFamily: theme.fonts.display,
-    fontSize: 48,
+    ...theme.type.hero,
     color: theme.colors.primary,
   },
   subtitle: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 16,
+    ...theme.type.body,
     color: theme.colors.foreground,
     marginTop: theme.gap(1),
   },
@@ -180,8 +178,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   appleButtonText: {
     color: theme.colors.background,
-    fontFamily: theme.fonts.medium,
-    fontSize: 16,
+    ...theme.type.bodyLabel,
   },
   googleButton: {
     backgroundColor: theme.colors.background,
@@ -193,15 +190,13 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   googleButtonText: {
     color: theme.colors.foreground,
-    fontFamily: theme.fonts.medium,
-    fontSize: 16,
+    ...theme.type.bodyLabel,
   },
   error: {
     alignSelf: 'stretch',
     marginTop: theme.gap(2),
     color: theme.colors.danger,
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
+    ...theme.type.footnote,
     textAlign: 'center',
   },
   buttonDisabled: {

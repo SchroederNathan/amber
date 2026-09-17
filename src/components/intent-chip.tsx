@@ -30,9 +30,11 @@ export function IntentChip({
   const icon = ICONS[kind] ?? 'sparkles';
   return (
     <Pressable
+      accessibilityRole="button"
       style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
       onPress={onPress}
-      hitSlop={6}
+      hitSlop={theme.spacing.sm}
+      pressRetentionOffset={theme.control.pressRetentionOffset}
     >
       <SymbolView name={icon} size={14} tintColor={theme.colors.primaryText} />
       <Text style={styles.label} numberOfLines={1}>
@@ -46,18 +48,17 @@ const styles = StyleSheet.create((theme) => ({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: theme.spacing.sm,
     backgroundColor: theme.colors.primarySoft,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 50,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.full,
   },
   chipPressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
   label: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.primaryText,
   },
 }));

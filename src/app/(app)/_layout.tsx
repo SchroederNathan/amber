@@ -1,3 +1,4 @@
+import { useReducedMotion } from 'react-native-reanimated';
 import { useOnboarding } from '@/lib/onboarding';
 import { RecentSavesWidgetSync } from '@/lib/widget-sync';
 import { useAuth } from '@clerk/expo';
@@ -6,6 +7,7 @@ import { useUnistyles } from 'react-native-unistyles';
 
 export default function AppLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  const reducedMotion = useReducedMotion();
   const { onboarded } = useOnboarding();
   const { theme } = useUnistyles();
 
@@ -22,6 +24,7 @@ export default function AppLayout() {
       <RecentSavesWidgetSync />
       <Stack
         screenOptions={{
+          animation: reducedMotion ? 'fade' : 'default',
           headerTransparent: true,
           headerShadowVisible: false,
           headerTintColor: theme.colors.primary,

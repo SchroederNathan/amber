@@ -423,7 +423,7 @@ const styles = StyleSheet.create((theme) => ({
   // Non-sticker heroes get the same white matted frame as the home cards, so
   // the padded look carries through the Apple zoom into this screen.
   heroContainer: {
-    backgroundColor: 'white',
+    backgroundColor: theme.media.paper,
     // Hug the image so a capped portrait sits as a centered card rather than
     // leaving a gap in a full-width frame.
     alignSelf: 'center',
@@ -448,8 +448,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(1),
   },
   processingText: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.primaryText,
   },
   titleContainer: {
@@ -463,13 +462,11 @@ const styles = StyleSheet.create((theme) => ({
     gap: 6,
   },
   sourceText: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 14,
+    ...theme.type.secondaryLabel,
     color: theme.colors.muted,
   },
   description: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 16,
+    ...theme.type.bodyLabel,
     lineHeight: 23,
     textAlign: 'center',
     color: theme.colors.muted,
@@ -493,8 +490,7 @@ const styles = StyleSheet.create((theme) => ({
     paddingTop: theme.gap(2),
   },
   paragraph: {
-    fontFamily: theme.fonts.regular,
-    fontSize: 16,
+    ...theme.type.body,
     lineHeight: 25,
     color: theme.colors.foreground,
   },
@@ -503,13 +499,12 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'center',
     gap: 5,
     backgroundColor: theme.colors.primarySoft,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 50,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.full,
   },
   manageSpacesLabel: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.primaryText,
   },
   similarSection: {
@@ -519,10 +514,9 @@ const styles = StyleSheet.create((theme) => ({
     paddingTop: theme.gap(2.5),
   },
   similarTitle: {
-    fontFamily: theme.fonts.display,
-    fontSize: 18,
+    ...theme.type.displaySmall,
     color: theme.colors.foreground,
-    paddingHorizontal: 4,
+    paddingHorizontal: theme.spacing.xs,
   },
   similarGrid: {
     flexDirection: 'row',
@@ -535,7 +529,7 @@ const styles = StyleSheet.create((theme) => ({
   // Same gutter scheme as the home feed: every cell pads 4 on all sides, so
   // neighbors sit 8 apart and the grid's -4 margins realign the outer edges.
   similarCell: {
-    padding: 4,
+    padding: theme.spacing.xs,
   },
   // Mirrors the home feed's ItemCard treatment: matted frame for photos, bare
   // silhouette for stickers, muted face for text — so the strip reads as a
@@ -554,7 +548,7 @@ const styles = StyleSheet.create((theme) => ({
     opacity: 0.85,
   },
   similarImageFrame: {
-    backgroundColor: 'white',
+    backgroundColor: theme.media.paper,
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     padding: theme.gap(0.5),
@@ -570,10 +564,7 @@ const styles = StyleSheet.create((theme) => ({
   // and the iOS layer shadow hugs the opaque pixels.
   similarSticker: {
     width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    boxShadow: theme.shadows.sticker,
   },
   similarTextFace: {
     minHeight: 96,
@@ -587,16 +578,14 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.primarySoft,
   },
   similarTextFaceTitle: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     lineHeight: 18,
     color: theme.colors.foreground,
   },
   similarCardTitle: {
     paddingHorizontal: theme.gap(0.5),
     paddingTop: theme.gap(0.75),
-    fontFamily: theme.fonts.bold,
-    fontSize: 10,
+    ...theme.type.badge,
     lineHeight: 12,
     color: theme.colors.foreground,
   },
@@ -609,21 +598,19 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'center',
     gap: 6,
     backgroundColor: theme.colors.primarySoft,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 50,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.full,
   },
   findLinksLabel: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.primaryText,
   },
   productsSection: {
     gap: theme.gap(1),
   },
   productsTitle: {
-    fontFamily: theme.fonts.display,
-    fontSize: 18,
+    ...theme.type.displaySmall,
     color: theme.colors.foreground,
   },
   productsRow: {
@@ -645,8 +632,7 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
   },
   productName: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 12,
+    ...theme.type.captionLabel,
     lineHeight: 16,
     color: theme.colors.foreground,
   },
@@ -656,14 +642,12 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(0.75),
   },
   productPrice: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 12,
+    ...theme.type.captionStrong,
     color: theme.colors.foreground,
   },
   productMerchant: {
     flexShrink: 1,
-    fontFamily: theme.fonts.regular,
-    fontSize: 11,
+    ...theme.type.finePrint,
     color: theme.colors.muted,
   },
 }));

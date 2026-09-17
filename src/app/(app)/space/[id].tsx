@@ -1,3 +1,4 @@
+import { fadeIn, fadeOut } from '@/styles/motion';
 import { EmptyState } from '@/components/empty-state';
 import type { FeedItem } from '@/components/item-card';
 import { MasonryFeed } from '@/components/masonry-feed';
@@ -12,7 +13,7 @@ import { SymbolView } from 'expo-symbols';
 import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useMemo } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function SpaceScreen() {
@@ -118,8 +119,8 @@ export default function SpaceScreen() {
           ListHeaderComponent={
             suggestionCount > 0 ? (
               <Animated.View
-                entering={FadeIn.duration(250)}
-                exiting={FadeOut.duration(200)}
+                entering={fadeIn}
+                exiting={fadeOut}
                 style={styles.suggestionsPill}
               >
                 <SymbolView name="sparkles" size={14} tintColor={theme.colors.primaryText} />
@@ -167,20 +168,18 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(1),
     alignSelf: 'center',
     backgroundColor: theme.colors.primarySoft,
-    borderRadius: 50,
+    borderRadius: theme.radius.full,
     paddingVertical: theme.gap(1),
     paddingHorizontal: theme.gap(2),
     marginTop: theme.gap(0.5),
     marginBottom: theme.gap(1),
   },
   suggestionsText: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.primaryText,
   },
   addAllText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 13,
+    ...theme.type.labelStrong,
     color: theme.colors.primaryText,
     textDecorationLine: 'underline',
   },

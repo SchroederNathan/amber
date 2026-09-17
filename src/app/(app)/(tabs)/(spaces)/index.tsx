@@ -11,7 +11,7 @@ import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { ProgressiveBlurHeader } from 'progressive-blur';
 import { ActionSheetIOS, ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Standard OpenGraph image shape (1200×630) — the default when a link's real
@@ -129,6 +129,7 @@ function CoverStack({
 
 export default function SpacesScreen() {
   const { theme } = useUnistyles();
+  const reducedMotion = useReducedMotion();
   const { data: spaces } = useQuery(convexQuery(api.spaces.listSpaces, {}));
   const deleteSpace = useMutation(api.spaces.deleteSpace);
 
@@ -176,18 +177,15 @@ export default function SpacesScreen() {
         keyExtractor={(space) => space._id}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
-        renderItem={({ item: space, index }) => {
+        renderItem={({ item: space }) => {
           // `previews` can be briefly absent when the offline cache rehydrates an
           // older query shape before the live refetch lands. The newest item is
           // the cover; the rest of the pile is intentionally blank.
           const cover = (space.previews ?? [])[0];
           return (
-            <Animated.View
-              style={styles.cell}
-              entering={FadeInDown.delay(index * 60).duration(350)}
-            >
+            <View style={styles.cell}>
               <Link href={`/space/${space._id}`} asChild>
-                <Link.Trigger withAppleZoom>
+                <Link.Trigger withAppleZoom={!reducedMotion}>
                   {/* The whole card is the pressable that routes to the space. */}
                   <Pressable style={({ pressed }) => pressed && styles.pressed}>
                     <CoverStack cover={cover} seed={space._id} />
@@ -215,7 +213,7 @@ export default function SpacesScreen() {
                   />
                 </Link.Menu>
               </Link>
-            </Animated.View>
+            </View>
           );
         }}
       />
@@ -256,12 +254,12 @@ const styles = StyleSheet.create((theme) => ({
   card: {
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
-    boxShadow: `0 6px 14px rgba(0,0,0,0.22), inset 0 0 0 1px ${theme.colors.imageBorder}`,
+    boxShadow: `${theme.shadows.photoStack}, inset 0 0 0 1px ${theme.colors.imageBorder}`,
   },
   // The cover: a white matte with a little padding around the photo, matching the
   // home feed's item frame so a save looks the same fanned into a space.
   coverFrame: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.media.paper,
     padding: theme.gap(0.5),
     zIndex: 3,
   },
@@ -276,12 +274,12 @@ const styles = StyleSheet.create((theme) => ({
     borderCurve: 'continuous',
     // White (not surfaceMuted) so a transparent die-cut sticker cover shows white
     // behind it, matching the matte instead of a grey block.
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.media.paper,
   },
   // The blank cards behind — same white stock as the cover matte so the pile
   // reads as a stack of identical cards.
   cardBlank: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.media.paper,
     zIndex: 1,
   },
   // Cover slot for an empty space: dashed outline, no fill or shadow.
@@ -303,8 +301,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   title: {
     flex: 1,
-    fontFamily: theme.fonts.bold,
-    fontSize: 10,
+    ...theme.type.badge,
     lineHeight: 12,
     color: theme.colors.foreground,
   },

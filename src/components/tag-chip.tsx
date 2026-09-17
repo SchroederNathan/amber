@@ -12,16 +12,15 @@ export function TagChip({ label, emphasized }: { label: string; emphasized?: boo
 const styles = StyleSheet.create((theme) => ({
   chip: {
     backgroundColor: theme.colors.surfaceMuted,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 50,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.full,
   },
   chipEmphasized: {
     backgroundColor: theme.colors.primarySoft,
   },
   label: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     color: theme.colors.muted,
   },
   labelEmphasized: {

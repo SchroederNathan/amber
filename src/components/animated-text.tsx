@@ -1,8 +1,10 @@
+import { motion } from '@/styles/motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Text as RNText,
   StyleSheet as RNStyleSheet,
   View,
+  useWindowDimensions,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -17,9 +19,8 @@ import {
 } from '@shopify/react-native-skia';
 import {
   useDerivedValue,
+  useReducedMotion,
   useSharedValue,
-  withDelay,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -28,27 +29,25 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 // real Gaussian blur. When `text` changes, characters shared with the previous
 // string persist (same key → same glyph) and glide to their new position, while
 // removed characters animate out (up + right, shrink, blur, fade) and added
-// characters animate in (rise from below, grow, sharpen, fade) — each staggered.
+// characters animate in (rise from below, grow, sharpen, fade) within one short transition.
 
-const FONT = require('../../assets/fonts/ExposureTrial-0.otf');
+const FONTS: Record<string, number> = {
+  'ExposureTrial-0': require('../../assets/fonts/ExposureTrial-0.otf'),
+  'Satoshi-Regular': require('../../assets/fonts/Satoshi-Regular.otf'),
+  'Satoshi-Medium': require('../../assets/fonts/Satoshi-Medium.otf'),
+  'Satoshi-Bold': require('../../assets/fonts/Satoshi-Bold.otf'),
+};
 
-const STAGGER_MS = 25; // per-character delay
-const ENTER_DELAY_MS = 120; // lead so exiting letters clear before new ones arrive
-const ENTER_RISE = 14; // px the incoming char rises from (below its target)
-const EXIT_UP = 12; // px the outgoing char translates up
-const EXIT_RIGHT = 8; // px the outgoing char translates right
-const SHRINK = 0.7; // scale a char starts/ends at while entering/exiting
-const BLUR_MAX = 6; // Gaussian blur (px) at the start of enter / end of exit
-const MOVE_DURATION = 260;
-const EXIT_DURATION = 240;
-const GLIDE_DELAY_MS = 140; // persistent chars wait before sliding to their new spot
-const GLIDE_DURATION = 320;
+// Glyph-only optical travel, independent of layout spacing.
+const ENTER_RISE = 14;
+const EXIT_UP = 12;
+const EXIT_RIGHT = 8;
+const BLUR_MAX = 6;
 const CANVAS_HEIGHT = 56;
 // Fixed canvas width. Kept just under the native header's title slot (~242pt
 // between the bar buttons) so it is never clamped — iOS then centers the whole
 // canvas on screen and the text, centered within it, lands dead-center.
 const DEFAULT_WIDTH = 240;
-const DEFAULT_FONT_SIZE = 24;
 
 // Key each character by value + running occurrence count, so the n-th "a" keeps
 // a stable identity across a swap and reconciles to the same glyph.
@@ -76,7 +75,6 @@ type CharGlyphProps = {
   color: string;
   fontSize: number;
   baselineY: number;
-  staggerMs: number;
   blurMax: number;
   onExited: (key: string) => void;
 };
@@ -90,7 +88,6 @@ const CharGlyph = memo(function CharGlyph({
   color,
   fontSize,
   baselineY,
-  staggerMs,
   blurMax,
   onExited,
 }: CharGlyphProps) {
@@ -98,49 +95,32 @@ const CharGlyph = memo(function CharGlyph({
   const gx = useSharedValue(cell.x);
   const tx = useSharedValue(0);
   const ty = useSharedValue(ENTER_RISE);
-  const sc = useSharedValue(SHRINK);
+  const sc = useSharedValue<number>(motion.scale.enter);
   const op = useSharedValue(0);
   const bl = useSharedValue(blurMax);
 
-  // Enter: on mount, cascade from below/blurred/faded/small into place.
+  // A title changes during frequent navigation: keep the entire morph within
+  // the feedback budget, with no per-character delay or unprompted bounce.
   useEffect(() => {
-    const delay = ENTER_DELAY_MS + cell.index * staggerMs;
-    ty.set(withDelay(delay, withSpring(0)));
-    sc.set(withDelay(delay, withSpring(1)));
-    op.set(withDelay(delay, withTiming(1, { duration: MOVE_DURATION })));
-    bl.set(withDelay(delay, withTiming(0, { duration: MOVE_DURATION })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Glide: persistent characters slide (after a short wait) to their new x.
-  const firstX = useRef(true);
-  useEffect(() => {
-    if (firstX.current) {
-      firstX.current = false;
-      return;
-    }
-    gx.set(withDelay(GLIDE_DELAY_MS, withTiming(cell.x, { duration: GLIDE_DURATION })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cell.x]);
-
-  // Exit: continue up + right, shrink, blur and fade, then drop the cell.
-  useEffect(() => {
-    if (cell.phase !== 'exit') return;
-    const delay = cell.index * staggerMs;
-    ty.set(withDelay(delay, withTiming(-EXIT_UP, { duration: EXIT_DURATION })));
-    tx.set(withDelay(delay, withTiming(EXIT_RIGHT, { duration: EXIT_DURATION })));
-    sc.set(withDelay(delay, withTiming(SHRINK, { duration: EXIT_DURATION })));
-    bl.set(withDelay(delay, withTiming(blurMax, { duration: EXIT_DURATION })));
-    op.set(withDelay(delay, withTiming(0, { duration: EXIT_DURATION })));
-    const timer = setTimeout(() => onExited(cell.key), delay + EXIT_DURATION + 40);
+    const exiting = cell.phase === 'exit';
+    ty.set(withTiming(exiting ? -EXIT_UP : 0, motion.timing.feedback));
+    tx.set(withTiming(exiting ? EXIT_RIGHT : 0, motion.timing.feedback));
+    sc.set(withTiming(exiting ? motion.scale.enter : 1, motion.timing.feedback));
+    bl.set(withTiming(exiting ? blurMax : 0, motion.timing.feedback));
+    op.set(withTiming(exiting ? 0 : 1, motion.timing.fade));
+    if (!exiting) return;
+    const timer = setTimeout(() => onExited(cell.key), motion.duration.feedback);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cell.phase]);
+  }, [cell.phase, cell.key, blurMax, onExited, ty, tx, sc, bl, op]);
+
+  useEffect(() => {
+    gx.set(withTiming(cell.x, motion.timing.textMove));
+  }, [cell.x, gx]);
 
   const transform = useDerivedValue(() => [
-    { translateX: gx.value + tx.value },
-    { translateY: baselineY + ty.value },
-    { scale: sc.value },
+    { translateX: gx.get() + tx.get() },
+    { translateY: baselineY + ty.get() },
+    { scale: sc.get() },
   ]);
   // Scale around the glyph's centre rather than the baseline origin.
   const origin = { x: cell.width / 2, y: -fontSize * 0.34 };
@@ -160,7 +140,6 @@ export type AnimatedTextProps = {
   width?: number;
   /** Canvas height; shrink it to sit the morph in a compact slot like a header. */
   height?: number;
-  staggerMs?: number;
   blurMax?: number;
 };
 
@@ -170,14 +149,16 @@ export function AnimatedText({
   containerStyle,
   width = DEFAULT_WIDTH,
   height = CANVAS_HEIGHT,
-  staggerMs = STAGGER_MS,
   blurMax = BLUR_MAX,
 }: AnimatedTextProps) {
   const { theme } = useUnistyles();
   const flat = (RNStyleSheet.flatten(style) ?? {}) as TextStyle;
-  const fontSize = typeof flat.fontSize === 'number' ? flat.fontSize : DEFAULT_FONT_SIZE;
+  const fontSize = typeof flat.fontSize === 'number' ? flat.fontSize : theme.type.sheetTitle.fontSize;
   const color = typeof flat.color === 'string' ? flat.color : theme.colors.foreground;
-  const font = useFont(FONT, fontSize);
+  const reducedMotion = useReducedMotion();
+  const { fontScale } = useWindowDimensions();
+  const usePlainText = reducedMotion || fontScale > 1;
+  const font = useFont(FONTS[flat.fontFamily ?? theme.fonts.display] ?? FONTS[theme.fonts.display], fontSize);
 
   const baselineY = height / 2 + fontSize * 0.34;
 
@@ -185,7 +166,7 @@ export function AnimatedText({
   const [cells, setCells] = useState<Cell[]>([]);
 
   useEffect(() => {
-    if (!font) return;
+    if (!font || usePlainText) return;
 
     const keyed = toKeyedChars(text);
     // Use true glyph advance widths (not tight bounds) so spacing/positioning
@@ -218,25 +199,25 @@ export function AnimatedText({
     // not a pure render derivation — so state is set from the effect by design.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCells([...present, ...exiting]);
-  }, [text, font, width]);
+  }, [text, font, width, usePlainText]);
 
   const removeCell = useCallback(
-    (key: string) => setCells((prev) => prev.filter((c) => c.key !== key)),
+    (key: string) => setCells((prev) => prev.filter((c) => c.key !== key || c.phase !== 'exit')),
     [],
   );
 
-  // Until the Skia font loads, fall back to plain text so the title still shows.
-  if (!font) {
+  // Native text supports Dynamic Type; Reduce Motion skips spatial glyph effects.
+  if (!font || usePlainText) {
     return (
       <View style={[styles.container, containerStyle]}>
-        <RNText style={style}>{text}</RNText>
+        <RNText style={[theme.type.sheetTitle, { color }, style]}>{text}</RNText>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <Canvas style={{ width, height }}>
+      <Canvas style={{ width, height }} accessible accessibilityLabel={text}>
         {cells.map((cell) => (
           <CharGlyph
             key={cell.key}
@@ -245,7 +226,6 @@ export function AnimatedText({
             color={color}
             fontSize={fontSize}
             baselineY={baselineY}
-            staggerMs={staggerMs}
             blurMax={blurMax}
             onExited={removeCell}
           />

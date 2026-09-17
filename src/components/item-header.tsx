@@ -45,13 +45,11 @@ const styles = StyleSheet.create((theme) => ({
     overflow: 'visible',
   },
   title: {
-    fontFamily: theme.fonts.display,
-    fontSize: 19,
+    ...theme.type.header,
     color: theme.colors.foreground,
   },
   date: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 12,
+    ...theme.type.captionLabel,
     color: theme.colors.muted,
 
   },

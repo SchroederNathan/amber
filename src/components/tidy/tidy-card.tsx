@@ -1,3 +1,4 @@
+import { motion } from '@/styles/motion';
 import { Image } from 'expo-image';
 import { memo, useState, type FC } from 'react';
 import { Text, View } from 'react-native';
@@ -51,7 +52,7 @@ const TidyCardComponent: FC<Props> = ({ photo, index, topStart }) => {
   );
 
   const rHintsStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(isDragging.get() ? 1 : 0, { duration: 150 }),
+    opacity: withTiming(isDragging.get() ? 1 : 0, motion.timing.fade),
   }));
 
   return (
@@ -62,7 +63,7 @@ const TidyCardComponent: FC<Props> = ({ photo, index, topStart }) => {
           style={styles.image}
           contentFit="cover"
           recyclingKey={photo.id}
-          transition={100}
+          transition={motion.duration.feedback}
         />
       )}
       {mounted && photo.creationTime != null && (
@@ -103,8 +104,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.overlay,
   },
   dateText: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
-    color: 'white',
+    ...theme.type.label,
+    color: theme.colors.onTint,
   },
 }));

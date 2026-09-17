@@ -4,6 +4,7 @@ import Animated, {
   Extrapolation,
   interpolate,
   useAnimatedStyle,
+  useReducedMotion,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -20,6 +21,7 @@ type Props = {
 // parallax and interpolate up as the top card leaves; the top card follows
 // the pan and tilts up to 4° with the hinge direction picked by grab point.
 const TidyCardContainerComponent: FC<PropsWithChildren<Props>> = ({ children, index }) => {
+  const reducedMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const { animatedIndex, currentIndex } = useDeckAnimation();
   const { panX, panY, absoluteYAnchor, panDistanceX } = useCardAnimation();
@@ -54,11 +56,13 @@ const TidyCardContainerComponent: FC<PropsWithChildren<Props>> = ({ children, in
     );
 
     return {
-      top,
-      opacity: isVisible ? 1 : 0,
-      transform: [
+      // Opacity alone still receives touches, especially when Reduce Motion
+      // keeps dismissed cards in place instead of moving them off-screen.
+      pointerEvents: index === current ? 'auto' : 'none',
+      opacity: isVisible && !(reducedMotion && index > current) ? 1 : 0,
+      transform: reducedMotion ? [] : [
         { translateX: panX.get() },
-        { translateY: panY.get() },
+        { translateY: top + panY.get() },
         { rotate: `${rotate}deg` },
         { scale },
       ],

@@ -1,3 +1,4 @@
+import { fadeOut, motion } from '@/styles/motion';
 import { SuggestedBadge } from '@/components/suggested-badge';
 import { displayHost } from '@/lib/url';
 import { api } from '@convex/_generated/api';
@@ -8,7 +9,7 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { ActionSheetIOS, ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
-import Animated, { FadeIn, ZoomOut } from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export type FeedItem = {
@@ -49,6 +50,7 @@ function clampRatio(ratio: number | undefined, fallback: number) {
 
 export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource }) {
   const { theme } = useUnistyles();
+  const reducedMotion = useReducedMotion();
   const deleteItem = useMutation(api.items.deleteItem);
   const acceptSuggestion = useMutation(api.spaces.acceptSuggestion);
   const dismissSuggestion = useMutation(api.spaces.dismissSuggestion);
@@ -111,12 +113,12 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
   };
 
   return (
-    <Animated.View entering={FadeIn.duration(300)} style={styles.cell}>
+    <View style={styles.cell}>
       <Link
         href={{ pathname: '/item/[id]', params: { id: item._id, ...source } }}
         asChild
       >
-        <Link.Trigger withAppleZoom>
+        <Link.Trigger withAppleZoom={!reducedMotion}>
           <Pressable
             style={({ pressed }) => [
               styles.card,
@@ -129,7 +131,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
                 <Image
                   source={{ uri: imageUri }}
                   recyclingKey={item._id}
-                  transition={200}
+                  transition={motion.duration.feedback}
                   contentFit={item.isSticker ? 'contain' : 'cover'}
                   style={[
                     item.isSticker ? styles.sticker : styles.image,
@@ -177,10 +179,9 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
             </View>
 
             {isSuggested && (
-              // The badge pops off with a spring when the suggestion resolves
-              // (accepted here or anywhere else — the prop flip unmounts it).
+              // A short fade confirms that the suggestion was accepted.
               <Animated.View
-                exiting={ZoomOut.springify().damping(14).stiffness(300)}
+                exiting={fadeOut}
                 style={styles.suggestedBadge}
               >
                 <SuggestedBadge onPress={accept} />
@@ -232,13 +233,13 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
           )}
         </Link.Menu>
       </Link>
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
   cell: {
-    padding: 4,
+    padding: theme.spacing.xs,
   },
   card: {
     borderRadius: theme.radius.md,
@@ -257,7 +258,7 @@ const styles = StyleSheet.create((theme) => ({
   },
 
   imageContainer: {
-    backgroundColor: 'white',
+    backgroundColor: theme.media.paper,
     borderRadius: theme.radius.md,
     borderCurve: 'continuous',
     padding: theme.gap(0.5),
@@ -269,10 +270,7 @@ const styles = StyleSheet.create((theme) => ({
   // silhouette rather than a rectangle.
   sticker: {
     width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    boxShadow: theme.shadows.sticker,
   },
   textFace: {
     padding: theme.gap(1.5),
@@ -286,8 +284,7 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.primarySoft,
   },
   textFaceTitle: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
+    ...theme.type.label,
     lineHeight: 18,
     color: theme.colors.foreground,
   },
@@ -303,8 +300,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: 2,
   },
   captionTitle: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 10,
+    ...theme.type.badge,
     lineHeight: 12,
     color: theme.colors.foreground,
   },
@@ -315,8 +311,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   captionHost: {
     flexShrink: 1,
-    fontFamily: theme.fonts.bold,
-    fontSize: 10,
+    ...theme.type.badge,
     lineHeight: 12,
     color: theme.colors.muted,
   },
@@ -334,8 +329,8 @@ const styles = StyleSheet.create((theme) => ({
     top: 8,
     right: 8,
     backgroundColor: theme.colors.surface,
-    borderRadius: 50,
+    borderRadius: theme.radius.full,
     padding: 5,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
+    boxShadow: theme.shadows.raised,
   },
 }));
