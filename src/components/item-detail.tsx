@@ -285,6 +285,7 @@ function ProductsSection({ item }: { item: DetailItem }) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.productsScroll}
           contentContainerStyle={styles.productsRow}
         >
           {products.map((product, index) => (
@@ -636,8 +637,15 @@ const styles = StyleSheet.create((theme) => ({
     ...theme.type.displaySmall,
     color: theme.colors.foreground,
   },
+  // Bleed the shop row out of `body`'s horizontal padding so cards scroll to
+  // the screen edge instead of clipping at the padded bounds; the content
+  // padding restores the same inset at rest. Keep both in sync with `body`.
+  productsScroll: {
+    marginHorizontal: -theme.gap(2),
+  },
   productsRow: {
     gap: theme.gap(1.25),
+    paddingHorizontal: theme.gap(2),
   },
   productCard: {
     width: 150,

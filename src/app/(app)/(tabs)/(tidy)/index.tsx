@@ -129,7 +129,9 @@ const TidyDeckView: FC<DeckViewProps> = ({
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: currentSource.title }} />
+      <Stack.Title asChild>
+        <Text style={styles.title}>{currentSource.title}</Text>
+      </Stack.Title>
 
       {/* Native header controls (note 3): undo on the left, delete on the
           right with a live count badge. */}
@@ -229,6 +231,11 @@ const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  title: {
+    ...theme.type.largeTitle,
+    letterSpacing: 0.5,
+    color: theme.colors.foreground,
   },
   progressRow: {
     alignItems: 'center',
