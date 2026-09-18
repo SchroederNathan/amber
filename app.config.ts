@@ -44,6 +44,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: getName(config.name ?? "Amber"),
   slug: "amber",
+  runtimeVersion: {
+    // Automatic production OTA delivery needs a native compatibility
+    // boundary even when the marketing version stays the same. Development
+    // and preview builds keep the appVersion runtime.
+    policy: process.env.APP_VARIANT === "production" ? "fingerprint" : "appVersion",
+  },
+  updates: {
+    ...config.updates,
+    url: `https://u.expo.dev/${config.extra?.eas?.projectId}`,
+  },
   extra: {
     ...config.extra,
     variant: process.env.APP_VARIANT ?? "unset",

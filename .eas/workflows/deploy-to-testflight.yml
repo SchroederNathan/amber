@@ -1,0 +1,88 @@
+name: Deploy iOS (TestFlight or OTA)
+
+# Native changes create a new TestFlight binary. Compatible changes publish
+# an iOS OTA update to the production channel. Never repack store binaries.
+
+on:
+  push:
+    branches: ['main']
+  # This also supports `eas workflow:run` before the GitHub repository is
+  # connected to the EAS project.
+  workflow_dispatch:
+    inputs:
+      force_native:
+        type: boolean
+        default: false
+        description: Build and upload a new TestFlight binary even if a compatible build exists
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  checks:
+    name: Type checks and regression tests
+    environment: production
+    # sdk-57 ships Node 22.23.1; the test script needs >= 22.6 for
+    # --experimental-strip-types.
+    image: sdk-57
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - name: Type checks and regression tests
+        run: |
+          bun run typecheck
+          bun run test
+
+  fingerprint:
+    name: Fingerprint native layer
+    type: fingerprint
+    environment: production
+    env:
+      APP_VARIANT: production
+
+  get_ios_build:
+    name: Find an OTA-compatible iOS build
+    type: get-build
+    needs: [checks, fingerprint]
+    params:
+      platform: ios
+      profile: production
+      distribution: store
+      channel: production
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      runtime_version: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      # Only reuse completed builds. An in-progress build may never be uploaded.
+      wait_for_in_progress: false
+
+  build_ios:
+    name: Build iOS for TestFlight
+    type: build
+    needs: [get_ios_build]
+    if: ${{ inputs.force_native == true || !needs.get_ios_build.outputs.build_id }}
+    params:
+      platform: ios
+      profile: production
+      message: ${{ github.commit_message }}
+
+  testflight:
+    name: Upload to TestFlight
+    type: testflight
+    needs: [build_ios]
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      profile: production
+      changelog: ${{ github.commit_message }}
+
+  publish_ios_update:
+    name: Publish iOS OTA update
+    type: update
+    needs: [get_ios_build]
+    if: ${{ inputs.force_native != true && needs.get_ios_build.outputs.build_id }}
+    environment: production
+    env:
+      APP_VARIANT: production
+    params:
+      platform: ios
+      channel: production
+      message: ${{ github.commit_message }}
