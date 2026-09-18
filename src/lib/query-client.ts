@@ -3,6 +3,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import { QueryClient } from '@tanstack/react-query';
 import { ConvexReactClient } from 'convex/react';
 import { createMMKV } from 'react-native-mmkv';
+import { restorePersistentClient, shouldDehydrateAppQuery } from './query-cache-policy';
 
 // Single Convex socket shared by ConvexProviderWithClerk (reactive mutations)
 // and the TanStack adapter (persisted reactive queries). One client => one
@@ -15,6 +16,9 @@ const convexQueryClient = new ConvexQueryClient(convex);
 
 export const queryClient = new QueryClient({
   defaultOptions: {
+    dehydrate: {
+      shouldDehydrateQuery: shouldDehydrateAppQuery,
+    },
     queries: {
       // Convex's hash/queryFn MUST be global defaults (not per-call) so that
       // restored persisted query hashes match — otherwise persistence silently
@@ -46,4 +50,7 @@ const clientStorage = {
   },
 };
 
-export const persister = createSyncStoragePersister({ storage: clientStorage });
+export const persister = createSyncStoragePersister({
+  storage: clientStorage,
+  deserialize: restorePersistentClient,
+});

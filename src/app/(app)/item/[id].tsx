@@ -12,8 +12,15 @@ import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+  type NativeStackNavigationProp,
+} from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -40,6 +47,7 @@ export default function ItemScreen() {
     q?: string;
   }>();
   const router = useRouter();
+  const navigation = useNavigation<NativeStackNavigationProp<{ 'item/[id]': { id: string } }>>();
   const { theme } = useUnistyles();
   const reducedMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
@@ -52,18 +60,18 @@ export default function ItemScreen() {
   // Rebuild the ordered sibling list from whichever list the user opened from.
   // Each of these queries is already warm in the cache from the source screen,
   // so this is a cache read, not a network round-trip.
-  const listQ = useQuery({
-    ...convexQuery(api.items.listItems, {}),
-    enabled: from !== 'space' && from !== 'search',
-  });
-  const spaceQ = useQuery({
-    ...convexQuery(api.spaces.getSpace, { id: (spaceId ?? '') as Id<'spaces'> }),
-    enabled: from === 'space' && !!spaceId,
-  });
-  const searchQ = useQuery({
-    ...convexQuery(api.items.searchItems, { query: q ?? '' }),
-    enabled: from === 'search' && !!q,
-  });
+  const listQ = useQuery(
+    convexQuery(api.items.listItems, from !== 'space' && from !== 'search' ? {} : 'skip'),
+  );
+  const spaceQ = useQuery(
+    convexQuery(
+      api.spaces.getSpace,
+      from === 'space' && spaceId ? { id: spaceId as Id<'spaces'> } : 'skip',
+    ),
+  );
+  const searchQ = useQuery(
+    convexQuery(api.items.searchItems, from === 'search' && q ? { query: q } : 'skip'),
+  );
 
   // A single-item fallback for deep links (no source) or a stale list that no
   // longer contains this id.
@@ -73,14 +81,17 @@ export default function ItemScreen() {
 
   // Mirror the space screen's feed order exactly (suggestions first, then
   // saved) so swiping pages through what the user saw in the grid.
-  const list: DetailItem[] | undefined =
-    from === 'space'
-      ? spaceQ.data
-        ? [...spaceQ.data.suggestions, ...spaceQ.data.items]
-        : undefined
-      : from === 'search'
-        ? searchQ.data
-        : listQ.data;
+  const list = useMemo<DetailItem[] | undefined>(
+    () =>
+      from === 'space'
+        ? spaceQ.data
+          ? [...spaceQ.data.suggestions, ...spaceQ.data.items]
+          : undefined
+        : from === 'search'
+          ? searchQ.data
+          : listQ.data,
+    [from, spaceQ.data, searchQ.data, listQ.data],
+  );
 
   const suggestedIds = useMemo(
     () => new Set(spaceQ.data?.suggestions.map((i) => i._id) ?? []),
@@ -107,7 +118,7 @@ export default function ItemScreen() {
   // so swiping (which rewrites the `id` param) never re-pairs the transition.
   const [pushedId] = useState(id);
   const [activeId, setActiveId] = useState(id);
-  const [editing, setEditing] = useState(false);
+  const activeIdRef = useRef(id);
 
   // Keeping the route `id` param in sync writes navigation state, which
   // re-renders the entire native-stack tree — a ~16ms cascade profiled as the
@@ -116,23 +127,33 @@ export default function ItemScreen() {
   // the param. Debounce it so a run of swipes writes once, after it settles,
   // instead of paying the cascade on every page.
   const paramTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelParamUpdate = useCallback(() => {
+    if (paramTimer.current !== null) {
+      clearTimeout(paramTimer.current);
+      paramTimer.current = null;
+    }
+  }, []);
   const onViewable = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken<DetailItem>[] }) => {
       const first = viewableItems[0]?.item as DetailItem | undefined;
-      if (!first) return;
+      if (!first || !navigation.isFocused() || first._id === activeIdRef.current) return;
+      activeIdRef.current = first._id;
       setActiveId(first._id);
-      if (paramTimer.current) clearTimeout(paramTimer.current);
+      cancelParamUpdate();
       paramTimer.current = setTimeout(() => {
-        router.setParams({ id: first._id });
+        paramTimer.current = null;
+        if (navigation.isFocused()) navigation.setParams({ id: first._id });
       }, 350);
     },
-    [router],
+    [navigation, cancelParamUpdate],
   );
-  useEffect(
-    () => () => {
-      if (paramTimer.current) clearTimeout(paramTimer.current);
-    },
-    [],
+  useFocusEffect(
+    useCallback(() => {
+      // A covered screen stays mounted. Cancel its pending write on blur, then
+      // restore the current page's URL when this screen receives focus again.
+      if (activeIdRef.current !== id) navigation.setParams({ id: activeIdRef.current });
+      return cancelParamUpdate;
+    }, [id, navigation, cancelParamUpdate]),
   );
   const viewabilityConfig = useMemo(
     () => ({ itemVisiblePercentThreshold: 60 }),
@@ -213,15 +234,17 @@ export default function ItemScreen() {
 
   const onDismiss = useCallback(async () => {
     if (!spaceId || !activeId || !items) return;
+    cancelParamUpdate();
     // The dismissed item leaves the space's list; slide to a neighbour first,
     // mirroring delete, so the pager never lands on a vanished page.
     const idx = items.findIndex((i) => i._id === activeId);
     const neighbor = items[idx + 1] ?? items[idx - 1];
     const dismissedId = activeId as Id<'items'>;
     if (neighbor) {
+      activeIdRef.current = neighbor._id;
       listRef.current?.scrollToIndex({ index: items.indexOf(neighbor), animated: true });
       setActiveId(neighbor._id);
-      router.setParams({ id: neighbor._id });
+      navigation.setParams({ id: neighbor._id });
     } else {
       router.back();
     }
@@ -229,23 +252,25 @@ export default function ItemScreen() {
       itemId: dismissedId,
       spaceId: spaceId as Id<'spaces'>,
     });
-  }, [spaceId, activeId, items, dismissSuggestion, router]);
+  }, [spaceId, activeId, items, dismissSuggestion, router, navigation, cancelParamUpdate]);
 
   const onDelete = useCallback(async () => {
     if (!activeItem || !items) return;
+    cancelParamUpdate();
     const idx = items.findIndex((i) => i._id === activeItem._id);
     const neighbor = items[idx + 1] ?? items[idx - 1];
     if (neighbor) {
       // Slide to the neighbour first, then remove the current save; Convex's
       // reactive query drops it from the list behind us.
+      activeIdRef.current = neighbor._id;
       listRef.current?.scrollToIndex({ index: items.indexOf(neighbor), animated: true });
       setActiveId(neighbor._id);
-      router.setParams({ id: neighbor._id });
+      navigation.setParams({ id: neighbor._id });
     } else {
       router.back();
     }
     await deleteItem({ id: activeItem._id });
-  }, [activeItem, items, deleteItem, router]);
+  }, [activeItem, items, deleteItem, router, navigation, cancelParamUpdate]);
 
   if (items === undefined) {
     return (

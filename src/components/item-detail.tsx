@@ -1,6 +1,7 @@
 import { IntentChip } from '@/components/intent-chip';
 import { TagChip } from '@/components/tag-chip';
 import { runIntent } from '@/lib/intents';
+import { relatedItemsQueryPolicy } from '@/lib/query-cache-policy';
 import { displayHost } from '@/lib/url';
 import { convexQuery } from '@convex-dev/react-query';
 import { api } from '@convex/_generated/api';
@@ -12,7 +13,7 @@ import { useHeaderHeight } from 'expo-router/build/react-navigation';
 import { SymbolView } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import type { FunctionReturnType } from 'convex/server';
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -48,6 +49,16 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
   const { theme } = useUnistyles();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const displayedId = useRef(item._id);
+
+  useLayoutEffect(() => {
+    if (displayedId.current === item._id) return;
+    displayedId.current = item._id;
+    // FlashList reuses this native ScrollView for another item. Its old
+    // vertical offset belongs to the previous page, not the new article.
+    scrollRef.current?.scrollTo({ x: 0, y: 0, animated: false });
+  }, [item._id]);
 
   // Cap the hero so a tall portrait image can't fill the whole screen and hide
   // the title, description, and actions below it.
@@ -64,8 +75,11 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
   // Lexical-similarity strip for the bottom of the page (v0 — a vector index
   // upgrade slots in behind the same query). Only ready items have signal.
   const { data: similar } = useQuery({
-    ...convexQuery(api.items.similarItems, { id: item._id }),
-    enabled: item.status === 'ready',
+    ...convexQuery(
+      api.items.similarItems,
+      item.status === 'ready' ? { id: item._id } : 'skip',
+    ),
+    ...relatedItemsQueryPolicy,
   });
 
   const heroUri = item.imageUrl ?? item.heroImageUrl;
@@ -104,6 +118,8 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
   const hero = heroUri ? (
     <Image
       source={{ uri: heroUri }}
+      recyclingKey={item._id}
+      enforceEarlyResizing
       contentFit="contain"
       style={
         item.isSticker
@@ -115,6 +131,7 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
 
   return (
     <ScrollView
+      ref={scrollRef}
       contentInsetAdjustmentBehavior="never"
       style={[styles.container, { paddingTop: headerHeight + theme.gap(5) }]}
       contentContainerStyle={{ paddingBottom: insets.bottom + theme.gap(4) }}
@@ -279,6 +296,8 @@ function ProductsSection({ item }: { item: DetailItem }) {
               {product.thumbnailUrl ? (
                 <Image
                   source={{ uri: product.thumbnailUrl }}
+                  recyclingKey={`${item._id}:${product.url}`}
+                  enforceEarlyResizing
                   contentFit="cover"
                   style={styles.productImage}
                 />
@@ -384,6 +403,8 @@ function SimilarItemCard({ item }: { item: DetailItem }) {
           item.isSticker ? (
             <Image
               source={{ uri: imageUri }}
+              recyclingKey={item._id}
+              enforceEarlyResizing
               contentFit="contain"
               style={[styles.similarSticker, { aspectRatio }]}
             />
@@ -391,6 +412,8 @@ function SimilarItemCard({ item }: { item: DetailItem }) {
             <View style={styles.similarImageFrame}>
               <Image
                 source={{ uri: imageUri }}
+                recyclingKey={item._id}
+                enforceEarlyResizing
                 contentFit="cover"
                 style={[styles.similarImage, { aspectRatio }]}
               />

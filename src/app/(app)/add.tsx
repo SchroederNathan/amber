@@ -1,6 +1,5 @@
 import { AnimatedText } from '@/components/animated-text';
 import { parseExifDate } from '@/lib/date';
-import { parseExifLocation } from '@/lib/exif';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
@@ -117,7 +116,6 @@ export default function AddScreen() {
           height: asset.height,
           mimeType: asset.mimeType,
           capturedAt: parseExifDate(asset.exif),
-          ...parseExifLocation(asset.exif),
         })),
         { spaceId: pinnedSpaceId },
       );

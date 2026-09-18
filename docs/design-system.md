@@ -34,10 +34,12 @@ its easing class instances cannot be serialized into a worklet closure.
 
 | Purpose | Curve / spring | Duration |
 | --- | --- | --- |
-| Frequent feedback, title changes, press | `bezier(0.23, 1, 0.32, 1)` | 120ms |
+| Frequent feedback, press | `bezier(0.23, 1, 0.32, 1)` | 120ms |
 | Small state changes | Same ease-out | 180ms |
 | Occasional entrance / exit | Same ease-out | 250ms / 200ms |
-| Existing glyphs moving on screen | `bezier(0.77, 0, 0.175, 1)` | 120ms |
+| Text morph: reveal / exit | Ease-out | 260ms / 240ms |
+| Text morph: existing glyph glide | `bezier(0.77, 0, 0.175, 1)` | 320ms after 140ms delay |
+| Text morph: rise / grow | Spring, damping ratio 1 | 550ms perceptual |
 | Settle without momentum | Spring, damping ratio 1 | 400ms perceptual |
 | Drag release / snap back | Spring, damping ratio 0.8, actual release velocity | 400ms perceptual |
 | Custom sheet, if ever needed | Spring, damping ratio 0.8, velocity | 300ms perceptual |
@@ -46,6 +48,23 @@ Press scale is 0.97. Spatial entrances start at 0.95 where needed. Never use a
 default spring, default timing easing, ease-in, a scale-from-zero effect, or
 per-row entrances in a virtualized list. Tab switches stay native. Onboarding
 uses one short fade budget rather than a long stagger that delays its controls.
+
+`motion.textMorph` preserves the requested
+[RN Motion blurred-text choreography](https://rnmotion.dev/animations/blurred-text-morph):
+25ms per letter, a 120ms entrance lead, 0.7 glyph scale and 6-point blur. This is
+an intentional exception to the short feedback budget. Shared letters glide;
+new letters rise and sharpen; removed letters lift right, shrink and blur away.
+The canvas overflows its layout slot so compact headers do not crop the effect.
+A cancellable RN-side timer removes completed exits in one batch; glyphs never
+schedule individual cleanup callbacks across Worklets. Headers mount fully
+visible, including the handoff from native font-loading text to the canvas.
+Returning letters cancel their previous fade before retargeting, without another
+entrance delay. If the text changes again before the morph finishes, discard
+outgoing fragments, show new letters immediately, and settle surviving letters
+with the 120ms ease-out feedback token. Ordinary changes retain the full morph.
+Titles are measured to fit their slot with an ellipsis
+and a bounded retiring layer; accessibility retains the full text. Opacity/blur
+use the design system's ease-out curve.
 
 Reduced Motion suppresses scale, translation, rotation, parallax and glyph blur;
 short opacity/color feedback remains. Stack transitions become fades and Apple
@@ -82,11 +101,14 @@ its serialized render function and needs a separate runtime-compatible migration
 - `npx tsc --noEmit`
 - `node --experimental-strip-types --test tests/swipe-decision.test.mjs`
 - `npx expo lint` (existing effect-state errors in New Space / Manage Spaces and
-  three existing item-detail warnings; no new diagnostics)
+  no new diagnostics; prior pager warnings resolved)
 - iOS simulator: native switch and primary button, short keep flick, undo, slow
   below-threshold drag returning home; repeated flicks and undo with iOS Reduce
   Motion enabled. Simulator checks establish function, not release performance
   or haptic feel.
+- Text morph: recorded Add title changes and a rapid item-page reversal; checked
+  intermediate frames for visible blur/glide, compact-header overflow and full
+  letter recovery after interruption.
 
 Before judging feel, use a release build on the slowest supported device: flick,
 reverse and re-grab a card, undo mid-settle, and check haptic timing. Check large

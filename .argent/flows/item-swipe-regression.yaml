@@ -1,0 +1,174 @@
+steps:
+  - tool: run-sequence
+    args:
+      steps:
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.8
+            fromY: 0.45
+            toX: 0.25
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+        - tool: gesture-swipe
+          args:
+            fromX: 0.32
+            fromY: 0.45
+            toX: 0.88
+            toY: 0.45
+            durationMs: 150
+          delayMs: 600
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Favorite Person Mug
+      timeoutMs: 4000
+executionPrerequisite: iOS portrait; item pager at Favorite Person Mug in
+  Apartment Shopping List, Amazon order details is next. No sheet/keyboard. Raw
+  150ms drags deliberately overlap title animations. Start rightward drags at
+  x=0.32 to avoid the native back gesture.

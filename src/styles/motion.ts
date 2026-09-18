@@ -40,7 +40,22 @@ export const motion = {
     enter: { duration: duration.enter, easing: easing.out, reduceMotion: ReduceMotion.System },
     exit: { duration: duration.exit, easing: easing.out, reduceMotion: ReduceMotion.System },
     fade: { duration: duration.feedback, easing: easing.out, reduceMotion: ReduceMotion.Never },
-    textMove: { duration: duration.feedback, easing: easing.inOut, reduceMotion: ReduceMotion.System },
+  },
+  // RN Motion's blurred text morph is a deliberate, staggered signature effect.
+  // Keep its choreography separate from the short press/feedback budget.
+  textMorph: {
+    stagger: 25,
+    enterDelay: 120,
+    glideDelay: 140,
+    enterRise: 14,
+    exitUp: 12,
+    exitRight: 8,
+    scale: 0.7,
+    blur: 6,
+    enter: { duration: 550, dampingRatio: 1, reduceMotion: ReduceMotion.System },
+    reveal: { duration: 260, easing: easing.out, reduceMotion: ReduceMotion.System },
+    exit: { duration: 240, easing: easing.out, reduceMotion: ReduceMotion.System },
+    glide: { duration: 320, easing: easing.inOut, reduceMotion: ReduceMotion.System },
   },
   spring: {
     settle: { duration: 400, dampingRatio: 1, reduceMotion: ReduceMotion.System },

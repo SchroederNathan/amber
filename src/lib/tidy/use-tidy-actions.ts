@@ -61,9 +61,6 @@ export function useTidyActions({ batch, noteDeleted }: Params) {
       (async () => {
         const asset = new Asset(photo.id);
         const uri = await asset.getUri();
-        // Best-effort: Android needs ACCESS_MEDIA_LOCATION, and not every
-        // photo has a GPS fix — a save must never fail over its location.
-        const location = await asset.getLocation().catch(() => null);
         const [itemId] = await saveImages([
           {
             uri,
@@ -71,8 +68,6 @@ export function useTidyActions({ batch, noteDeleted }: Params) {
             height: photo.height ?? undefined,
             mimeType: mimeFromUri(uri),
             capturedAt: photo.creationTime ?? undefined,
-            latitude: location?.latitude,
-            longitude: location?.longitude,
           },
         ]);
         return itemId;
