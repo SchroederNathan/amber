@@ -180,7 +180,7 @@ export default function CameraScreen() {
 
       <View style={[styles.topBar, { top: insets.top + 8 }]}>
         <Pressable style={styles.roundButton} onPress={() => router.back()}>
-          <SymbolView name="xmark" size={17} tintColor={theme.colors.onTint} weight="semibold" />
+          <SymbolView name="xmark" size={17} tintColor={theme.media.foreground} weight="semibold" />
         </Pressable>
         {showControls ? (
           <Pressable
@@ -190,7 +190,7 @@ export default function CameraScreen() {
             <SymbolView
               name="arrow.triangle.2.circlepath.camera"
               size={17}
-              tintColor={theme.colors.onTint}
+              tintColor={theme.media.foreground}
             />
           </Pressable>
         ) : null}
@@ -215,7 +215,7 @@ export default function CameraScreen() {
 
           <View style={[styles.bottomBar, { bottom: insets.bottom + 24 }]}>
             <Pressable style={styles.libraryButton} onPress={pickFromLibrary}>
-              <SymbolView name="photo.on.rectangle" size={20} tintColor={theme.colors.onTint} />
+              <SymbolView name="photo.on.rectangle" size={20} tintColor={theme.media.foreground} />
             </Pressable>
             <Pressable style={styles.shutter} onPress={capture} disabled={busy}>
               {busy ? (
@@ -291,7 +291,7 @@ const styles = StyleSheet.create((theme) => ({
     width: 74,
     height: 74,
     borderRadius: 37,
-    backgroundColor: theme.colors.onTint,
+    backgroundColor: theme.media.paper,
     alignItems: 'center',
     justifyContent: 'center',
     boxShadow: theme.shadows.camera,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: 31,
     borderWidth: 3,
     borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.onTint,
+    backgroundColor: theme.media.paper,
   },
   fallback: {
     flex: 1,

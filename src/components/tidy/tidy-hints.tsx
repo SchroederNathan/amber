@@ -204,7 +204,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   badgeLabel: {
     ...theme.type.headline,
-    color: theme.colors.onTint,
+    color: theme.colors.onOverlay,
     ...theme.shadows.text,
   },
 }));

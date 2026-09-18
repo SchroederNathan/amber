@@ -105,6 +105,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   dateText: {
     ...theme.type.label,
-    color: theme.colors.onTint,
+    color: theme.colors.onOverlay,
   },
 }));
