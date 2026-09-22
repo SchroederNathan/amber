@@ -1,14 +1,15 @@
+import { BiometricSetting } from '@/components/biometric-setting';
+import { useAppLock } from '@/lib/app-lock';
 import { Wordmark } from '@/components/wordmark';
 import { useClerk, useUser } from '@clerk/expo';
-import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ProfileScreen() {
   const { user } = useUser();
   const { signOut } = useClerk();
-  const router = useRouter();
+  const { busy } = useAppLock();
   const { theme } = useUnistyles();
 
   return (
@@ -25,11 +26,17 @@ export default function ProfileScreen() {
         </Text>
       </View>
 
+      <BiometricSetting />
+
       <Pressable
+        disabled={busy}
         style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.7 }]}
         onPress={async () => {
-          router.back();
-          await signOut();
+          try {
+            await signOut();
+          } catch {
+            Alert.alert('Could not sign out', 'Check your connection and try again.');
+          }
         }}
       >
         <Text style={styles.signOutText}>Sign out</Text>

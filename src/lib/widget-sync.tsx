@@ -54,7 +54,7 @@ function widgetSubtitle(item: FeedItem): string {
   return 'Photo';
 }
 
-async function syncWidget(items: FeedItem[]) {
+async function syncWidget(items: FeedItem[], isCurrent: () => boolean = () => true) {
   // Loaded lazily so a dev client built before expo-widgets was added doesn't
   // crash at startup on the missing native module.
   const { widgetsDirectory } = await import('expo-widgets');
@@ -95,11 +95,21 @@ async function syncWidget(items: FeedItem[]) {
     }
   }
 
-  RecentSavesWidget.updateSnapshot({ items: widgetItems });
+  if (isCurrent()) RecentSavesWidget.updateSnapshot({ items: widgetItems });
 }
 
 // Serialize syncs so a fast series of Convex pushes can't interleave file work.
 let syncChain: Promise<void> = Promise.resolve();
+let widgetGeneration = 0;
+
+// Invalidate pending publications before waiting for thumbnail work to finish.
+export function hideRecentSavesWidget(): Promise<void> {
+  widgetGeneration++;
+  if (Platform.OS !== 'ios') return Promise.resolve();
+  const clear = syncChain.catch(() => {}).then(() => syncWidget([]));
+  syncChain = clear.catch(() => {});
+  return clear;
+}
 
 /**
  * Keeps the "Recent Saves" home screen widget fed with the latest ready items.
@@ -109,6 +119,10 @@ let syncChain: Promise<void> = Promise.resolve();
 export function RecentSavesWidgetSync() {
   const { data: items } = useQuery(convexQuery(api.items.listItems, {}));
   const lastKey = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    void hideRecentSavesWidget().catch(() => console.warn('Could not clear Recent Saves widget'));
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || items === undefined) return;
@@ -122,8 +136,11 @@ export function RecentSavesWidgetSync() {
     if (key === lastKey.current) return;
     lastKey.current = key;
 
+    const generation = widgetGeneration;
     syncChain = syncChain
-      .then(() => syncWidget(recent))
+      .then(() => generation === widgetGeneration
+        ? syncWidget(recent, () => generation === widgetGeneration)
+        : undefined)
       .catch((error) => {
         lastKey.current = null;
         console.warn('Recent Saves widget sync failed', error);
