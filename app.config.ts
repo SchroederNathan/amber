@@ -70,6 +70,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // silently replace them (expo-font, expo-router, expo-sharing, …).
     ...(config.plugins ?? []),
     [
+      "expo-build-properties",
+      {
+        ios: {
+          enableSceneSupport: true,
+        },
+      },
+    ],
+    [
       "expo-dev-client",
       {
         addGeneratedScheme: process.env.APP_VARIANT === "development",
