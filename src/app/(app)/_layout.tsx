@@ -1,4 +1,5 @@
 import { useReducedMotion } from 'react-native-reanimated';
+import { useAppLock } from '@/lib/app-lock';
 import { useOnboarding } from '@/lib/onboarding';
 import { RecentSavesWidgetSync } from '@/lib/widget-sync';
 import { useAuth } from '@clerk/expo';
@@ -7,21 +8,20 @@ import { useUnistyles } from 'react-native-unistyles';
 
 export default function AppLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+  return <AuthenticatedAppLayout />;
+}
+
+function AuthenticatedAppLayout() {
   const reducedMotion = useReducedMotion();
   const { onboarded } = useOnboarding();
+  const { enabled: lockEnabled } = useAppLock();
   const { theme } = useUnistyles();
-
-  if (!isLoaded) {
-    return null;
-  }
-
-  if (!isSignedIn) {
-    return <Redirect href="/(auth)/sign-in" />;
-  }
 
   return (
     <>
-      <RecentSavesWidgetSync />
+      {!lockEnabled && <RecentSavesWidgetSync />}
       <Stack
         screenOptions={{
           animation: reducedMotion ? 'fade' : 'default',

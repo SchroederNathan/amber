@@ -52,7 +52,12 @@
       "expo-router",
       "expo-status-bar",
       "@clerk/expo",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Amber uses Face ID to keep your saved content private."
+        }
+      ],
       "expo-web-browser",
       [
         "expo-calendar",
@@ -63,7 +68,7 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Amber lets you tidy your photo library — keep, delete, or save photos into your hub.",
+          "photosPermission": "Amber lets you tidy your photo library \u2014 keep, delete, or save photos into your hub.",
           "savePhotosPermission": "Amber can save images back to your photo library."
         }
       ],
@@ -88,6 +93,12 @@
               "image/*"
             ]
           }
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Amber uses Face ID to keep your saved content private."
         }
       ]
     ],

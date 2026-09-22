@@ -1,9 +1,8 @@
 import { OnboardingProvider } from '@/lib/onboarding';
-import { convex, persister, queryClient } from '@/lib/query-client';
-import { ClerkProvider, useAuth } from '@clerk/expo';
+import { AppAccessBoundary } from '@/lib/app-lock';
+import { PrivateDataProvider } from '@/lib/private-data';
+import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -54,19 +53,16 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <PersistQueryClientProvider
-            client={queryClient}
-            persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24, buster: 'v1' }}
-          >
-            <OnboardingProvider>
-              <NavThemeProvider>
+        <NavThemeProvider>
+          <AppAccessBoundary signedOut={<Slot />}>
+            <PrivateDataProvider>
+              <OnboardingProvider>
                 <Slot />
-                <StatusBar style="auto" />
-              </NavThemeProvider>
-            </OnboardingProvider>
-          </PersistQueryClientProvider>
-        </ConvexProviderWithClerk>
+              </OnboardingProvider>
+            </PrivateDataProvider>
+          </AppAccessBoundary>
+          <StatusBar style="auto" />
+        </NavThemeProvider>
       </ClerkProvider>
     </GestureHandlerRootView>
   );

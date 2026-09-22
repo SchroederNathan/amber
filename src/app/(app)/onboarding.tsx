@@ -1,3 +1,6 @@
+import { BiometricSetting } from '@/components/biometric-setting';
+import { useAppLock } from '@/lib/app-lock';
+import { useState } from 'react';
 import { fadeIn } from '@/styles/motion';
 import { Wordmark } from '@/components/wordmark';
 import { useOnboarding } from '@/lib/onboarding';
@@ -68,15 +71,26 @@ function PermissionButton({
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { completeOnboarding } = useOnboarding();
+  const { busy: lockBusy } = useAppLock();
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { hasPermission: cameraGranted, requestPermission: requestCamera } =
     useCameraPermission();
   const [libraryPermission, requestLibrary] = ImagePicker.useMediaLibraryPermissions();
 
-  const finish = () => {
+  const finish = async () => {
+    if (finishing || lockBusy) return;
+    setFinishing(true);
+    setError(null);
     if (process.env.EXPO_OS === 'ios') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-    completeOnboarding();
+    try {
+      await completeOnboarding();
+    } catch {
+      setError("Could not save your setup. Please try again.");
+      setFinishing(false);
+    }
   };
 
   return (
@@ -128,9 +142,12 @@ export default function OnboardingScreen() {
         />
       </Animated.View>
 
+      <BiometricSetting />
+      {error && <Text accessibilityRole="alert" style={styles.featureMessage}>{error}</Text>}
       <Animated.View entering={fadeIn}>
         <Pressable
           onPress={finish}
+          disabled={lockBusy || finishing}
           style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}
         >
           <Text style={styles.ctaText}>Start saving</Text>
