@@ -52,7 +52,6 @@ const styles = StyleSheet.create((theme) => ({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   pressed: {
     opacity: theme.opacity.pressed,
