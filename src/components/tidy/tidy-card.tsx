@@ -99,8 +99,7 @@ const styles = StyleSheet.create((theme) => ({
     left: theme.gap(2),
     paddingHorizontal: theme.gap(1.5),
     paddingVertical: theme.gap(0.75),
-    borderRadius: theme.radius.md,
-    borderCurve: 'continuous',
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.overlay,
   },
   dateText: {

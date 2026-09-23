@@ -55,6 +55,7 @@ const styles = StyleSheet.create((theme) => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
   },
   title: { ...theme.type.button, color: theme.colors.foreground },

@@ -53,8 +53,8 @@ export function Button({
       scheme: 'auto',
     },
     onboarding: {
-      fill: theme.onboarding.primary,
-      onFill: theme.onboarding.onPrimary,
+      fill: theme.colors.primary,
+      onFill: theme.colors.onTint,
       tint: theme.onboarding.glassTint,
       surface: theme.onboarding.secondary,
       label: theme.onboarding.foreground,

@@ -41,7 +41,7 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
             disabled={pending}
             loading={pending && provider === 'apple'}
             onPress={() => { setProvider('apple'); onApple?.(); }}
-            icon={<Image source={require('../../../assets/brand/apple.svg')} style={styles.providerIcon} tintColor={theme.onboarding.onPrimary} contentFit="contain" accessible={false} />}
+            icon={<Image source={require('../../../assets/brand/apple.svg')} style={styles.providerIcon} tintColor={theme.colors.onTint} contentFit="contain" accessible={false} />}
           />
           <Button
             title="Continue with Google"

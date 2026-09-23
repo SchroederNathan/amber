@@ -61,25 +61,27 @@ const shared = {
     photoStack: '0 6px 14px rgba(0, 0, 0, 0.22)',
     text: { textShadowColor: 'rgba(0, 0, 0, 0.35)', textShadowRadius: 6 },
   },
+  // Soft, capsule-adjacent corners to match the capsule buttons. Steps are
+  // concentric: a matted photo's inner radius is its frame's radius minus the
+  // mat (md 20 - 4pt mat = sm 16; lg 28 - 8pt mat = md 20).
   radius: {
-    sm: 8,
-    md: 11,
-    lg: 16,
-    xl: 24,
+    sm: 16,
+    md: 20,
+    lg: 28,
+    xl: 32,
     full: 9999,
   },
 } as const;
 
 const lightTheme = {
   ...shared,
-  // Tailwind stone / amber. Onboarding has a brighter canvas and deeper CTAs.
+  // Tailwind stone. Onboarding has a brighter, neutral canvas; its actions use
+  // the one brand fill, `colors.primary`, like the rest of the app.
   onboarding: {
     background: '#fafaf9',
     hero: '#f0eeec',
     foreground: '#1c1917',
     muted: '#57534e',
-    primary: '#7b3306',
-    onPrimary: '#ffffff',
     secondary: '#ffffff',
     border: '#d6d3d1',
     // Secondary glass needs a faint fill to read on a flat canvas.
@@ -117,8 +119,6 @@ const darkTheme = {
     hero: '#1c1917',
     foreground: '#fafaf9',
     muted: '#a8a29e',
-    primary: '#fee685',
-    onPrimary: '#451a03',
     secondary: '#292524',
     border: '#57534e',
     glassTint: 'rgba(250, 250, 249, 0.1)',
