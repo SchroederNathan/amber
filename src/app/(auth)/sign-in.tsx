@@ -1,8 +1,9 @@
 import { isClerkAPIResponseError, useSSO, useSignIn } from '@clerk/expo';
 import { useSignInWithApple } from '@clerk/expo/apple';
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { Platform } from 'react-native';
+import { Welcome } from '@/components/onboarding/welcome';
+import { useWelcomeTransition } from '@/lib/welcome-transition';
 
 // Release builds have no console, so every auth failure has to reach the
 // screen. Clerk API errors carry the useful text in `longMessage`.
@@ -16,6 +17,7 @@ function describeError(err: unknown) {
 }
 
 export default function Page() {
+  const { cover, reveal } = useWelcomeTransition();
   const { startSSOFlow } = useSSO();
   const { startAppleAuthenticationFlow } = useSignInWithApple();
   const { signIn } = useSignIn();
@@ -39,11 +41,17 @@ export default function Page() {
       if (signInError) {
         setError(describeError(signInError));
       } else if (signIn.status === 'complete') {
-        await signIn.finalize();
+        cover();
+        const result = await signIn.finalize();
+        if (result.error) {
+          reveal();
+          setError(describeError(result.error));
+        }
       } else {
         setError(`Dev login incomplete: ${signIn.status}`);
       }
     } catch (err) {
+      reveal();
       setError(describeError(err));
     } finally {
       setPending(false);
@@ -60,6 +68,7 @@ export default function Page() {
     signUp,
   }: Awaited<ReturnType<typeof startSSOFlow>>) => {
     if (createdSessionId && setActive) {
+      cover();
       await setActive({ session: createdSessionId });
       return;
     }
@@ -78,6 +87,7 @@ export default function Page() {
         await activate(await startSSOFlow({ strategy: 'oauth_apple' }));
       }
     } catch (err) {
+      reveal();
       setError(describeError(err));
     } finally {
       setPending(false);
@@ -90,6 +100,7 @@ export default function Page() {
     try {
       await activate(await startSSOFlow({ strategy: 'oauth_google' }));
     } catch (err) {
+      reveal();
       setError(describeError(err));
     } finally {
       setPending(false);
@@ -97,112 +108,12 @@ export default function Page() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>amber</Text>
-      <Text style={styles.subtitle}>Sign in to continue</Text>
-
-      <View style={styles.buttons}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.appleButton,
-            pending && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleApple}
-          disabled={pending}
-        >
-          <Text style={styles.appleButtonText}> Continue with Apple</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.googleButton,
-            pending && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleGoogle}
-          disabled={pending}
-        >
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </Pressable>
-        {__DEV__ && (
-          <Pressable
-            testID="dev-login-button"
-            style={({ pressed }) => [
-              styles.appleButton,
-              pending && styles.buttonDisabled,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={handleDevLogin}
-            disabled={pending}
-          >
-            <Text style={styles.appleButtonText}>🔧 Dev login</Text>
-          </Pressable>
-        )}
-      </View>
-
-      {error && (
-        <Text style={styles.error} selectable>
-          {error}
-        </Text>
-      )}
-    </View>
+    <Welcome
+      pending={pending}
+      error={error}
+      onApple={handleApple}
+      onGoogle={handleGoogle}
+      onDevLogin={handleDevLogin}
+    />
   );
 }
-
-const styles = StyleSheet.create((theme, rt) => ({
-  container: {
-    flex: 1,
-    padding: theme.gap(2.5),
-    paddingTop: rt.insets.top + theme.gap(8),
-    alignItems: 'center',
-  },
-  title: {
-    ...theme.type.hero,
-    color: theme.colors.primary,
-  },
-  subtitle: {
-    ...theme.type.body,
-    color: theme.colors.foreground,
-    marginTop: theme.gap(1),
-  },
-  buttons: {
-    alignSelf: 'stretch',
-    gap: theme.gap(1.5),
-    marginTop: theme.gap(6),
-  },
-  appleButton: {
-    backgroundColor: theme.colors.foreground,
-    paddingVertical: theme.gap(1.75),
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  appleButtonText: {
-    color: theme.colors.background,
-    ...theme.type.bodyLabel,
-  },
-  googleButton: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: theme.gap(1.75),
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  googleButtonText: {
-    color: theme.colors.foreground,
-    ...theme.type.bodyLabel,
-  },
-  error: {
-    alignSelf: 'stretch',
-    marginTop: theme.gap(2),
-    color: theme.colors.danger,
-    ...theme.type.footnote,
-    textAlign: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-}));

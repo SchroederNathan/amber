@@ -1,9 +1,10 @@
 import { BiometricSetting } from '@/components/biometric-setting';
+import { Button } from '@/components/ui/button';
 import { useAppLock } from '@/lib/app-lock';
 import { Wordmark } from '@/components/wordmark';
 import { useClerk, useUser } from '@clerk/expo';
 import { SymbolView } from 'expo-symbols';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ProfileScreen() {
@@ -28,9 +29,11 @@ export default function ProfileScreen() {
 
       <BiometricSetting />
 
-      <Pressable
+      <Button
+        title="Sign out"
+        variant="destructive"
         disabled={busy}
-        style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.7 }]}
+        style={styles.signOut}
         onPress={async () => {
           try {
             await signOut();
@@ -38,9 +41,7 @@ export default function ProfileScreen() {
             Alert.alert('Could not sign out', 'Check your connection and try again.');
           }
         }}
-      >
-        <Text style={styles.signOutText}>Sign out</Text>
-      </Pressable>
+      />
     </View>
   );
 }
@@ -82,18 +83,5 @@ const styles = StyleSheet.create((theme) => ({
     ...theme.type.subheadLabel,
     color: theme.colors.foreground,
   },
-  signOut: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    paddingVertical: theme.gap(1.5),
-    borderRadius: theme.radius.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  signOutText: {
-    ...theme.type.subheadStrong,
-    color: theme.colors.danger,
-  },
+  signOut: { alignSelf: 'stretch' },
 }));

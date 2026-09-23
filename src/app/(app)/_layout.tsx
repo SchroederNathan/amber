@@ -1,4 +1,6 @@
 import { useReducedMotion } from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { useWelcomeTransition } from '@/lib/welcome-transition';
 import { useAppLock } from '@/lib/app-lock';
 import { useOnboarding } from '@/lib/onboarding';
 import { RecentSavesWidgetSync } from '@/lib/widget-sync';
@@ -14,6 +16,8 @@ export default function AppLayout() {
 }
 
 function AuthenticatedAppLayout() {
+  const { reveal } = useWelcomeTransition();
+  useEffect(() => { reveal(); }, [reveal]);
   const reducedMotion = useReducedMotion();
   const { onboarded } = useOnboarding();
   const { enabled: lockEnabled } = useAppLock();
