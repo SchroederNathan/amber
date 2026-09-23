@@ -117,6 +117,7 @@ export function Button({
           style={[
             styles.surface,
             styles[size],
+            styles.solid,
             filled
               ? { backgroundColor: colors.fill }
               : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth },
@@ -137,8 +138,10 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radius.full,
-    overflow: 'hidden',
   },
+  // Only the solid fallback clips. GlassView shapes its own corners natively, and
+  // clipping it would cut off the interactive glass as it swells on press.
+  solid: { overflow: 'hidden' },
   md: { minHeight: theme.control.minHeight, paddingVertical: theme.spacing.md },
   lg: { minHeight: theme.control.largeHeight, paddingVertical: theme.spacing.lg },
   label: { flexShrink: 1, textAlign: 'center' },
