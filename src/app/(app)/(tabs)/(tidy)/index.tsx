@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { EmptyState } from '@/components/empty-state';
+import { Button } from '@/components/ui/button';
 import { TidyDeck } from '@/components/tidy/tidy-deck';
 import { TidyDone } from '@/components/tidy/tidy-done';
 import { DeckAnimationProvider, useDeckAnimation } from '@/lib/tidy/deck-animation';
@@ -212,11 +213,11 @@ const PermissionGate: FC<{
           'Swipe through your photos one by one.\nKeep them, delete them, or save them into Amber.'
         }
       />
-      <Pressable style={styles.gateButton} onPress={handlePress}>
-        <Text style={styles.gateButtonText}>
-          {permission.canAskAgain ? 'Allow photo access' : 'Open Settings'}
-        </Text>
-      </Pressable>
+      <Button
+        title={permission.canAskAgain ? 'Allow photo access' : 'Open Settings'}
+        style={styles.gateButton}
+        onPress={handlePress}
+      />
     </View>
   );
 };
@@ -277,15 +278,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   gateButton: {
     alignSelf: 'center',
     marginBottom: theme.gap(6),
-    paddingHorizontal: theme.gap(3),
-    paddingVertical: theme.gap(1.5),
-    borderRadius: theme.radius.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
-  },
-  gateButtonText: {
-    ...theme.type.button,
-    color: theme.colors.onTint,
   },
   loading: {
     flex: 1,

@@ -40,8 +40,9 @@ const shared = {
   // Existing layouts use this 8pt helper; new styles use named 4pt steps above.
   gap: (v: number) => v * 8,
   motion,
-  opacity: { pressed: 0.7, disabled: 0.4 },
-  control: { minHeight: 48, pressRetentionOffset: 12 },
+  // `held` is a Button's pressed and loading look: dimmed, never replaced by a spinner.
+  opacity: { pressed: 0.7, held: 0.85, disabled: 0.4 },
+  control: { minHeight: 48, largeHeight: 56, pressRetentionOffset: 12 },
   // Camera chrome and photo paper intentionally keep their contrast in both themes.
   media: {
     background: '#000000',
@@ -60,17 +61,32 @@ const shared = {
     photoStack: '0 6px 14px rgba(0, 0, 0, 0.22)',
     text: { textShadowColor: 'rgba(0, 0, 0, 0.35)', textShadowRadius: 6 },
   },
+  // Soft, capsule-adjacent corners to match the capsule buttons. Steps are
+  // concentric: a matted photo's inner radius is its frame's radius minus the
+  // mat (md 20 - 4pt mat = sm 16; lg 28 - 8pt mat = md 20).
   radius: {
-    sm: 8,
-    md: 11,
-    lg: 16,
-    xl: 24,
+    sm: 16,
+    md: 20,
+    lg: 28,
+    xl: 32,
     full: 9999,
   },
 } as const;
 
 const lightTheme = {
   ...shared,
+  // Tailwind stone. Onboarding has a brighter, neutral canvas; its actions use
+  // the one brand fill, `colors.primary`, like the rest of the app.
+  onboarding: {
+    background: '#fafaf9',
+    hero: '#f0eeec',
+    foreground: '#1c1917',
+    muted: '#57534e',
+    secondary: '#ffffff',
+    border: '#d6d3d1',
+    // Secondary glass needs a faint fill to read on a flat canvas.
+    glassTint: 'rgba(28, 25, 23, 0.06)',
+  },
   colors: {
     background: '#faf6ee',
     surface: '#fffdf8',
@@ -82,6 +98,8 @@ const lightTheme = {
     primarySoft: '#f7e8cd',
     primaryText: '#935d09',
     border: '#ece3d1',
+    // Secondary glass needs a faint fill to read on a flat canvas.
+    glassTint: 'rgba(43, 36, 24, 0.07)',
     imageBorder: 'rgba(0, 0, 0, 0.07)',
     danger: '#b75232',
     overlay: 'rgba(43, 36, 24, 0.45)',
@@ -96,6 +114,15 @@ const lightTheme = {
 
 const darkTheme = {
   ...shared,
+  onboarding: {
+    background: '#0c0a09',
+    hero: '#1c1917',
+    foreground: '#fafaf9',
+    muted: '#a8a29e',
+    secondary: '#292524',
+    border: '#57534e',
+    glassTint: 'rgba(250, 250, 249, 0.1)',
+  },
   colors: {
     background: '#191510',
     surface: '#231e16',
@@ -107,6 +134,7 @@ const darkTheme = {
     primarySoft: '#3a2f1c',
     primaryText: '#f0c078',
     border: '#332c20',
+    glassTint: 'rgba(244, 237, 221, 0.1)',
     imageBorder: 'rgba(255, 255, 255, 0.07)',
     danger: '#e07a58',
     overlay: 'rgba(0, 0, 0, 0.55)',

@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { motion, motionCSS } from '@/styles/motion';
 import { scheduleOnRN } from 'react-native-worklets';
 import { parseExifDate } from '@/lib/date';
@@ -138,9 +139,7 @@ export default function CameraScreen() {
       <Text style={styles.fallbackTitle}>{title}</Text>
       <Text style={styles.fallbackMessage}>{message}</Text>
       {action}
-      <Pressable style={styles.fallbackButton} onPress={pickFromLibrary}>
-        <Text style={styles.fallbackButtonText}>Pick from library instead</Text>
-      </Pressable>
+      <Button title="Pick from library instead" tone="media" variant="secondary" onPress={pickFromLibrary} />
     </View>
   );
 
@@ -149,9 +148,7 @@ export default function CameraScreen() {
     body = renderFallback(
       'Camera access needed',
       'Amber uses the camera to capture things you want to keep.',
-      <Pressable style={[styles.fallbackButton, styles.fallbackPrimary]} onPress={requestPermission}>
-        <Text style={[styles.fallbackButtonText, { color: theme.colors.onTint }]}>Allow camera</Text>
-      </Pressable>,
+      <Button title="Allow camera" tone="media" onPress={requestPermission} />,
     );
   } else if (device == null) {
     body = renderFallback(
@@ -321,18 +318,5 @@ const styles = StyleSheet.create((theme) => ({
     lineHeight: 21,
     color: theme.media.muted,
     textAlign: 'center',
-  },
-  fallbackButton: {
-    paddingVertical: theme.gap(1.25),
-    paddingHorizontal: theme.gap(2.5),
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.media.control,
-  },
-  fallbackPrimary: {
-    backgroundColor: theme.colors.primary,
-  },
-  fallbackButtonText: {
-    ...theme.type.subheadStrong,
-    color: theme.media.foreground,
   },
 }));

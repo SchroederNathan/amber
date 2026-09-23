@@ -1,5 +1,6 @@
 import { fadeOut, motion } from '@/styles/motion';
 import { EmptyState } from '@/components/empty-state';
+import { Button } from '@/components/ui/button';
 import { ItemDetail, type DetailItem } from '@/components/item-detail';
 import { ItemHeader } from '@/components/item-header';
 import { convexQuery } from '@convex-dev/react-query';
@@ -10,7 +11,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
-import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import {
   Stack,
@@ -23,9 +23,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   Share,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -339,22 +337,13 @@ export default function ItemScreen() {
           exiting={fadeOut}
           style={[styles.decisionBar, { bottom: insets.bottom + theme.gap(1.5) }]}
         >
-          <Pressable onPress={onDismiss} style={styles.dismissWrap}>
-            <GlassView glassEffectStyle="regular" isInteractive style={styles.decisionButton}>
-              <Text style={styles.dismissText}>Dismiss</Text>
-            </GlassView>
-          </Pressable>
-          <Pressable onPress={onAccept} style={styles.acceptWrap}>
-            <GlassView
-              glassEffectStyle="regular"
-              isInteractive
-              tintColor={theme.colors.primary}
-              style={styles.decisionButton}
-            >
-              <SymbolView name="sparkles" size={15} tintColor={theme.colors.onTint} />
-              <Text style={styles.acceptText}>Add to space</Text>
-            </GlassView>
-          </Pressable>
+          <Button title="Dismiss" variant="secondary" onPress={onDismiss} style={styles.dismissWrap} />
+          <Button
+            title="Add to space"
+            icon={<SymbolView name="sparkles" size={15} tintColor={theme.colors.onTint} />}
+            onPress={onAccept}
+            style={styles.acceptWrap}
+          />
         </Animated.View>
       ) : null}
     </View>
@@ -384,25 +373,5 @@ const styles = StyleSheet.create((theme) => ({
   },
   acceptWrap: {
     flex: 2,
-  },
-  // Shared glass surface for both decision buttons. No backgroundColor/border —
-  // the liquid glass provides the material; the amber CTA sets it via tintColor.
-  decisionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.gap(0.75),
-    paddingVertical: theme.gap(1.75),
-    borderRadius: theme.radius.lg,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  dismissText: {
-    ...theme.type.subheadStrong,
-    color: theme.colors.foreground,
-  },
-  acceptText: {
-    ...theme.type.subheadStrong,
-    color: theme.colors.onTint,
   },
 }));

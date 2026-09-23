@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Wordmark } from '@/components/wordmark';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -26,15 +27,13 @@ export function PrivacyScreen({
       </Text>
       {busy && <ActivityIndicator accessibilityLabel="Verifying access" />}
       {action && (
-        <Pressable
-          accessibilityRole="button"
+        <Button
           testID="unlock-button"
+          title={actionLabel ?? 'Unlock Amber'}
           disabled={busy}
           onPress={action}
           style={styles.button}
-        >
-          <Text style={styles.buttonText}>{actionLabel ?? 'Unlock Amber'}</Text>
-        </Pressable>
+        />
       )}
       {recover && (
         <Pressable
@@ -67,13 +66,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.muted,
     textAlign: 'center',
   },
-  button: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    padding: theme.gap(2),
-    alignSelf: 'stretch',
-    alignItems: 'center',
-  },
-  buttonText: { ...theme.type.button, color: theme.colors.onTint },
+  button: { alignSelf: 'stretch' },
   secondary: { padding: theme.gap(1.5) },
 }));

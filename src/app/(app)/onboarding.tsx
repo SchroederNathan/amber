@@ -1,244 +1,188 @@
-import { BiometricSetting } from '@/components/biometric-setting';
+import { Button } from '@/components/ui/button';
+import { PermissionDevice } from '@/components/onboarding/permission-device';
 import { useAppLock } from '@/lib/app-lock';
-import { useState } from 'react';
-import { fadeIn } from '@/styles/motion';
-import { Wordmark } from '@/components/wordmark';
 import { useOnboarding } from '@/lib/onboarding';
+import { requestOnboardingPermission } from '@/lib/onboarding-permissions';
+import { fadeIn, motion } from '@/styles/motion';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { SymbolView, type SFSymbol } from 'expo-symbols';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, AppState, Linking, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import Animated, { useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useCameraPermission } from 'react-native-vision-camera';
+import { scheduleOnRN } from 'react-native-worklets';
 
-function FeatureRow({
-  icon,
-  title,
-  message,
-}: {
-  icon: SFSymbol;
-  title: string;
-  message: string;
-}) {
-  const { theme } = useUnistyles();
-  return (
-    <Animated.View entering={fadeIn} style={styles.feature}>
-      <View style={styles.featureIcon}>
-        <SymbolView name={icon} size={20} tintColor={theme.colors.primaryText} />
-      </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={styles.featureTitle}>{title}</Text>
-        <Text style={styles.featureMessage}>{message}</Text>
-      </View>
-    </Animated.View>
-  );
-}
-
-function PermissionButton({
-  icon,
-  label,
-  granted,
-  onPress,
-}: {
-  icon: SFSymbol;
-  label: string;
-  granted: boolean;
-  onPress: () => void;
-}) {
-  const { theme } = useUnistyles();
-  return (
-    <Pressable
-      onPress={granted ? undefined : onPress}
-      style={({ pressed }) => [
-        styles.permission,
-        granted && styles.permissionGranted,
-        pressed && !granted && { opacity: 0.8 },
-      ]}
-    >
-      <SymbolView
-        name={granted ? 'checkmark.circle.fill' : icon}
-        size={18}
-        tintColor={granted ? theme.colors.primary : theme.colors.foreground}
-      />
-      <Text style={styles.permissionLabel}>{label}</Text>
-      <Text style={styles.permissionState}>{granted ? 'Ready' : 'Allow'}</Text>
-    </Pressable>
-  );
-}
+const steps = ['camera', 'photos', 'biometrics'] as const;
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const { height, width } = useWindowDimensions();
+  const heroHeight = Math.max(280, Math.min(height * 0.49, 540));
+  const reducedMotion = useReducedMotion();
   const { completeOnboarding } = useOnboarding();
-  const { busy: lockBusy } = useAppLock();
-  const [finishing, setFinishing] = useState(false);
+  const lock = useAppLock();
+  const camera = useCameraPermission();
+  const [library, requestLibrary, getLibrary] = ImagePicker.useMediaLibraryPermissions();
+  const [step, setStep] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { hasPermission: cameraGranted, requestPermission: requestCamera } =
-    useCameraPermission();
-  const [libraryPermission, requestLibrary] = ImagePicker.useMediaLibraryPermissions();
+  const [settingsNeeded, setSettingsNeeded] = useState(false);
+  // Guard rapid taps before React commits disabled button props.
+  const inFlight = useRef(false);
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void getLibrary().catch(() => {});
+    });
+    return () => subscription.remove();
+  }, [getLibrary]);
+  const current = steps[step];
+  const granted = current === 'camera' ? camera.hasPermission
+    : current === 'photos' ? library?.granted || library?.accessPrivileges === 'limited'
+    : lock.enabled;
 
-  const finish = async () => {
-    if (finishing || lockBusy) return;
-    setFinishing(true);
+  const title = current === 'camera' ? 'See it. Save it.'
+    : current === 'photos' ? 'Keep your favorites.' : 'Just for your eyes.';
+  const description = current === 'camera'
+    ? 'Use your camera to save things that catch your eye.'
+    : current === 'photos'
+      ? 'Save your favorite photos and screenshots to Amber.'
+      : lock.available
+        ? `Unlock Amber with ${lock.label} to keep your saves private.`
+        : 'Set up Face ID or a fingerprint on your device to lock Amber.';
+
+  const unlockTransition = useCallback(() => {
+    inFlight.current = false;
+    setTransitioning(false);
+  }, []);
+
+  const advance = async () => {
     setError(null);
-    if (process.env.EXPO_OS === 'ios') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-    try {
+    setSettingsNeeded(false);
+    if (step === steps.length - 1) {
       await completeOnboarding();
+      if (process.env.EXPO_OS === 'ios') {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+      return;
+    }
+    const next = step + 1;
+    setStep(next);
+    setTransitioning(true);
+    AccessibilityInfo.announceForAccessibility(next === 1 ? 'Photo library. Step 2 of 3.' : 'Biometric lock. Step 3 of 3.');
+    progress.set(withTiming(next, {
+      ...(reducedMotion ? motion.timing.fade : motion.timing.enter),
+      duration: reducedMotion ? motion.duration.state : 400,
+    }, (finished) => {
+      if (finished) scheduleOnRN(unlockTransition);
+    }));
+  };
+
+  const run = async (skip = false) => {
+    if (inFlight.current || lock.busy) return;
+    inFlight.current = true;
+    setBusy(true);
+    setError(null);
+    let advancing = false;
+    try {
+      const result = skip ? { allowed: true, settingsNeeded: false }
+        : await requestOnboardingPermission(current, {
+          camera,
+          photos: { get: getLibrary, request: requestLibrary },
+          biometrics: lock,
+        });
+      if (!result.allowed) {
+        setSettingsNeeded(result.settingsNeeded);
+        setError({
+          camera: 'Camera access is off. You can enable it in Settings, or continue without it.',
+          photos: 'Photo access is off. Allow access when you’re ready, or continue without it.',
+          biometrics: 'Your lock wasn’t enabled. Try again, or set it up later in your profile.',
+        }[current]);
+      }
+      if (result.allowed) {
+        await advance();
+        advancing = step < steps.length - 1;
+      }
     } catch {
-      setError("Could not save your setup. Please try again.");
-      setFinishing(false);
+      setError(current === 'biometrics'
+        ? 'Could not finish setup. Please try again.'
+        : 'Could not update this permission. Please try again, or skip for now.');
+    } finally {
+      setBusy(false);
+      if (!advancing) inFlight.current = false;
     }
   };
 
+  const primaryTitle = granted ? (current === 'biometrics' ? 'Start saving' : 'Continue')
+    : current === 'camera' ? 'Allow camera access'
+      : current === 'photos' ? 'Allow photo access'
+        : lock.available ? `Enable ${lock.label}` : 'Start saving';
+  const disabled = busy || lock.busy || transitioning;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 24 },
-      ]}
-    >
-      <Animated.View entering={fadeIn} style={styles.hero}>
-        <Wordmark size={44} />
-        <Text style={styles.slogan}>Save it for later.</Text>
-      </Animated.View>
-
-      <View style={styles.features}>
-        <FeatureRow
-          icon="square.grid.2x2"
-          title="One warm shelf"
-          message="Links, photos, notes — everything lands in one calm masonry feed."
-        />
-        <FeatureRow
-          icon="sparkles"
-          title="Amber tags it for you"
-          message="Every save is read, titled, and tagged, then filed into your spaces."
-        />
-        <FeatureRow
-          icon="doc.text"
-          title="Read it right here"
-          message="Saved articles open in a clean, quiet reader — no tabs, no clutter."
-        />
+    <View style={styles.screen}>
+      <ScrollView style={styles.scroll} bounces={false} showsVerticalScrollIndicator={false} removeClippedSubviews={false}>
+        <View style={[styles.hero, { height: heroHeight }]}>
+          {steps.map((name, index) => (
+            <PermissionDevice
+              key={name}
+              kind={name}
+              index={index}
+              progress={progress}
+              width={width}
+              size={heroHeight * 1.15}
+              top={insets.top + 16}
+              reducedMotion={reducedMotion}
+            />
+          ))}
+        </View>
+        <View style={styles.copyContainer}>
+          <Animated.View key={current} entering={fadeIn} style={styles.copy}>
+            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+            <Text
+              accessibilityRole={error ? 'alert' : undefined}
+              accessibilityLiveRegion="polite"
+              style={[styles.description, error && styles.error]}
+            >{error ?? description}</Text>
+          </Animated.View>
+        </View>
+      </ScrollView>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <View style={styles.actions}>
+          <Button
+            testID={`onboarding-${current}-allow`}
+            tone="onboarding"
+            size="lg"
+            title={settingsNeeded && !granted ? 'Open Settings' : primaryTitle}
+            loading={busy || lock.busy}
+            disabled={disabled}
+            onPress={() => {
+              if (settingsNeeded && !granted) {
+                void Linking.openSettings().catch(() => setError('Could not open Settings. You can skip this step for now.'));
+              } else {
+                void run();
+              }
+            }}
+          />
+          <Button testID={`onboarding-${current}-skip`} title="Not now" tone="onboarding" size="lg" variant="secondary" disabled={disabled} onPress={() => { void run(true); }} />
+        </View>
       </View>
-
-      <Animated.View entering={fadeIn} style={styles.permissions}>
-        <Text style={styles.permissionsHint}>
-          Amber works best with a couple of permissions — you stay in control.
-        </Text>
-        <PermissionButton
-          icon="camera"
-          label="Camera"
-          granted={cameraGranted}
-          onPress={requestCamera}
-        />
-        <PermissionButton
-          icon="photo.on.rectangle"
-          label="Photo Library"
-          granted={libraryPermission?.granted ?? false}
-          onPress={requestLibrary}
-        />
-      </Animated.View>
-
-      <BiometricSetting />
-      {error && <Text accessibilityRole="alert" style={styles.featureMessage}>{error}</Text>}
-      <Animated.View entering={fadeIn}>
-        <Pressable
-          onPress={finish}
-          disabled={lockBusy || finishing}
-          style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}
-        >
-          <Text style={styles.ctaText}>Start saving</Text>
-        </Pressable>
-      </Animated.View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: theme.gap(3),
-    gap: theme.gap(4),
-  },
-  hero: {
-    alignItems: 'center',
-    gap: theme.gap(1),
-  },
-  slogan: {
-    ...theme.type.body,
-    color: theme.colors.muted,
-  },
-  features: {
-    gap: theme.gap(2.5),
-  },
-  feature: {
-    flexDirection: 'row',
-    gap: theme.gap(1.5),
-    alignItems: 'flex-start',
-  },
-  featureIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: theme.colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTitle: {
-    ...theme.type.button,
-    color: theme.colors.foreground,
-  },
-  featureMessage: {
-    ...theme.type.footnote,
-    lineHeight: 20,
-    color: theme.colors.muted,
-  },
-  permissions: {
-    gap: theme.gap(1),
-  },
-  permissionsHint: {
-    ...theme.type.caption,
-    color: theme.colors.faint,
-    marginBottom: theme.gap(0.5),
-  },
-  permission: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.gap(1.25),
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.gap(1.5),
-  },
-  permissionGranted: {
-    borderColor: theme.colors.primarySoft,
-    backgroundColor: theme.colors.primarySoft,
-  },
-  permissionLabel: {
-    flex: 1,
-    ...theme.type.subheadLabel,
-    color: theme.colors.foreground,
-  },
-  permissionState: {
-    ...theme.type.labelStrong,
-    color: theme.colors.primaryText,
-  },
-  cta: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    borderCurve: 'continuous',
-    paddingVertical: theme.gap(2),
-    alignItems: 'center',
-  },
-  ctaText: {
-    ...theme.type.headline,
-    color: theme.colors.onTint,
-  },
+  screen: { flex: 1, backgroundColor: theme.onboarding.background },
+  scroll: { flex: 1 },
+  copyContainer: { padding: 28, paddingBottom: 12, maxWidth: 560, width: '100%', alignSelf: 'center' },
+  hero: { backgroundColor: theme.onboarding.hero, overflow: 'hidden' },
+  footer: { paddingHorizontal: 28, paddingTop: 20, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  copy: { gap: 12 },
+  title: { fontFamily: theme.fonts.display, fontSize: 38, lineHeight: 43, color: theme.onboarding.foreground },
+  description: { ...theme.type.body, lineHeight: 24, color: theme.onboarding.muted },
+  actions: { gap: 12 },
+  error: { color: theme.colors.danger },
 }));

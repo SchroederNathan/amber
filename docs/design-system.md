@@ -12,16 +12,45 @@ this theme instead of adding a parallel theme or styling library.
   existing layouts; use named steps for new or substantially edited components.
 - `theme.colors`: adaptive brand/semantic roles; `theme.media` deliberately keeps
   camera chrome and photo paper at fixed contrast.
+- One brand color: amber `colors.primary` (`#e6a23c`) in both modes. Put
+  `colors.onTint` on it for labels and icons. Use `colors.primaryText` for amber
+  text on light surfaces (plain amber text is too light to read), and
+  `colors.primarySoft` for tinted backgrounds. Do not add a second accent. The
+  `theme.onboarding` palette is a neutral canvas only (background, foreground,
+  muted, secondary, border) and has no primary of its own.
 - `theme.radius`, `theme.shadows`, `theme.opacity`, `theme.control`: shared shape,
   elevation, interaction and minimum target values. Use continuous corners on
   non-capsule surfaces.
+- Radius scale: `sm` 16, `md` 20, `lg` 28, `xl` 32, `full` (capsule). Corners are
+  soft to match the capsule buttons.
+  - `md`: cards, inputs, grouped rows and banners.
+  - `lg`: large frames such as the item hero and multi-line inputs.
+  - `xl`: full-screen cards such as the Tidy deck.
+  - `sm`: only the inner radius of a matted photo. Keep nesting concentric:
+    inner = outer - padding (`md` 20 frame with a 4 pt mat holds an `sm` 16
+    photo; `lg` 28 with an 8 pt mat holds `md` 20).
+  - `full`: buttons, chips and pill labels. Circles use `size / 2`.
 - `ThemedText`: `variant` selects a type style, native font scaling stays enabled,
   and caller styles merge last. Existing Unistyles components can spread the same
   `theme.type` styles into their stylesheets.
-- `Button`: primary intent, medium size (48-point minimum), pressed, disabled and
-  loading states. `title` remains its accessible label while a spinner is shown.
-  Style overrides merge last for layout. Add sizes/variants only when a screen
-  needs them. New Space and the Tidy checkpoint are the reference consumers.
+- `Button` (`src/components/ui/button.tsx`) is the only large action button. Do
+  not hand-roll a `Pressable` CTA.
+  - Shape: every button is a capsule (`theme.radius.full`), at every size.
+  - Material: interactive Liquid Glass (`expo-glass-effect`) where
+    `isLiquidGlassAvailable()`. The system owns the press response there. Other
+    platforms get a solid fill that dims (`theme.opacity.held`) and scales to 0.97.
+  - `variant`: `primary` (glass tinted with the fill color), `secondary` (glass
+    with a faint `glassTint` so it reads on flat backgrounds), `destructive`
+    (secondary glass with a danger label).
+  - `size`: `md` (48-point minimum, default) or `lg` (56 points, onboarding).
+  - `tone`: the surface the button sits on. `app` (default), `onboarding` (the
+    neutral onboarding canvas) or `media` (dark camera chrome). Every tone fills
+    `primary` with the same amber.
+  - `icon` is an optional leading node. `loading` dims the button and disables
+    it. It never swaps in a spinner or adds a status view, so nothing reflows.
+  - Style overrides merge last and are for layout only (`alignSelf`, `flex`,
+    margins, `minWidth`). Consumers: welcome, onboarding, New Space, Tidy gate and
+    checkpoint, camera fallback, item decision bar, privacy lock, profile sign-out.
 - Native `Switch` handles settings toggles, with explicit labels. Native stacks,
   form sheets and native tabs own their navigation behavior.
 

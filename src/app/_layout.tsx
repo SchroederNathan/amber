@@ -1,4 +1,5 @@
 import { OnboardingProvider } from '@/lib/onboarding';
+import { WelcomeTransitionProvider } from '@/lib/welcome-transition';
 import { AppAccessBoundary } from '@/lib/app-lock';
 import { PrivateDataProvider } from '@/lib/private-data';
 import { ClerkProvider } from '@clerk/expo';
@@ -50,18 +51,22 @@ function NavThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const scheme = useColorScheme();
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <NavThemeProvider>
-          <AppAccessBoundary signedOut={<Slot />}>
-            <PrivateDataProvider>
-              <OnboardingProvider>
-                <Slot />
-              </OnboardingProvider>
-            </PrivateDataProvider>
-          </AppAccessBoundary>
-          <StatusBar style="auto" />
+          <WelcomeTransitionProvider>
+            <AppAccessBoundary signedOut={<Slot />}>
+              <PrivateDataProvider>
+                <OnboardingProvider>
+                  <Slot />
+                </OnboardingProvider>
+              </PrivateDataProvider>
+            </AppAccessBoundary>
+          </WelcomeTransitionProvider>
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </NavThemeProvider>
       </ClerkProvider>
     </GestureHandlerRootView>
