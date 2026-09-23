@@ -9,8 +9,9 @@ function deferred() {
   });
   return { promise, resolve };
 }
-function fixture(overrides = {}) {
+function fixture(overrides = {}, options = {}) {
   const writes = [];
+  const clock = { now: 0 };
   const deps = {
     readEnabled: async () => true,
     writeEnabled: async (value) => {
@@ -21,8 +22,15 @@ function fixture(overrides = {}) {
     preparePrivacy: async () => {},
     ...overrides,
   };
-  return { lock: new AppLockController(deps, true), writes };
+  const lock = new AppLockController(deps, true, {
+    graceMs: 120_000,
+    autoPrompt: false,
+    now: () => clock.now,
+    ...options,
+  });
+  return { lock, writes, clock };
 }
+const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 test('restored session starts closed and a stored opt-in requires verification', async () => {
   const { lock } = fixture();
@@ -63,14 +71,91 @@ test('cancellation, lockout, and invalidated keys never unlock or disable the po
   }
 });
 
-test('successful verification followed by an interruption relocks immediately', async () => {
-  const { lock } = fixture();
+test('a short interruption keeps the app unlocked', async () => {
+  const { lock, clock } = fixture();
   await lock.load();
   await lock.authenticate('unlock');
   lock.activityChanged('inactive');
-  assert.equal(lock.getSnapshot().status, 'locked');
+  lock.activityChanged('background');
+  clock.now = 119_999;
+  lock.activityChanged('active');
+  assert.equal(lock.getSnapshot().status, 'unlocked');
+});
+
+test('two minutes away relocks, counted from when the app first left', async () => {
+  const { lock, clock } = fixture();
+  await lock.load();
+  await lock.authenticate('unlock');
+  lock.activityChanged('inactive');
+  clock.now = 60_000;
+  lock.activityChanged('background');
+  clock.now = 120_000;
   lock.activityChanged('active');
   assert.equal(lock.getSnapshot().status, 'locked');
+});
+
+test('a clock moved backwards relocks', async () => {
+  const { lock, clock } = fixture();
+  clock.now = 500_000;
+  await lock.load();
+  await lock.authenticate('unlock');
+  lock.activityChanged('background');
+  clock.now = 0;
+  lock.activityChanged('active');
+  assert.equal(lock.getSnapshot().status, 'locked');
+});
+
+test('the lock prompts automatically on launch and after the grace period', async () => {
+  let prompts = 0;
+  const { lock, clock } = fixture(
+    { verify: async () => (++prompts, true) },
+    { autoPrompt: true },
+  );
+  await lock.load();
+  await settle();
+  assert.equal(prompts, 1);
+  assert.equal(lock.getSnapshot().status, 'unlocked');
+  lock.activityChanged('background');
+  clock.now = 120_000;
+  lock.activityChanged('active');
+  await settle();
+  assert.equal(prompts, 2);
+  assert.equal(lock.getSnapshot().status, 'unlocked');
+});
+
+test('a cancelled automatic prompt waits for a tap or the next return', async () => {
+  let prompts = 0;
+  const { lock } = fixture(
+    { verify: async () => (++prompts, false) },
+    { autoPrompt: true },
+  );
+  await lock.load();
+  await settle();
+  // The dismissed prompt makes iOS inactive, then active again.
+  lock.activityChanged('inactive');
+  lock.activityChanged('active');
+  await settle();
+  assert.equal(prompts, 1);
+  assert.equal(lock.getSnapshot().status, 'locked');
+  lock.activityChanged('background');
+  lock.activityChanged('active');
+  await settle();
+  assert.equal(prompts, 2);
+});
+
+test('no automatic prompt starts while Amber is in the background', async () => {
+  let prompts = 0;
+  const { lock } = fixture(
+    { verify: async () => (++prompts, true) },
+    { autoPrompt: true },
+  );
+  lock.activityChanged('background');
+  await lock.load();
+  await settle();
+  assert.equal(prompts, 0);
+  lock.activityChanged('active');
+  await settle();
+  assert.equal(prompts, 1);
 });
 
 test('the biometric prompt itself may go inactive without a prompt loop', async () => {
@@ -162,7 +247,7 @@ test('a late opt-in policy write after backgrounding leaves the app locked', asy
 });
 
 test('failed opt-out write preserves protection', async () => {
-  const { lock } = fixture({
+  const { lock, clock } = fixture({
     writeEnabled: async () => {
       throw new Error('disk full');
     },
@@ -172,6 +257,8 @@ test('failed opt-out write preserves protection', async () => {
   assert.equal(await lock.authenticate('disable'), false);
   assert.equal(lock.getSnapshot().status, 'unlocked');
   lock.activityChanged('background');
+  clock.now = 120_000;
+  lock.activityChanged('active');
   assert.equal(lock.getSnapshot().status, 'locked');
 });
 

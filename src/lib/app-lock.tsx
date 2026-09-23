@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert, AppState, StyleSheet, View } from 'react-native';
 import { AppLockController } from './app-lock-controller';
 import { canResetLock, type LockRecoveryRequest } from './app-lock-recovery';
 import {
@@ -108,7 +108,7 @@ function AccountLock({
         recover={recover}
       />
     );
-  if (status === 'locked' || (enabled && !foreground)) {
+  if (status === 'locked') {
     return (
       <PrivacyScreen
         message={message}
@@ -119,8 +119,26 @@ function AccountLock({
       />
     );
   }
-  return <AppLockContext value={value}>{children}</AppLockContext>;
+  // Inside the grace period the app stays mounted, so navigation survives a
+  // quick trip away. A cover hides saves while Amber is not in the foreground.
+  return (
+    <AppLockContext value={value}>
+      {children}
+      {enabled && !foreground && !busy && (
+        <View style={styles.cover}>
+          <PrivacyScreen
+            title="Saves hidden"
+            message="Amber hides your saves while it is in the background."
+          />
+        </View>
+      )}
+    </AppLockContext>
+  );
 }
+
+const styles = StyleSheet.create({
+  cover: { ...StyleSheet.absoluteFill, zIndex: 10 },
+});
 
 function ResetRecoveredLock({
   userId,

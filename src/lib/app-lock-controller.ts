@@ -14,17 +14,38 @@ export type LockDependencies = {
   verify: () => Promise<boolean>;
   preparePrivacy: () => Promise<void>;
 };
+export type LockOptions = {
+  // How long Amber may stay out of the foreground before it locks again.
+  graceMs?: number;
+  // Start verification without a tap when the lock screen appears.
+  autoPrompt?: boolean;
+  now?: () => number;
+};
+
+export const LOCK_GRACE_MS = 2 * 60 * 1000;
 
 export class AppLockController {
   private snapshot: LockSnapshot;
   private listeners = new Set<() => void>();
   private generation = 0;
   private disposed = false;
+  private awaySince: number | null = null;
+  private promptPending = false;
 
   private dependencies: LockDependencies;
+  private graceMs: number;
+  private autoPrompt: boolean;
+  private now: () => number;
 
-  constructor(dependencies: LockDependencies, foreground: boolean) {
+  constructor(
+    dependencies: LockDependencies,
+    foreground: boolean,
+    { graceMs = LOCK_GRACE_MS, autoPrompt = true, now = Date.now }: LockOptions = {},
+  ) {
     this.dependencies = dependencies;
+    this.graceMs = graceMs;
+    this.autoPrompt = autoPrompt;
+    this.now = now;
     this.snapshot = {
       status: 'loading',
       busy: false,
@@ -53,8 +74,11 @@ export class AppLockController {
     try {
       const enabled = await this.dependencies.readEnabled();
       if (enabled) await this.dependencies.preparePrivacy();
-      if (generation === this.generation)
+      if (generation === this.generation) {
+        this.promptPending = enabled;
         this.update({ status: enabled ? 'locked' : 'disabled' });
+        this.promptIfPending();
+      }
     } catch {
       // A read error must never be interpreted as opting out.
       if (generation === this.generation)
@@ -68,17 +92,36 @@ export class AppLockController {
 
   activityChanged(activity: string) {
     const foreground = activity === 'active';
+    const { busy, status } = this.snapshot;
     // Native biometric dialogs can briefly make iOS inactive. A real background
     // transition always invalidates an in-flight result, including enrollment.
-    const invalidate =
-      activity === 'background' || (!foreground && !this.snapshot.busy);
-    if (invalidate && this.snapshot.status !== 'loading') this.generation++;
-    this.update({
-      foreground,
-      ...(invalidate && this.snapshot.status === 'unlocked'
-        ? { status: 'locked' as const }
-        : {}),
-    });
+    const invalidate = activity === 'background' || (!foreground && !busy);
+    if (invalidate && status !== 'loading') this.generation++;
+    if (invalidate) this.awaySince ??= this.now();
+    // Returning from the background is when the user expects Face ID again.
+    if (activity === 'background') this.promptPending = true;
+    let next = status;
+    if (foreground && this.awaySince !== null) {
+      const away = this.now() - this.awaySince;
+      this.awaySince = null;
+      // A clock that moved backwards cannot prove the grace period is running.
+      if (status === 'unlocked' && (away >= this.graceMs || away < 0)) {
+        next = 'locked';
+        this.promptPending = true;
+      }
+    }
+    if (foreground && next !== 'locked') this.promptPending = false;
+    this.update({ foreground, status: next });
+    this.promptIfPending();
+  }
+
+  // One automatic prompt per lock, so a cancelled prompt does not loop.
+  private promptIfPending() {
+    const { status, foreground, busy } = this.snapshot;
+    if (!this.autoPrompt || !this.promptPending || this.disposed) return;
+    if (status !== 'locked' || !foreground || busy) return;
+    this.promptPending = false;
+    void this.authenticate('unlock');
   }
 
   async authenticate(action: 'unlock' | 'enable' | 'disable') {
@@ -120,6 +163,7 @@ export class AppLockController {
       return false;
     } finally {
       this.update({ busy: false });
+      this.promptIfPending();
     }
   }
 
