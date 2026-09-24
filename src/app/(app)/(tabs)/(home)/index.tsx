@@ -1,4 +1,5 @@
 import { EmptyState } from '@/components/empty-state';
+import { HeaderFade } from '@/components/header-fade';
 import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <MasonryFeed items={items} numColumns={2} source={{ from: 'home' }} />
+      <HeaderFade />
     </View>
   );
 }
