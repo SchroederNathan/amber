@@ -31,7 +31,11 @@ function ActionButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={[styles.action, disabled && { opacity: 0.4 }]}
+      style={({ pressed }) => [
+        styles.action,
+        pressed && { opacity: theme.opacity.pressedSurface },
+        disabled && { opacity: theme.opacity.disabled },
+      ]}
     >
       <View style={styles.actionIcon}>
         <SymbolView name={icon} size={40} tintColor={theme.colors.foreground} />

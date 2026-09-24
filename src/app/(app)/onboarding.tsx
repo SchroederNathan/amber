@@ -73,10 +73,7 @@ export default function OnboardingScreen() {
     setStep(next);
     setTransitioning(true);
     AccessibilityInfo.announceForAccessibility(next === 1 ? 'Photo library. Step 2 of 3.' : 'Biometric lock. Step 3 of 3.');
-    progress.set(withTiming(next, {
-      ...(reducedMotion ? motion.timing.fade : motion.timing.enter),
-      duration: reducedMotion ? motion.duration.state : 400,
-    }, (finished) => {
+    progress.set(withTiming(next, reducedMotion ? motion.timing.crossfade : motion.timing.screen, (finished) => {
       if (finished) scheduleOnRN(unlockTransition);
     }));
   };

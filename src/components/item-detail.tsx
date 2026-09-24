@@ -291,7 +291,7 @@ function ProductsSection({ item }: { item: DetailItem }) {
           {products.map((product, index) => (
             <Pressable
               key={`${product.url}-${index}`}
-              style={({ pressed }) => [styles.productCard, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.productCard, pressed && { opacity: theme.opacity.pressedSurface }]}
               onPress={() => WebBrowser.openBrowserAsync(product.url)}
             >
               {product.thumbnailUrl ? (
@@ -330,7 +330,7 @@ function ProductsSection({ item }: { item: DetailItem }) {
   return (
     <View style={styles.findLinksRow}>
       <Pressable
-        style={({ pressed }) => [styles.findLinksChip, pressed && { opacity: 0.7 }]}
+        style={({ pressed }) => [styles.findLinksChip, pressed && { opacity: theme.opacity.pressed }]}
         onPress={() => findLinks({ id: item._id })}
         hitSlop={6}
       >
@@ -569,7 +569,7 @@ const styles = StyleSheet.create((theme) => ({
     overflow: 'visible',
   },
   similarCardPressed: {
-    opacity: 0.85,
+    opacity: theme.opacity.pressedSurface,
   },
   similarImageFrame: {
     backgroundColor: theme.media.paper,

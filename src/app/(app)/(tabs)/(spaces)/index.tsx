@@ -241,7 +241,7 @@ const styles = StyleSheet.create((theme) => ({
     margin: theme.gap(1),
   },
   pressed: {
-    opacity: 0.85,
+    opacity: theme.opacity.pressedSurface,
   },
   // Square area the pile is centered within. Kept square so every cell is the
   // same height and the 2-column grid stays tidy regardless of cover shape.
