@@ -38,7 +38,7 @@ function NavThemeProvider({ children }: { children: React.ReactNode }) {
       card: theme.colors.background,
       text: theme.colors.foreground,
       border: theme.colors.border,
-      primary: theme.colors.primary,
+      primary: theme.colors.tint,
     },
   };
 

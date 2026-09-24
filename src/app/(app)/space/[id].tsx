@@ -1,4 +1,4 @@
-import { fadeIn, fadeOut } from '@/styles/motion';
+import { fadeIn, fadeOut } from '@/theme/motion';
 import { EmptyState } from '@/components/empty-state';
 import type { FeedItem } from '@/components/item-card';
 import { MasonryFeed } from '@/components/masonry-feed';

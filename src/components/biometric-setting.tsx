@@ -24,7 +24,7 @@ export function BiometricSetting() {
             onValueChange={(next) => void (next ? enable() : disable())}
             modifiers={
               process.env.EXPO_OS === 'ios'
-                ? [tint(theme.colors.primary), accessibilityLabel(`${label} lock`)]
+                ? [tint(theme.colors.toggle), accessibilityLabel(`${label} lock`)]
                 : undefined
             }
           />

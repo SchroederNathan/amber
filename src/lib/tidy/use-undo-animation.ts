@@ -1,5 +1,5 @@
 import { useAnimatedReaction, withTiming } from 'react-native-reanimated';
-import { motion } from '@/styles/motion';
+import { motion } from '@/theme/motion';
 
 import { useCardAnimation } from './card-animation';
 import { useDeckAnimation } from './deck-animation';

@@ -3,7 +3,7 @@ import { PermissionDevice } from '@/components/onboarding/permission-device';
 import { useAppLock } from '@/lib/app-lock';
 import { useOnboarding } from '@/lib/onboarding';
 import { requestOnboardingPermission } from '@/lib/onboarding-permissions';
-import { fadeIn, motion } from '@/styles/motion';
+import { fadeIn, motion } from '@/theme/motion';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -151,7 +151,6 @@ export default function OnboardingScreen() {
         <View style={styles.actions}>
           <Button
             testID={`onboarding-${current}-allow`}
-            tone="onboarding"
             size="lg"
             title={settingsNeeded && !granted ? 'Open Settings' : primaryTitle}
             loading={busy || lock.busy}
@@ -164,7 +163,7 @@ export default function OnboardingScreen() {
               }
             }}
           />
-          <Button testID={`onboarding-${current}-skip`} title="Not now" tone="onboarding" size="lg" variant="secondary" disabled={disabled} onPress={() => { void run(true); }} />
+          <Button testID={`onboarding-${current}-skip`} title="Not now" size="lg" variant="secondary" disabled={disabled} onPress={() => { void run(true); }} />
         </View>
       </View>
     </View>
@@ -172,14 +171,14 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  screen: { flex: 1, backgroundColor: theme.onboarding.background },
+  screen: { flex: 1, backgroundColor: theme.colors.background },
   scroll: { flex: 1 },
   copyContainer: { padding: 28, paddingBottom: 12, maxWidth: 560, width: '100%', alignSelf: 'center' },
-  hero: { backgroundColor: theme.onboarding.hero, overflow: 'hidden' },
+  hero: { backgroundColor: theme.colors.surfaceMuted, overflow: 'hidden' },
   footer: { paddingHorizontal: 28, paddingTop: 20, width: '100%', maxWidth: 560, alignSelf: 'center' },
   copy: { gap: 12 },
-  title: { fontFamily: theme.fonts.display, fontSize: 38, lineHeight: 43, color: theme.onboarding.foreground },
-  description: { ...theme.type.body, lineHeight: 24, color: theme.onboarding.muted },
+  title: { fontFamily: theme.fonts.display, fontSize: 38, lineHeight: 43, color: theme.colors.foreground },
+  description: { ...theme.type.body, lineHeight: 24, color: theme.colors.muted },
   actions: { gap: 12 },
   error: { color: theme.colors.danger },
 }));

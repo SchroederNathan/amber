@@ -1,5 +1,5 @@
 import { Welcome } from '@/components/onboarding/welcome';
-import { fadeOut, motion } from '@/styles/motion';
+import { fadeOut, motion } from '@/theme/motion';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { SlideOutUp, useReducedMotion } from 'react-native-reanimated';

@@ -153,7 +153,7 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
       >
         {item.status === 'processing' ? (
           <View style={styles.processingRow}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ActivityIndicator size="small" color={theme.colors.tint} />
             <Text style={styles.processingText}>Amber is reading this…</Text>
           </View>
         ) : null}

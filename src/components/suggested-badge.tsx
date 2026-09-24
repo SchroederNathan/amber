@@ -27,7 +27,7 @@ export function SuggestedBadge({
       <SymbolView
         name="sparkles"
         size={size * 0.55}
-        tintColor={theme.colors.primary}
+        tintColor={theme.colors.tint}
       />
     </GlassView>
   );

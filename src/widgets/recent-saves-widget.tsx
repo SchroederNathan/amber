@@ -23,8 +23,20 @@ export type WidgetSaveItem = {
   imageUri?: string;
 };
 
+export type WidgetColors = {
+  background: string;
+  tile: string;
+  foreground: string;
+  muted: string;
+  accent: string;
+};
+
+/** The app's active color scheme, sent with every snapshot (see lib/widget-sync). */
+export type WidgetPalette = { light: WidgetColors; dark: WidgetColors };
+
 export type RecentSavesWidgetProps = {
   items: WidgetSaveItem[];
+  palette?: WidgetPalette;
 };
 
 // Everything (palette, helpers) lives inside the component: the `'widget'`
@@ -33,22 +45,13 @@ export type RecentSavesWidgetProps = {
 const RecentSavesWidget = (props: RecentSavesWidgetProps, environment: WidgetEnvironment) => {
   'widget';
   const dark = environment.colorScheme === 'dark';
-  // Amber palette, mirrored from src/unistyles.ts.
-  const c = dark
-    ? {
-        background: '#191510',
-        tile: '#2c261c',
-        foreground: '#f4eddd',
-        muted: '#a2977f',
-        accent: '#e6a23c',
-      }
-    : {
-        background: '#faf6ee',
-        tile: '#f3ecdd',
-        foreground: '#2b2418',
-        muted: '#7a6f5f',
-        accent: '#e6a23c',
-      };
+  // The palette arrives with the snapshot. The fallback is the default Neutral
+  // scheme (Tailwind neutral), for a widget placed before the app first syncs.
+  const c =
+    props.palette?.[dark ? 'dark' : 'light'] ??
+    (dark
+      ? { background: '#0a0a0a', tile: '#262626', foreground: '#f5f5f5', muted: '#a3a3a3', accent: '#fafafa' }
+      : { background: '#fafafa', tile: '#f5f5f5', foreground: '#171717', muted: '#737373', accent: '#171717' });
 
   const kindIcon = (kind: 'image' | 'link' | 'note') =>
     kind === 'link' ? 'link' : kind === 'note' ? 'note.text' : 'photo';
@@ -69,7 +72,7 @@ const RecentSavesWidget = (props: RecentSavesWidgetProps, environment: WidgetEnv
     );
   }
 
-  // A grid cell: thumbnail if the save has one, otherwise a warm tile with
+  // A grid cell: thumbnail if the save has one, otherwise a tile with
   // the type icon and title. Every cell is sized to exactly half the widget
   // minus padding (12pt) and gap (7pt): (side - 12*2 - 7) / 2 — an image's
   // intrinsic size would otherwise skew the HStack split.

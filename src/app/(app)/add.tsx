@@ -154,7 +154,7 @@ export default function AddScreen() {
           <Stack.Toolbar placement="left">
             <Stack.Toolbar.Button
               icon="chevron.left"
-              tintColor={theme.colors.primary}
+              tintColor={theme.colors.tint}
               onPress={() => setMode('menu')}
             >
               Back
@@ -163,7 +163,7 @@ export default function AddScreen() {
           <Stack.Toolbar placement="right">
             <Stack.Toolbar.Button
               icon="checkmark"
-              tintColor={canSave ? theme.colors.primary : theme.colors.muted}
+              tintColor={canSave ? theme.colors.tint : theme.colors.muted}
               onPress={save}
             >
               Save
@@ -232,10 +232,7 @@ const styles = StyleSheet.create((theme) => ({
     paddingTop: theme.gap(2),
     gap: theme.gap(1.5),
   },
-  heading: {
-    ...theme.type.sheetTitle,
-    color: theme.colors.foreground,
-  },
+  heading: theme.type.sheetTitle,
   actions: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -38,7 +38,7 @@ export function UpdateSetting() {
       await Updates.reloadAsync({
         reloadScreenOptions: {
           backgroundColor: theme.colors.background,
-          spinner: { color: theme.colors.primary },
+          spinner: { color: theme.colors.tint },
         },
       });
     } catch {

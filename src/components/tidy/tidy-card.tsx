@@ -1,4 +1,4 @@
-import { motion } from '@/styles/motion';
+import { motion } from '@/theme/motion';
 import { Image } from 'expo-image';
 import { memo, useState, type FC } from 'react';
 import { Text, View } from 'react-native';

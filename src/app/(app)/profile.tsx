@@ -68,7 +68,7 @@ export default function ProfileScreen() {
             {user?.hasImage ? (
               <Image source={user.imageUrl} style={styles.avatarImage} transition={150} />
             ) : (
-              <SymbolView name="person.fill" size={44} tintColor={theme.colors.primaryText} />
+              <SymbolView name="person.fill" size={44} tintColor={theme.colors.muted} />
             )}
           </View>
           <Text selectable numberOfLines={1} style={styles.name}>
@@ -131,7 +131,7 @@ const styles = StyleSheet.create((theme) => ({
     width: 112,
     height: 112,
     borderRadius: 56,
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

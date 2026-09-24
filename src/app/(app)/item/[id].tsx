@@ -1,4 +1,4 @@
-import { fadeOut, motion } from '@/styles/motion';
+import { fadeOut, motion } from '@/theme/motion';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { ItemDetail, type DetailItem } from '@/components/item-detail';
@@ -340,7 +340,7 @@ export default function ItemScreen() {
           <Button title="Dismiss" variant="secondary" onPress={onDismiss} style={styles.dismissWrap} />
           <Button
             title="Add to space"
-            icon={<SymbolView name="sparkles" size={15} tintColor={theme.colors.onTint} />}
+            icon={<SymbolView name="sparkles" size={15} tintColor={theme.colors.onPrimary} />}
             onPress={onAccept}
             style={styles.acceptWrap}
           />

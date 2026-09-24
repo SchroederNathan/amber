@@ -3,12 +3,13 @@ import type { DetailItem } from '@/components/item-detail';
 import { formatItemDate } from '@/lib/date';
 import { displayHost } from '@/lib/url';
 import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // The item-detail header: the item's title (morphing via AnimatedText as the
 // user swipes between siblings) over the date it belongs to — the original
 // camera-roll capture time for imported photos, otherwise when it was saved.
 export function ItemHeader({ item }: { item: DetailItem | undefined }) {
+  const { theme } = useUnistyles();
   const title =
     item?.title ?? item?.note ?? displayHost(item?.url) ?? 'Untitled';
 
@@ -32,6 +33,7 @@ export function ItemHeader({ item }: { item: DetailItem | undefined }) {
           text={formatItemDate(when)}
           height={18}
           style={styles.date}
+          color={theme.colors.muted}
         />
       ) : null}
     </View>
@@ -44,13 +46,6 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
     overflow: 'visible',
   },
-  title: {
-    ...theme.type.header,
-    color: theme.colors.foreground,
-  },
-  date: {
-    ...theme.type.captionLabel,
-    color: theme.colors.muted,
-
-  },
+  title: theme.type.header,
+  date: theme.type.captionLabel,
 }));

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { motion, motionCSS } from '@/styles/motion';
+import { motion, motionCSS } from '@/theme/motion';
 import { scheduleOnRN } from 'react-native-worklets';
 import { parseExifDate } from '@/lib/date';
 import { useSaveImages } from '@/lib/use-save-image';
@@ -198,12 +198,12 @@ export default function CameraScreen() {
           {stickerLiftAvailable ? (
             <View style={[styles.modeSelector, { bottom: insets.bottom + 118 }]}>
               <Pressable hitSlop={10} onPress={() => switchMode('photo')}>
-                <Animated.Text style={[styles.modeLabel, { transitionProperty: 'color', transitionDuration: motion.duration.state, transitionTimingFunction: motionCSS.out }, { color: mode === 'photo' ? theme.colors.primary : theme.media.inactive }]}>
+                <Animated.Text style={[styles.modeLabel, { transitionProperty: 'color', transitionDuration: motion.duration.state, transitionTimingFunction: motionCSS.out }, { color: mode === 'photo' ? theme.media.accent : theme.media.inactive }]}>
                   PHOTO
                 </Animated.Text>
               </Pressable>
               <Pressable hitSlop={10} onPress={() => switchMode('sticker')}>
-                <Animated.Text style={[styles.modeLabel, { transitionProperty: 'color', transitionDuration: motion.duration.state, transitionTimingFunction: motionCSS.out }, { color: mode === 'sticker' ? theme.colors.primary : theme.media.inactive }]}>
+                <Animated.Text style={[styles.modeLabel, { transitionProperty: 'color', transitionDuration: motion.duration.state, transitionTimingFunction: motionCSS.out }, { color: mode === 'sticker' ? theme.media.accent : theme.media.inactive }]}>
                   STICKER
                 </Animated.Text>
               </Pressable>
@@ -298,7 +298,7 @@ const styles = StyleSheet.create((theme) => ({
     height: 62,
     borderRadius: 31,
     borderWidth: 3,
-    borderColor: theme.colors.primary,
+    borderColor: theme.media.paperAccent,
     backgroundColor: theme.media.paper,
   },
   fallback: {

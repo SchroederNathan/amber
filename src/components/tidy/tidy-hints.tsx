@@ -1,4 +1,4 @@
-import { motion } from '@/styles/motion';
+import { motion } from '@/theme/motion';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 import { type FC } from 'react';
@@ -61,6 +61,8 @@ type BadgeProps = {
 };
 
 const Badge: FC<BadgeProps> = ({ direction, label, icon, accentColor }) => {
+  const { theme } = useUnistyles();
+  const paper = theme.media.paper;
   const progress = useDirectionProgress(direction);
 
   const rBadgeStyle = useAnimatedStyle(() => ({
@@ -72,7 +74,7 @@ const Badge: FC<BadgeProps> = ({ direction, label, icon, accentColor }) => {
 
   const rCircleStyle = useAnimatedStyle(() => ({
     backgroundColor: withTiming(
-      progress.get() + buffer > 1 ? 'white' : 'transparent',
+      progress.get() + buffer > 1 ? paper : 'transparent',
       motion.timing.fade,
     ),
   }));
@@ -103,7 +105,7 @@ const Badge: FC<BadgeProps> = ({ direction, label, icon, accentColor }) => {
         <Canvas style={styles.badgeCanvas}>
           <Path
             path={arcPath}
-            color="white"
+            color={paper}
             style="stroke"
             strokeWidth={STROKE_WIDTH}
             strokeCap="round"
@@ -111,7 +113,7 @@ const Badge: FC<BadgeProps> = ({ direction, label, icon, accentColor }) => {
         </Canvas>
         <View style={styles.badgeIconStack}>
           <Animated.View style={styles.badgeIcon}>
-            <SymbolView name={icon} size={ICON_SIZE} tintColor="white" />
+            <SymbolView name={icon} size={ICON_SIZE} tintColor={paper} />
           </Animated.View>
           <Animated.View style={[styles.badgeIcon, rAccentIconStyle]}>
             <SymbolView name={icon} size={ICON_SIZE} tintColor={accentColor} />
@@ -130,7 +132,7 @@ export const TidyHints: FC = () => {
     <View style={styles.container} pointerEvents="none">
       <Tint direction="keep" color={theme.colors.keep} />
       <Tint direction="delete" color={theme.colors.danger} />
-      <Tint direction="save" color={theme.colors.primary} />
+      <Tint direction="save" color={theme.media.paperAccent} />
       <View style={styles.topRow}>
         <Badge direction="keep" label="Keep" icon="checkmark" accentColor={theme.colors.onKeep} />
         <Badge
@@ -145,7 +147,7 @@ export const TidyHints: FC = () => {
           direction="save"
           label="Save to Amber"
           icon="arrow.up"
-          accentColor={theme.colors.primary}
+          accentColor={theme.media.paperAccent}
         />
       </View>
     </View>

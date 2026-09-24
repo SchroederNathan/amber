@@ -101,7 +101,7 @@ export default function NewSpaceScreen() {
           accessibilityLabel="Dynamic suggestions"
           value={dynamic}
           onValueChange={setDynamic}
-          trackColor={{ true: theme.colors.primary }}
+          trackColor={{ true: theme.colors.toggle }}
         />
       </View>
 

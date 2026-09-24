@@ -31,7 +31,7 @@ function AuthenticatedAppLayout() {
           animation: reducedMotion ? 'fade' : 'default',
           headerTransparent: true,
           headerShadowVisible: false,
-          headerTintColor: theme.colors.primary,
+          headerTintColor: theme.colors.tint,
         }}
       >
         <Stack.Protected guard={onboarded}>

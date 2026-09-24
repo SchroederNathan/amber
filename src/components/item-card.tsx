@@ -1,4 +1,4 @@
-import { fadeOut, motion } from '@/styles/motion';
+import { fadeOut, motion } from '@/theme/motion';
 import { SuggestedBadge } from '@/components/suggested-badge';
 import { displayHost } from '@/lib/url';
 import { api } from '@convex/_generated/api';
@@ -190,7 +190,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
 
             {item.status === 'processing' && (
               <View style={styles.processing}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ActivityIndicator size="small" color={theme.colors.tint} />
               </View>
             )}
           </Pressable>

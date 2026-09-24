@@ -95,8 +95,22 @@ throughout; keep them accurate or functions fail at runtime.
   Convex `queryKeyHashFn`/`queryFn` are set as *global* query defaults — required so restored
   persisted hashes match. `staleTime: Infinity` (Convex pushes updates). Don't move these to
   per-call options.
-- **Styling** (`src/unistyles.ts`) — `react-native-unistyles` with light/dark themes (a warm
-  amber palette), `adaptiveThemes: true`, a `gap(n) => n*8` spacer helper, and shared radii/fonts.
+- **Styling** — `react-native-unistyles` with `adaptiveThemes: true`. All tokens live in
+  `src/theme/` (`palette`, `schemes`, `colors`, `typography`, `spacing`, `radius`, `shadows`,
+  `controls`, `motion`); `src/unistyles.ts` only registers them. The default scheme is
+  **Neutral** (Tailwind `neutral`).
+  - `palette.ts` is the full Tailwind palette. Screens never read it.
+  - A **color scheme** (`schemes.ts`) is a `gray` scale plus an `accent` scale. `colors.ts`
+    derives every semantic role (`background`, `foreground`, `primary`, `onPrimary`, `tint`,
+    `toggle`, `primarySoft`, …) from those two scales, per mode. Use `tint` for accent text and
+    icons on the canvas, `primary` only for fills, and `toggle` for switch tracks.
+    `theme.media.*` is mode-independent camera/photo chrome.
+  - To add a scheme, add one entry to `colorSchemes`. To switch at runtime, call
+    `setColorScheme(name)` from `src/lib/color-scheme.ts` (persisted in MMKV, read before
+    `StyleSheet.configure`). The home-screen widget gets the active palette with each snapshot.
+  - Never hardcode hex colors outside `src/theme/`. Skia and other JS-read colors
+    (e.g. `AnimatedText`'s `color` prop) must come from `useUnistyles()`, not from a
+    `StyleSheet.create` style: those don't update on a live theme change.
   The babel plugin (`react-native-unistyles/plugin`, `root: 'src'`) auto-processes styles.
 
 ### Native modules (`modules/`) — local Expo modules

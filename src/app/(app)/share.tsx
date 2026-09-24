@@ -70,7 +70,7 @@ export default function ShareScreen() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator color={theme.colors.primary} />
+      <ActivityIndicator color={theme.colors.tint} />
       <Text style={styles.label}>Saving to Amber…</Text>
     </View>
   );
