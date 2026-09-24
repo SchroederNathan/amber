@@ -1,5 +1,6 @@
 import type { IntentKind } from '@/lib/intents';
-import { SymbolView, type SFSymbol } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol';
+import type { SFSymbol } from 'expo-symbols';
 import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 

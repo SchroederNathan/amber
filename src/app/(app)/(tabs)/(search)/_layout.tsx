@@ -1,12 +1,14 @@
+import { barHeaderOptions } from '@/lib/header-options';
 import { Stack } from 'expo-router';
 import { Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function SearchStackLayout() {
+  const { theme } = useUnistyles();
   return (
     <Stack
       screenOptions={{
-        headerTransparent: true,
+        ...barHeaderOptions(theme.colors.background),
         headerShadowVisible: false,
       }}
     >

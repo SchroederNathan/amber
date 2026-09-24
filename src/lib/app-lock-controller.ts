@@ -13,6 +13,7 @@ export type LockDependencies = {
   enroll: () => Promise<void>;
   verify: () => Promise<boolean>;
   preparePrivacy: () => Promise<void>;
+  releasePrivacy: () => Promise<void>;
 };
 export type LockOptions = {
   // How long Amber may stay out of the foreground before it locks again.
@@ -148,6 +149,9 @@ export class AppLockController {
       } else if (action === 'disable') {
         await this.dependencies.writeEnabled(false);
         this.update({ status: 'disabled' });
+        // The lock is already off; failing to lift the screenshot block only
+        // lasts until the next launch, so it must not report a failed disable.
+        await this.dependencies.releasePrivacy().catch(() => {});
         return true;
       }
       if (this.disposed || generation !== this.generation) return false;
@@ -157,7 +161,7 @@ export class AppLockController {
       this.update({
         message:
           action === 'enable'
-            ? 'Biometric lock was not enabled. Check Face ID or fingerprint settings and try again.'
+            ? 'Biometric lock was not enabled. Check your device’s biometric settings and try again.'
             : 'Amber stays locked until verification succeeds. Try again, or sign out and sign in to reset the lock.',
       });
       return false;

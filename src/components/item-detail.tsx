@@ -10,7 +10,7 @@ import { useMutation } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/build/react-navigation';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol';
 import * as WebBrowser from 'expo-web-browser';
 import type { FunctionReturnType } from 'convex/server';
 import { memo, useLayoutEffect, useRef } from 'react';

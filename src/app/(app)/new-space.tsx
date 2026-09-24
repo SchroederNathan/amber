@@ -102,6 +102,8 @@ export default function NewSpaceScreen() {
           value={dynamic}
           onValueChange={setDynamic}
           trackColor={{ true: theme.colors.toggle }}
+          // Android otherwise paints the thumb in the system accent.
+          thumbColor={process.env.EXPO_OS === 'android' ? theme.colors.toggleThumb : undefined}
         />
       </View>
 
@@ -115,9 +117,11 @@ export default function NewSpaceScreen() {
   );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((theme, rt) => ({
   content: {
     padding: theme.spacing.xl,
+    // Android sheets draw edge-to-edge behind the navigation bar.
+    paddingBottom: theme.spacing.xl + (process.env.EXPO_OS === 'android' ? rt.insets.bottom : 0),
     gap: theme.spacing.md,
   },
   heading: {

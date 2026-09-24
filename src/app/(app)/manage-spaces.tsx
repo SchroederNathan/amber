@@ -64,6 +64,8 @@ export default function ManageSpacesScreen() {
               <Switch
                 accessibilityLabel={space.name}
                 trackColor={{ true: theme.colors.toggle }}
+                // Android otherwise paints the thumb in the system accent.
+                thumbColor={process.env.EXPO_OS === 'android' ? theme.colors.toggleThumb : undefined}
                 value={members.has(space._id)}
                 onValueChange={(next) => toggle(space._id, next)}
               />
@@ -75,9 +77,11 @@ export default function ManageSpacesScreen() {
   );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((theme, rt) => ({
   content: {
     padding: theme.gap(2.5),
+    // Android sheets draw edge-to-edge behind the navigation bar.
+    paddingBottom: theme.gap(2.5) + (process.env.EXPO_OS === 'android' ? rt.insets.bottom : 0),
     gap: theme.gap(1.5),
   },
   heading: {

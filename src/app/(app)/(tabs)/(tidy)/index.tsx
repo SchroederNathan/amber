@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { EmptyState } from '@/components/empty-state';
+import { useToolbarIcon } from '@/components/ui/symbol';
 import { Button } from '@/components/ui/button';
 import { TidyDeck } from '@/components/tidy/tidy-deck';
 import { TidyDone } from '@/components/tidy/tidy-done';
@@ -17,7 +18,8 @@ import { usePhotoBatch, type TidyPhoto } from '@/lib/tidy/use-photo-batch';
 import { useTidyActions } from '@/lib/tidy/use-tidy-actions';
 
 export default function TidyScreen() {
-  const [permission, requestPermission] = usePermissions();
+  // Tidy only reviews photos; without this Android also asks for music and video.
+  const [permission, requestPermission] = usePermissions({ granularPermissions: ['photo'] });
   const granted = permission?.granted ?? false;
 
   const sources = useAlbums(granted);
@@ -94,6 +96,9 @@ const TidyDeckView: FC<DeckViewProps> = ({
   const { topIndex, counts, pendingDeleteCount, canUndo, onDecision, undo, commitDeletes } =
     useTidyActions({ batch, noteDeleted });
   const [continuing, setContinuing] = useState(false);
+  const undoIcon = useToolbarIcon('arrow.uturn.backward');
+  const deleteIcon = useToolbarIcon('trash');
+  const albumIcon = useToolbarIcon('photo.on.rectangle.angled');
 
   // Leaving the tab (or backgrounding the screen) flushes queued deletions so
   // the batch never silently outlives the session.
@@ -137,18 +142,18 @@ const TidyDeckView: FC<DeckViewProps> = ({
       {/* Native header controls (note 3): undo on the left, delete on the
           right with a live count badge. */}
       <Stack.Toolbar placement="left">
-        <Stack.Toolbar.Button icon="arrow.uturn.backward" hidden={!canUndo} onPress={handleUndo}>
+        <Stack.Toolbar.Button icon={undoIcon} accessibilityLabel="Undo" hidden={!canUndo} onPress={handleUndo}>
           Undo
         </Stack.Toolbar.Button>
       </Stack.Toolbar>
       <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button icon="trash" hidden={pendingDeleteCount === 0} onPress={commitDeletes}>
+        <Stack.Toolbar.Button icon={deleteIcon} accessibilityLabel="Delete" hidden={pendingDeleteCount === 0} onPress={commitDeletes}>
           <Stack.Toolbar.Label>Delete</Stack.Toolbar.Label>
           {pendingDeleteCount > 0 && (
             <Stack.Toolbar.Badge>{String(pendingDeleteCount)}</Stack.Toolbar.Badge>
           )}
         </Stack.Toolbar.Button>
-        <Stack.Toolbar.Menu icon="photo.on.rectangle.angled">
+        <Stack.Toolbar.Menu icon={albumIcon} accessibilityLabel="Albums">
           {sources.map((s) => (
             <Stack.Toolbar.MenuAction
               key={s.id}
@@ -228,6 +233,11 @@ const Loading: FC = () => (
   </View>
 );
 
+// iOS lays the deck under a transparent header and a floating tab bar, so it
+// pads past both. Android's opaque header and bottom navigation already sit
+// outside the content, so there the deck only needs a small gap.
+const underBars = process.env.EXPO_OS === 'ios';
+
 const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flex: 1,
@@ -241,7 +251,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   progressRow: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: rt.insets.top + theme.gap(6),
+    paddingTop: underBars ? rt.insets.top + theme.gap(6) : theme.gap(2),
     paddingBottom: theme.gap(1),
   },
   progressText: {
@@ -252,11 +262,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     marginHorizontal: theme.gap(2),
     // Clear the floating native tab bar with a comfortable gap (note 5).
-    marginBottom: rt.insets.bottom + theme.gap(11),
+    marginBottom: underBars ? rt.insets.bottom + theme.gap(11) : theme.gap(4),
   },
   limitedBanner: {
     position: 'absolute',
-    bottom: rt.insets.bottom + theme.gap(11),
+    bottom: underBars ? rt.insets.bottom + theme.gap(11) : theme.gap(4),
     left: theme.gap(2),
     right: theme.gap(2),
     paddingHorizontal: theme.gap(2),

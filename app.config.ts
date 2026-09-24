@@ -65,6 +65,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: getAppId(),
     icon: icon ?? config.ios?.icon,
   },
+  android: {
+    ...config.android,
+    package: getAppId(),
+  },
   plugins: [
     // Keep the static plugins from app.json — an inline array here would
     // silently replace them (expo-font, expo-router, expo-sharing, …).
@@ -97,5 +101,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ],
       },
     ],
+    "./plugins/with-android-accent",
   ],
 });

@@ -8,8 +8,8 @@ import { useClerk, useUser } from '@clerk/expo';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
-import { Alert, PlatformColor, ScrollView, Text, View } from 'react-native';
+import { SymbolView, useToolbarIcon } from '@/components/ui/symbol';
+import { Alert, Platform, PlatformColor, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ProfileScreen() {
@@ -20,6 +20,7 @@ export default function ProfileScreen() {
   const { theme } = useUnistyles();
   const biometricFooter = useBiometricFooter();
   const versionLabel = useVersionLabel();
+  const closeIcon = useToolbarIcon('xmark');
 
   // Both lists are already cached by the Home and Spaces tabs.
   const { data: items } = useQuery(convexQuery(api.items.listItems, {}));
@@ -50,8 +51,10 @@ export default function ProfileScreen() {
     <>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
-          icon="xmark"
-          tintColor={PlatformColor('label')}
+          icon={closeIcon}
+          accessibilityLabel="Close"
+          // `label` is an iOS system color; Android has no equivalent name.
+          tintColor={Platform.OS === 'ios' ? PlatformColor('label') : theme.colors.foreground}
           onPress={() => router.back()}
         >
           Close

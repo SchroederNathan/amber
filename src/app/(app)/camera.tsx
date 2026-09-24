@@ -7,7 +7,7 @@ import type { Id } from '@convex/_generated/dataModel';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';

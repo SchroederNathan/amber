@@ -23,12 +23,12 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Share,
   useWindowDimensions,
   View,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, useToolbarIcon } from '@/components/ui/symbol';
+import { shareUrl } from '@/lib/url';
 import Animated, { SlideInDown, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -47,6 +47,10 @@ export default function ItemScreen() {
   const router = useRouter();
   const navigation = useNavigation<NativeStackNavigationProp<{ 'item/[id]': { id: string } }>>();
   const { theme } = useUnistyles();
+  const menuIcon = useToolbarIcon('ellipsis', 'more_vert');
+  const shareIcon = useToolbarIcon('square.and.arrow.up');
+  const copyIcon = useToolbarIcon('doc.on.doc');
+  const deleteIcon = useToolbarIcon('trash');
   const reducedMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -180,12 +184,12 @@ export default function ItemScreen() {
   const shareActive = useCallback(async () => {
     if (!activeItem) return;
     if (!activeItem.imageUrl) {
-      if (activeItem.url) await Share.share({ url: activeItem.url });
+      if (activeItem.url) await shareUrl(activeItem.url);
       return;
     }
     try {
       if (!(await Sharing.isAvailableAsync())) {
-        if (activeItem.url) await Share.share({ url: activeItem.url });
+        if (activeItem.url) await shareUrl(activeItem.url);
         return;
       }
       const ext = activeItem.isSticker ? 'png' : 'jpg';
@@ -297,17 +301,18 @@ export default function ItemScreen() {
       <Stack.Title asChild>
         <ItemHeader item={activeItem} />
       </Stack.Title>
-      <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Menu icon="ellipsis">
-          <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={shareActive}>
+      {/* The header is transparent here, so Android's dropdown needs its own fill. */}
+      <Stack.Toolbar placement="right" backgroundColor={theme.colors.background}>
+        <Stack.Toolbar.Menu icon={menuIcon} accessibilityLabel="More">
+          <Stack.Toolbar.MenuAction icon={shareIcon} onPress={shareActive}>
             Share
           </Stack.Toolbar.MenuAction>
           {activeItem?.url ? (
-            <Stack.Toolbar.MenuAction icon="doc.on.doc" onPress={copyLink}>
+            <Stack.Toolbar.MenuAction icon={copyIcon} onPress={copyLink}>
               Copy link
             </Stack.Toolbar.MenuAction>
           ) : null}
-          <Stack.Toolbar.MenuAction icon="trash" destructive onPress={onDelete}>
+          <Stack.Toolbar.MenuAction icon={deleteIcon} destructive onPress={onDelete}>
             Delete
           </Stack.Toolbar.MenuAction>
         </Stack.Toolbar.Menu>

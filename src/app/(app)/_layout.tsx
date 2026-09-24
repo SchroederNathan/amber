@@ -2,6 +2,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { useWelcomeTransition } from '@/lib/welcome-transition';
 import { useAppLock } from '@/lib/app-lock';
+import { barHeaderOptions } from '@/lib/header-options';
 import { useOnboarding } from '@/lib/onboarding';
 import { RecentSavesWidgetSync } from '@/lib/widget-sync';
 import { useAuth } from '@clerk/expo';
@@ -49,6 +50,7 @@ function AuthenticatedAppLayout() {
           <Stack.Screen
             name="space/[id]"
             options={{
+              ...barHeaderOptions(theme.colors.background),
               title: '',
               headerBackButtonDisplayMode: 'minimal',
             }}

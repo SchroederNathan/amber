@@ -64,6 +64,8 @@ export function buildColors(scheme: ColorSchemeDefinition, mode: Mode) {
     tint: readableStep(accent, accentSteps.fill, light, background),
     /** Native switch track. The thumb is always white, so the track darkens until it shows. */
     toggle: readableStep(accent, accentSteps.fill, true, palette.white, 3),
+    /** Native switch thumb. iOS draws it white itself; Android needs it set. */
+    toggleThumb: palette.white,
     /** Tinted chip / badge background, paired with `primaryText`. */
     primarySoft: accent[accentSteps.soft],
     primaryText: accent[accentSteps.text],

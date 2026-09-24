@@ -1,10 +1,13 @@
+import { barHeaderOptions } from '@/lib/header-options';
 import { Stack } from 'expo-router';
+import { useUnistyles } from 'react-native-unistyles';
 
 export default function TidyStackLayout() {
+  const { theme } = useUnistyles();
   return (
     <Stack
       screenOptions={{
-        headerTransparent: true,
+        ...barHeaderOptions(theme.colors.background),
         headerShadowVisible: false,
       }}
     >

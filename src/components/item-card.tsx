@@ -1,14 +1,15 @@
 import { fadeOut, motion } from '@/theme/motion';
 import { SuggestedBadge } from '@/components/suggested-badge';
-import { displayHost } from '@/lib/url';
+import { displayHost, shareUrl } from '@/lib/url';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { useMutation } from 'convex/react';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
-import { ActionSheetIOS, ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
+import { useActionMenu } from '@/components/ui/action-menu';
+import { SymbolView } from '@/components/ui/symbol';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -55,6 +56,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
   const acceptSuggestion = useMutation(api.spaces.acceptSuggestion);
   const dismissSuggestion = useMutation(api.spaces.dismissSuggestion);
   const removeItemFromSpace = useMutation(api.spaces.removeItemFromSpace);
+  const menu = useActionMenu();
 
   const spaceId =
     source?.from === 'space' ? (source.spaceId as Id<'spaces'>) : undefined;
@@ -85,7 +87,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
       actions.push({ label: 'Dismiss suggestion', destructive: true, run: dismiss });
     } else {
       if (item.url) {
-        actions.push({ label: 'Share', run: () => Share.share({ url: item.url! }) });
+        actions.push({ label: 'Share', run: () => shareUrl(item.url!) });
       }
       if (spaceId !== undefined) {
         actions.push({
@@ -99,17 +101,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
         run: () => deleteItem({ id: item._id }),
       });
     }
-    const destructiveIndex = actions.findIndex((a) => a.destructive);
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: [...actions.map((a) => a.label), 'Cancel'],
-        destructiveButtonIndex: destructiveIndex >= 0 ? destructiveIndex : undefined,
-        cancelButtonIndex: actions.length,
-      },
-      (index) => {
-        actions[index]?.run();
-      },
-    );
+    menu.open(actions);
   };
 
   return (
@@ -173,8 +165,15 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
                   </View>
                 ) : null}
               </View>
-              <Pressable hitSlop={10} onPress={openMenu} style={styles.menuButton}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="More actions"
+                hitSlop={10}
+                onPress={openMenu}
+                style={styles.menuButton}
+              >
                 <SymbolView name="ellipsis" size={15} tintColor={theme.colors.foreground} />
+                {menu.anchor}
               </Pressable>
             </View>
 
@@ -213,7 +212,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
                 <Link.MenuAction
                   title="Share"
                   icon="square.and.arrow.up"
-                  onPress={() => Share.share({ url: item.url! })}
+                  onPress={() => shareUrl(item.url!)}
                 />
               ) : null}
               {spaceId !== undefined ? (
