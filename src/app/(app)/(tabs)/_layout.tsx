@@ -3,8 +3,26 @@ import { useUnistyles } from 'react-native-unistyles';
 
 export default function TabsLayout() {
   const { theme } = useUnistyles();
+  // iOS draws a Liquid Glass bar tinted by `tintColor`. Android's Material bar
+  // otherwise falls back to the stock lavender surface and pill, so it takes
+  // the theme's roles and type explicitly.
+  const android =
+    process.env.EXPO_OS === 'android'
+      ? {
+          backgroundColor: theme.colors.background,
+          indicatorColor: theme.colors.primarySoft,
+          rippleColor: theme.colors.primarySoft,
+          // Match iOS, which labels every tab, not only the selected one.
+          labelVisibilityMode: 'labeled' as const,
+          iconColor: { default: theme.colors.muted, selected: theme.colors.tint },
+          labelStyle: {
+            default: { fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.muted },
+            selected: { fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.tint },
+          },
+        }
+      : {};
   return (
-    <NativeTabs tintColor={theme.colors.tint} minimizeBehavior="onScrollDown">
+    <NativeTabs tintColor={theme.colors.tint} minimizeBehavior="onScrollDown" {...android}>
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Icon
           sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }}
