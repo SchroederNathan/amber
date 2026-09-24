@@ -60,8 +60,9 @@ function SplashOverlay({
 
   useEffect(() => {
     if (!ready) {
-      // Something locked or started loading again mid-exit: settle back.
-      scale.set(withSpring(1, splash.grow));
+      // Something locked or started loading again mid-exit: cover back up.
+      // The mark never animates smaller; it resets to rest size at once.
+      scale.set(1);
       opacity.set(withTiming(1, splash.fade));
       return;
     }
