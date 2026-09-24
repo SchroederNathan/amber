@@ -5,7 +5,7 @@ A save-it-for-later app for the things you want to come back to. Drop in a **lin
 tags it — then files it into the right collection for you. Everything shows up as a warm
 masonry feed.
 
-Built with Expo (SDK 57) + Convex backend + AI classification via AI SDK.
+Built with Expo (SDK 58) + Convex backend + AI classification via AI SDK.
 
 ## Features
 
@@ -25,7 +25,7 @@ Built with Expo (SDK 57) + Convex backend + AI classification via AI SDK.
 
 | Layer      | What                                                                       |
 | ---------- | -------------------------------------------------------------------------- |
-| App        | Expo SDK 57, React Native 0.86 (New Architecture), Expo Router (typed)     |
+| App        | Expo SDK 58, React Native 0.88 (New Architecture), Expo Router (typed)     |
 | Backend    | [Convex](https://convex.dev) — reactive DB, file storage, server actions   |
 | Auth       | [Clerk](https://clerk.com)                                                 |
 | AI         | Vercel AI SDK → Gemini 3.1 Flash-Lite via the AI Gateway                   |

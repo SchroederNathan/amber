@@ -6,9 +6,9 @@ import {
   StyleSheet as RNStyleSheet,
   View,
   useWindowDimensions,
-  type StyleProp,
+  type TextProps,
   type TextStyle,
-  type ViewStyle,
+  type ViewProps,
 } from 'react-native';
 import {
   BlurMask,
@@ -160,8 +160,8 @@ const CharGlyph = memo(function CharGlyph({
 
 export type AnimatedTextProps = {
   text: string;
-  style?: StyleProp<TextStyle>;
-  containerStyle?: StyleProp<ViewStyle>;
+  style?: TextProps['style'];
+  containerStyle?: ViewProps['style'];
   width?: number;
   /** Layout height. The canvas includes overflow for the glyph travel and blur. */
   height?: number;
@@ -184,7 +184,9 @@ export function AnimatedText({
   color: colorProp,
 }: AnimatedTextProps) {
   const { theme } = useUnistyles();
-  const flat = (RNStyleSheet.flatten(style) ?? {}) as TextStyle;
+  // Expo's web typings widen TextStyle (e.g. `cursor: string`) past what RN 0.88's
+  // strict `flatten` accepts, so hand it the parameter type it expects.
+  const flat = (RNStyleSheet.flatten(style as Parameters<typeof RNStyleSheet.flatten>[0]) ?? {}) as TextStyle;
   const fontSize = typeof flat.fontSize === 'number' ? flat.fontSize : theme.type.sheetTitle.fontSize;
   const color = colorProp ?? theme.colors.foreground;
   const reducedMotion = useReducedMotion();
@@ -234,7 +236,7 @@ function MorphText({ text, font, fontSize, color, width, height, overscan, basel
   overscan: number;
   baselineY: number;
   blurMax: number;
-  containerStyle?: StyleProp<ViewStyle>;
+  containerStyle?: ViewProps['style'];
 }) {
   const measure = useMemo(() => (char: string) =>
     font.getGlyphWidths(font.getGlyphIDs(char)).reduce((sum, advance) => sum + advance, 0), [font]);

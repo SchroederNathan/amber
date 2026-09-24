@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @AGENTS.md
 
-> Expo SDK 57 changed a lot. Before writing app code, read the exact versioned docs at
-> https://docs.expo.dev/versions/v57.0.0/ (or use the `expo` MCP `read_documentation` /
-> `search_documentation` tools). Do not rely on pre-SDK-57 API memory.
+> Expo SDK 58 changed a lot. Before writing app code, read the exact versioned docs at
+> https://docs.expo.dev/versions/v58.0.0/ (or use the `expo` MCP `read_documentation` /
+> `search_documentation` tools). Do not rely on pre-SDK-58 API memory.
 
 ## What this is
 
@@ -42,7 +42,8 @@ Xcode 26.4 while local Xcode 26.6 works.
 
 ### Version pins that must not drift (from hard-won auto-memory)
 
-- `react-native-worklets` pinned to exactly **0.10.0** — 0.10.1 SIGABRTs at launch.
+- `react-native-worklets` must match the version the dev client was built with — a stale
+  binary against newer worklets JS SIGABRTs at launch (`getNumber`). Rebuild after bumping it.
 - `react-native-reanimated` **>= 4.5.1** — 4.5.0 crashes on empty Unistyles style objects.
 
 ## Architecture
@@ -86,7 +87,7 @@ throughout; keep them accurate or functions fail at runtime.
   background to kill white flashes) → `Slot`.
 - **Routing** (`expo-router`, typed routes on): `(auth)` for sign-in, `(app)` gated by Clerk auth
   and an onboarding guard (`Stack.Protected`). Inside `(app)`: `(tabs)` uses **native tabs**
-  (`expo-router/unstable-native-tabs`) — Home (masonry feed), Spaces, Search. `add`, `new-space`,
+  (`expo-router/native-tabs`) — Home (masonry feed), Spaces, Search. `add`, `new-space`,
   `profile` are form-sheet modals; `camera` is a full-screen modal; `item/[id]` and `space/[id]`
   are detail screens.
 - **Data layer** (`src/lib/query-client.ts`) — one `ConvexReactClient` shared by both Convex's

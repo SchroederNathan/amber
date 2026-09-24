@@ -1,5 +1,5 @@
 import { alpha } from '@/theme';
-import { useHeaderHeight } from 'expo-router/build/react-navigation';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 

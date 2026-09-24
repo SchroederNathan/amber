@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { useHeaderHeight } from 'expo-router/build/react-navigation';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { SymbolView } from '@/components/ui/symbol';
 import * as WebBrowser from 'expo-web-browser';
 import type { FunctionReturnType } from 'convex/server';
@@ -21,6 +21,7 @@ import {
   Text,
   useWindowDimensions,
   View,
+  type ScrollViewInstance,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -51,7 +52,7 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
   const { theme } = useUnistyles();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const displayedId = useRef(item._id);
 
   useLayoutEffect(() => {
