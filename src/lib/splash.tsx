@@ -1,4 +1,5 @@
 import { Wordmark } from '@/components/wordmark';
+import { motion } from '@/styles/motion';
 import {
   createContext,
   use,
@@ -9,14 +10,10 @@ import {
 } from 'react';
 import { View } from 'react-native';
 import Animated, {
-  Easing,
-  ReduceMotion,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withRepeat,
-  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -29,26 +26,7 @@ const SplashContext = createContext<((mode: HoldMode) => () => void) | null>(
   null,
 );
 
-const breathe = {
-  duration: 900,
-  easing: Easing.inOut(Easing.sin),
-  reduceMotion: ReduceMotion.Never,
-};
-const dip = {
-  duration: 260,
-  dampingRatio: 0.9,
-  reduceMotion: ReduceMotion.Never,
-};
-const lift = {
-  duration: 500,
-  dampingRatio: 1,
-  reduceMotion: ReduceMotion.Never,
-};
-const fadeAway = {
-  duration: 320,
-  easing: Easing.out(Easing.quad),
-  reduceMotion: ReduceMotion.Never,
-};
+const splash = motion.splash;
 // Loading screens hand off to each other across commits (lock → private data →
 // onboarding). Wait out that gap so the splash only exits once, into the app.
 const SETTLE_MS = 80;
@@ -56,11 +34,11 @@ const SETTLE_MS = 80;
 function BreathingWordmark({ breathing = true }: { breathing?: boolean }) {
   const opacity = useSharedValue(1);
   useEffect(() => {
-    opacity.value = breathing
-      ? withRepeat(withTiming(0.7, breathe), -1, true)
-      : withTiming(1, fadeAway);
+    opacity.set(breathing
+      ? withRepeat(withTiming(splash.breatheOpacity, splash.breathe), -1, true)
+      : withTiming(1, splash.fade));
   }, [breathing, opacity]);
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   return (
     <Animated.View style={style}>
       <Wordmark size={44} />
@@ -83,8 +61,8 @@ function SplashOverlay({
   useEffect(() => {
     if (!ready) {
       // Something locked or started loading again mid-exit: settle back.
-      scale.value = withSpring(1, lift);
-      opacity.value = withTiming(1, fadeAway);
+      scale.set(withSpring(1, splash.grow));
+      opacity.set(withTiming(1, splash.fade));
       return;
     }
     const timeout = setTimeout(() => {
@@ -93,20 +71,17 @@ function SplashOverlay({
         'worklet';
         if (finished) scheduleOnRN(onRevealed);
       };
-      if (reducedMotion) {
-        opacity.value = withTiming(0, fadeAway, done);
-        return;
-      }
-      scale.value = withSequence(withSpring(0.9, dip), withSpring(1.3, lift));
-      opacity.value = withDelay(dip.duration, withTiming(0, fadeAway, done));
+      // The mark only grows on the way out, while the cover fades over it.
+      if (!reducedMotion) scale.set(withSpring(splash.growScale, splash.grow));
+      opacity.set(withTiming(0, splash.fade, done));
     }, SETTLE_MS);
     return () => clearTimeout(timeout);
   }, [ready, reducedMotion, onRevealed, scale, opacity]);
 
   const leaving = ready && exiting;
-  const containerStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const containerStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }));
   const markStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
   return (
     <Animated.View

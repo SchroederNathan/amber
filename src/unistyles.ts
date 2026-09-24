@@ -41,7 +41,8 @@ const shared = {
   gap: (v: number) => v * 8,
   motion,
   // `held` is a Button's pressed and loading look: dimmed, never replaced by a spinner.
-  opacity: { pressed: 0.7, held: 0.85, disabled: 0.4 },
+  // `pressedSurface` dims large tappable surfaces (cards, tiles) less than text.
+  opacity: { pressed: 0.7, held: 0.85, pressedSurface: 0.85, disabled: 0.4 },
   control: { minHeight: 48, largeHeight: 56, pressRetentionOffset: 12 },
   // Camera chrome and photo paper intentionally keep their contrast in both themes.
   media: {

@@ -132,7 +132,7 @@ export default function SpaceScreen() {
                 <Pressable
                   onPress={addAll}
                   hitSlop={8}
-                  style={({ pressed }) => pressed && { opacity: 0.7 }}
+                  style={({ pressed }) => pressed && { opacity: theme.opacity.pressed }}
                 >
                   <Text style={styles.addAllText}>Add all</Text>
                 </Pressable>

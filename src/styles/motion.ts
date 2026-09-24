@@ -13,12 +13,17 @@ const curves = {
   sheet: [0.32, 0.72, 0, 1],
 } as const;
 
-const duration = { feedback: 120, state: 180, enter: 250, exit: 200 } as const;
+// feedback: press, image fade-in. state: toggles, color swaps, crossfades.
+// enter/exit: elements mounting inside a screen. screen: a full-screen surface
+// moving on or off (welcome cover, onboarding pages).
+const duration = { feedback: 120, state: 180, enter: 250, exit: 200, screen: 400 } as const;
 const easing = {
   out: Easing.bezier(...curves.out),
   inOut: Easing.bezier(...curves.inOut),
   sheet: Easing.bezier(...curves.sheet),
   linear: Easing.linear,
+  // Symmetric, for loops that yoyo (the splash breath). Not for UI transitions.
+  breathe: Easing.inOut(Easing.sin),
 };
 
 // CSS easing objects are class instances. Keep them outside `motion` so a
@@ -39,7 +44,18 @@ export const motion = {
     state: { duration: duration.state, easing: easing.out, reduceMotion: ReduceMotion.System },
     enter: { duration: duration.enter, easing: easing.out, reduceMotion: ReduceMotion.System },
     exit: { duration: duration.exit, easing: easing.out, reduceMotion: ReduceMotion.System },
+    screen: { duration: duration.screen, easing: easing.inOut, reduceMotion: ReduceMotion.System },
     fade: { duration: duration.feedback, easing: easing.out, reduceMotion: ReduceMotion.Never },
+    crossfade: { duration: duration.state, easing: easing.out, reduceMotion: ReduceMotion.Never },
+  },
+  // The launch/unlock wordmark is Amber's brand moment, so it gets its own
+  // choreography. Its exit only ever grows the mark: it never dips first.
+  splash: {
+    breathe: { duration: 900, easing: easing.breathe, reduceMotion: ReduceMotion.Never },
+    breatheOpacity: 0.7,
+    grow: { duration: 500, dampingRatio: 1, reduceMotion: ReduceMotion.Never },
+    growScale: 1.3,
+    fade: { duration: 320, easing: easing.out, reduceMotion: ReduceMotion.Never },
   },
   // RN Motion's blurred text morph is a deliberate, staggered signature effect.
   // Keep its choreography separate from the short press/feedback budget.

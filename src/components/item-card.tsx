@@ -123,7 +123,7 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
             style={({ pressed }) => [
               styles.card,
               item.isSticker && styles.cardSticker,
-              pressed && { opacity: 0.85 },
+              pressed && { opacity: theme.opacity.pressedSurface },
             ]}
           >
             {imageUri ? (

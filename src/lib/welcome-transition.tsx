@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { StyleSheet, View } from 'react-native';
 import Animated, { SlideOutUp, useReducedMotion } from 'react-native-reanimated';
 
-const exitUp = SlideOutUp.duration(400).easing(motion.easing.inOut);
+const exitUp = SlideOutUp.duration(motion.duration.screen).easing(motion.easing.inOut);
 const WelcomeTransitionContext = createContext({
   cover: () => {},
   reveal: () => {},
