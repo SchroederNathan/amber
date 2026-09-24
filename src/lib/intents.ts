@@ -41,8 +41,12 @@ export async function runIntent(kind: IntentKind, value: string): Promise<void> 
       );
       break;
     case 'open_maps':
+      // Android hands a geo: query to whichever maps app is installed; Apple
+      // Maps' web fallback would only open a browser there.
       await Linking.openURL(
-        `https://maps.apple.com/?q=${encodeURIComponent(value)}`,
+        process.env.EXPO_OS === 'android'
+          ? `geo:0,0?q=${encodeURIComponent(value)}`
+          : `https://maps.apple.com/?q=${encodeURIComponent(value)}`,
       );
       break;
     case 'call':

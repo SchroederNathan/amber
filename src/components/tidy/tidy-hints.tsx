@@ -1,6 +1,7 @@
 import { motion } from '@/theme/motion';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import { SymbolView, type SFSymbol } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol';
+import type { SFSymbol } from 'expo-symbols';
 import { type FC } from 'react';
 import { Text, View } from 'react-native';
 import Animated, {

@@ -6,11 +6,13 @@ import { convexQuery } from '@convex-dev/react-query';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
+import { useState } from 'react';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { useActionMenu } from '@/components/ui/action-menu';
+import { SymbolView } from '@/components/ui/symbol';
 import { ProgressiveBlurHeader } from 'progressive-blur';
-import { ActionSheetIOS, ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -140,13 +142,13 @@ export default function SpacesScreen() {
     ]);
   };
 
-  const openMenu = (id: Id<'spaces'>) =>
-    ActionSheetIOS.showActionSheetWithOptions(
-      { options: ['Delete', 'Cancel'], destructiveButtonIndex: 0, cancelButtonIndex: 1 },
-      (index) => {
-        if (index === 0) confirmDelete(id);
-      },
-    );
+  const menu = useActionMenu();
+  // Which tile the Android dropdown anchors to.
+  const [menuFor, setMenuFor] = useState<Id<'spaces'> | null>(null);
+  const openMenu = (id: Id<'spaces'>) => {
+    setMenuFor(id);
+    menu.open([{ label: 'Delete', destructive: true, run: () => confirmDelete(id) }]);
+  };
 
   if (spaces === undefined) {
     return (
@@ -177,6 +179,8 @@ export default function SpacesScreen() {
         keyExtractor={(space) => space._id}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
+        // Re-render tiles when the Android menu opens or closes.
+        extraData={menu.anchor}
         renderItem={({ item: space }) => {
           // `previews` can be briefly absent when the offline cache rehydrates an
           // older query shape before the live refetch lands. The newest item is
@@ -194,11 +198,14 @@ export default function SpacesScreen() {
                         {space.name}
                       </Text>
                       <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="More actions"
                         hitSlop={10}
                         onPress={() => openMenu(space._id)}
                         style={styles.menuButton}
                       >
                         <SymbolView name="ellipsis" size={15} tintColor={theme.colors.foreground} />
+                        {menuFor === space._id && menu.anchor}
                       </Pressable>
                     </View>
                   </Pressable>

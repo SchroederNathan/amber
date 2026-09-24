@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { PermissionDevice } from '@/components/onboarding/permission-device';
 import { useAppLock } from '@/lib/app-lock';
+import { biometricMethods } from '@/lib/app-lock-storage';
 import { useOnboarding } from '@/lib/onboarding';
 import { requestOnboardingPermission } from '@/lib/onboarding-permissions';
 import { fadeIn, motion } from '@/theme/motion';
@@ -52,7 +53,7 @@ export default function OnboardingScreen() {
       ? 'Save your favorite photos and screenshots to Amber.'
       : lock.available
         ? `Unlock Amber with ${lock.label} to keep your saves private.`
-        : 'Set up Face ID or a fingerprint on your device to lock Amber.';
+        : `Set up ${biometricMethods} on your device to lock Amber.`;
 
   const unlockTransition = useCallback(() => {
     inFlight.current = false;

@@ -1,4 +1,5 @@
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol';
+import type { SFSymbol } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -27,7 +28,7 @@ export function SettingsGroup({
 }
 
 type RowProps = {
-  icon: SymbolViewProps['name'];
+  icon: SFSymbol;
   label: string;
   /** Right-hand content: a switch, a status label, or nothing for a chevron. */
   trailing?: ReactNode;

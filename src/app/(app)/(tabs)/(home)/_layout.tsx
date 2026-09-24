@@ -1,10 +1,18 @@
+import { useToolbarIcon } from '@/components/ui/symbol';
+import { barHeaderOptions } from '@/lib/header-options';
 import { Wordmark } from '@/components/wordmark';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { PlatformColor } from 'react-native';
+import { Platform, PlatformColor } from 'react-native';
+import { useUnistyles } from 'react-native-unistyles';
 
 export default function HomeStackLayout() {
   const router = useRouter();
+  const { theme } = useUnistyles();
+  const profileIcon = useToolbarIcon('person');
+  const addIcon = useToolbarIcon('plus');
+  // `label` is an iOS system color; Android has no equivalent name.
+  const tint = Platform.OS === 'ios' ? PlatformColor('label') : theme.colors.foreground;
 
   // Native bar-button items don't run JS on tap the way a Pressable does, so
   // the light haptic HeaderButton used to give is fired here instead.
@@ -18,7 +26,7 @@ export default function HomeStackLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTransparent: true,
+        ...barHeaderOptions(theme.colors.background),
         headerShadowVisible: false,
       }}
     >
@@ -28,8 +36,9 @@ export default function HomeStackLayout() {
         </Stack.Title>
         <Stack.Toolbar placement="left">
           <Stack.Toolbar.Button
-            icon="person"
-            tintColor={PlatformColor('label')}
+            icon={profileIcon}
+            accessibilityLabel="Profile"
+            tintColor={tint}
             onPress={tap('/profile')}
           >
             Profile
@@ -37,8 +46,9 @@ export default function HomeStackLayout() {
         </Stack.Toolbar>
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Button
-            icon="plus"
-            tintColor={PlatformColor('label')}
+            icon={addIcon}
+            accessibilityLabel="Add"
+            tintColor={tint}
             onPress={tap('/add')}
           >
             Add

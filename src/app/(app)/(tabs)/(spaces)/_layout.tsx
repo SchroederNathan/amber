@@ -1,10 +1,16 @@
+import { useToolbarIcon } from '@/components/ui/symbol';
+import { barHeaderOptions } from '@/lib/header-options';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { PlatformColor, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { Platform, PlatformColor, Text } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function SpacesStackLayout() {
   const router = useRouter();
+  const { theme } = useUnistyles();
+  const addIcon = useToolbarIcon('plus');
+  // `label` is an iOS system color; Android has no equivalent name.
+  const tint = Platform.OS === 'ios' ? PlatformColor('label') : theme.colors.foreground;
 
   // Native bar-button items don't run JS on tap the way a Pressable does, so
   // the light haptic HeaderButton used to give is fired here instead.
@@ -18,7 +24,7 @@ export default function SpacesStackLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTransparent: true,
+        ...barHeaderOptions(theme.colors.background),
         headerShadowVisible: false,
       }}
     >
@@ -28,8 +34,9 @@ export default function SpacesStackLayout() {
         </Stack.Title>
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Button
-            icon="plus"
-            tintColor={PlatformColor('label')}
+            icon={addIcon}
+            accessibilityLabel="New space"
+            tintColor={tint}
             onPress={newSpace}
           >
             New space

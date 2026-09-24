@@ -66,12 +66,16 @@ export default function Page() {
     setActive,
     signIn: attempt,
     signUp,
+    authSessionResult,
   }: Awaited<ReturnType<typeof startSSOFlow>>) => {
     if (createdSessionId && setActive) {
       cover();
       await setActive({ session: createdSessionId });
       return;
     }
+    // The browser sheet closed without a redirect: a cancel. Clerk still hands
+    // back the half-started sign-in (needs_identifier), which is not an error.
+    if (authSessionResult && authSessionResult.type !== 'success') return;
     if (attempt?.status || signUp?.status) {
       setError(`Sign-in did not complete (sign in: ${attempt?.status ?? 'none'}, sign up: ${signUp?.status ?? 'none'})`);
     }

@@ -20,6 +20,7 @@ function fixture(overrides = {}, options = {}) {
     enroll: async () => {},
     verify: async () => true,
     preparePrivacy: async () => {},
+    releasePrivacy: async () => {},
     ...overrides,
   };
   const lock = new AppLockController(deps, true, {
@@ -269,4 +270,18 @@ test('an opted-out account does not require biometric hardware or a prompt', asy
   lock.activityChanged('active');
   assert.equal(lock.getSnapshot().status, 'disabled');
   assert.equal(await lock.authenticate('unlock'), false);
+});
+
+test('turning the lock off lifts screen protection, and a failed lift still disables', async () => {
+  let released = 0;
+  const { lock, writes } = fixture({ releasePrivacy: async () => { released++; } });
+  await lock.load();
+  assert.equal(await lock.authenticate('disable'), true);
+  assert.equal(released, 1);
+  assert.deepEqual(writes, [false]);
+
+  const failing = fixture({ releasePrivacy: async () => { throw new Error('unavailable'); } });
+  await failing.lock.load();
+  assert.equal(await failing.lock.authenticate('disable'), true);
+  assert.equal(failing.lock.getSnapshot().status, 'disabled');
 });

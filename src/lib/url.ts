@@ -1,3 +1,5 @@
+import { Share } from 'react-native';
+
 const URL_PATTERN = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+([/?#]\S*)?$/i;
 
 export function isProbablyUrl(text: string) {
@@ -16,4 +18,10 @@ export function displayHost(url: string | undefined) {
   } catch {
     return url;
   }
+}
+
+/** Opens the share sheet for a link. React Native's `url` field is iOS-only;
+ * Android ignores it and would share nothing, so there the link goes as text. */
+export function shareUrl(url: string) {
+  return Share.share(process.env.EXPO_OS === 'ios' ? { url } : { message: url });
 }

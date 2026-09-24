@@ -50,9 +50,13 @@ export function createLockDependencies(userId: string): LockDependencies {
       if (!SecureStore.canUseBiometricAuthentication())
         throw new Error('Biometrics unavailable');
       // iOS does not prompt when creating a key, so read it back before opting in.
+      // Android already prompts on the write; a read-back would ask twice.
       await SecureStore.deleteItemAsync(keys.proof, keyOptions);
       await SecureStore.setItemAsync(keys.proof, userId, keyOptions);
-      if ((await SecureStore.getItemAsync(keys.proof, keyOptions)) !== userId)
+      if (
+        Platform.OS === 'ios' &&
+        (await SecureStore.getItemAsync(keys.proof, keyOptions)) !== userId
+      )
         throw new Error('Verification failed');
     },
     async verify() {
@@ -67,8 +71,18 @@ export function createLockDependencies(userId: string): LockDependencies {
         await ScreenCapture.preventScreenCaptureAsync('amber-lock');
       await hideRecentSavesWidget();
     },
+    async releasePrivacy() {
+      if (Platform.OS === 'ios')
+        await ScreenCapture.disableAppSwitcherProtectionAsync();
+      if (Platform.OS === 'android')
+        await ScreenCapture.allowScreenCaptureAsync('amber-lock');
+    },
   };
 }
+
+/** How to name the unlock methods in copy; Face ID is Apple-only. */
+export const biometricMethods =
+  Platform.OS === 'ios' ? 'Face ID or a fingerprint' : 'a fingerprint or face unlock';
 
 export async function getBiometricLabel() {
   if (Platform.OS === 'web') return { available: false, label: 'Biometrics' };

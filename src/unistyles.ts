@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native-unistyles';
+import { Appearance, Platform } from 'react-native';
+import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { getStoredColorScheme } from './lib/color-scheme';
 import { createTheme, type AppTheme } from './theme';
 
@@ -39,3 +40,16 @@ StyleSheet.configure({
     adaptiveThemes: true,
   },
 });
+
+// On Android, Unistyles misses a live dark-mode switch: its runtime reports the
+// new colorScheme but keeps the old theme until the next launch. React
+// Native's Appearance event lands once the switch has applied, so re-arming
+// adaptive themes there makes Unistyles re-read the scheme and follow it.
+if (Platform.OS === 'android') {
+  Appearance.addChangeListener(({ colorScheme }) => {
+    if (colorScheme && UnistylesRuntime.themeName !== colorScheme) {
+      UnistylesRuntime.setAdaptiveThemes(false);
+      UnistylesRuntime.setAdaptiveThemes(true);
+    }
+  });
+}

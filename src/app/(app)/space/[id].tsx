@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, useToolbarIcon } from '@/components/ui/symbol';
 import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useMemo } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
@@ -20,6 +20,10 @@ export default function SpaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { theme } = useUnistyles();
+  const addIcon = useToolbarIcon('plus');
+  const menuIcon = useToolbarIcon('ellipsis', 'more_vert');
+  const editIcon = useToolbarIcon('pencil');
+  const deleteIcon = useToolbarIcon('trash');
   const { data: space } = useQuery(
     convexQuery(api.spaces.getSpace, { id: id as Id<'spaces'> }),
   );
@@ -89,7 +93,8 @@ export default function SpaceScreen() {
       </Stack.Title>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
-          icon="plus"
+          icon={addIcon}
+          accessibilityLabel="Add"
           tintColor={theme.colors.foreground}
           onPress={() =>
             router.push({ pathname: '/add', params: { spaceId: id } })
@@ -97,16 +102,16 @@ export default function SpaceScreen() {
         >
           Add
         </Stack.Toolbar.Button>
-        <Stack.Toolbar.Menu icon="ellipsis">
+        <Stack.Toolbar.Menu icon={menuIcon} accessibilityLabel="More">
           <Stack.Toolbar.MenuAction
-            icon="pencil"
+            icon={editIcon}
             onPress={() =>
               router.push({ pathname: '/new-space', params: { id } })
             }
           >
             Edit space
           </Stack.Toolbar.MenuAction>
-          <Stack.Toolbar.MenuAction icon="trash" destructive onPress={confirmDelete}>
+          <Stack.Toolbar.MenuAction icon={deleteIcon} destructive onPress={confirmDelete}>
             Delete space
           </Stack.Toolbar.MenuAction>
         </Stack.Toolbar.Menu>

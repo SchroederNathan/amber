@@ -1,5 +1,6 @@
 import { AnimatedText } from '@/components/animated-text';
 import { parseExifDate } from '@/lib/date';
+import { isProbablyUrl } from '@/lib/url';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
@@ -8,8 +9,9 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView, type SFSymbol } from 'expo-symbols';
-import { useEffect, useState } from 'react';
+import { SymbolView } from '@/components/ui/symbol';
+import type { SFSymbol } from 'expo-symbols';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -45,6 +47,37 @@ function ActionButton({
   );
 }
 
+function HeaderIconButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: SFSymbol;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const { theme } = useUnistyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      hitSlop={8}
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.headerButton}
+    >
+      <SymbolView
+        name={icon}
+        size={24}
+        tintColor={disabled ? theme.colors.muted : theme.colors.tint}
+      />
+    </Pressable>
+  );
+}
+
 export default function AddScreen() {
   const router = useRouter();
   const { theme } = useUnistyles();
@@ -59,6 +92,7 @@ export default function AddScreen() {
   const createNoteItem = useMutation(api.items.createNoteItem);
   const saveImages = useSaveImages();
 
+  const inputRef = useRef<TextInput>(null);
   const trimmed = value.trim();
   const canSave = trimmed.length > 0 && !saving;
 
@@ -66,12 +100,27 @@ export default function AddScreen() {
   useEffect(() => {
     if (mode !== 'article') return;
     let active = true;
-    Clipboard.getUrlAsync().then((url) => {
-      if (active && url) setValue((current) => current || url);
-    });
+    // getUrlAsync is iOS-only; Android reads the text and keeps it if it is a link.
+    const clipboardUrl =
+      process.env.EXPO_OS === 'ios'
+        ? Clipboard.getUrlAsync()
+        : Clipboard.getStringAsync().then((text) => (isProbablyUrl(text) ? text.trim() : null));
+    clipboardUrl
+      .then((url) => {
+        if (active && url) setValue((current) => current || url);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
+  }, [mode]);
+
+  // Android resizes the sheet to the composer over ~300ms and drops a keyboard
+  // opened mid-resize behind it, so focus once the sheet has settled.
+  useEffect(() => {
+    if (process.env.EXPO_OS === 'ios' || mode === 'menu') return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 350);
+    return () => clearTimeout(timer);
   }, [mode]);
 
   const success = () => {
@@ -135,51 +184,72 @@ export default function AddScreen() {
   const isArticle = mode === 'article';
   const title = isArticle ? 'Save an article' : mode === 'note' ? 'New note' : 'Save something';
 
+  // Animated title persists across mode changes so the text cascades
+  // between "Save something" / "New note" / "Save an article".
+  const heading = <AnimatedText text={title} style={styles.heading} />;
+
   return (
     <View style={styles.content}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTransparent: false,
-          headerStyle: { backgroundColor: theme.colors.background },
-        }}
-      />
-      {/* Animated title persists across mode changes so the text cascades
-          between "Save something" / "New note" / "Save an article". */}
-      <Stack.Title asChild>
-        <AnimatedText text={title} style={styles.heading} />
-      </Stack.Title>
-      {isComposer && (
+      {process.env.EXPO_OS === 'ios' ? (
         <>
-          <Stack.Toolbar placement="left">
-            <Stack.Toolbar.Button
-              icon="chevron.left"
-              tintColor={theme.colors.tint}
-              onPress={() => setMode('menu')}
-            >
-              Back
-            </Stack.Toolbar.Button>
-          </Stack.Toolbar>
-          <Stack.Toolbar placement="right">
-            <Stack.Toolbar.Button
-              icon="checkmark"
-              tintColor={canSave ? theme.colors.tint : theme.colors.muted}
-              onPress={save}
-            >
-              Save
-            </Stack.Toolbar.Button>
-          </Stack.Toolbar>
+          <Stack.Screen
+            options={{
+              headerShown: true,
+              headerTransparent: false,
+              headerStyle: { backgroundColor: theme.colors.background },
+            }}
+          />
+          <Stack.Title asChild>{heading}</Stack.Title>
+          {isComposer && (
+            <>
+              <Stack.Toolbar placement="left">
+                <Stack.Toolbar.Button
+                  icon="chevron.left"
+                  tintColor={theme.colors.tint}
+                  onPress={() => setMode('menu')}
+                >
+                  Back
+                </Stack.Toolbar.Button>
+              </Stack.Toolbar>
+              <Stack.Toolbar placement="right">
+                <Stack.Toolbar.Button
+                  icon="checkmark"
+                  tintColor={canSave ? theme.colors.tint : theme.colors.muted}
+                  onPress={save}
+                >
+                  Save
+                </Stack.Toolbar.Button>
+              </Stack.Toolbar>
+            </>
+          )}
         </>
+      ) : (
+        // Android form sheets have no native header, so the title and the
+        // composer's back/save controls sit at the top of the sheet instead.
+        <View style={styles.sheetHeader}>
+          <View style={styles.sheetHeaderSide}>
+            {isComposer && (
+              <HeaderIconButton icon="chevron.left" label="Back" onPress={() => setMode('menu')} />
+            )}
+          </View>
+          {heading}
+          <View style={[styles.sheetHeaderSide, styles.sheetHeaderEnd]}>
+            {isComposer && (
+              <HeaderIconButton icon="checkmark" label="Save" disabled={!canSave} onPress={save} />
+            )}
+          </View>
+        </View>
       )}
 
       {isComposer ? (
         <TextInput
+          ref={inputRef}
           style={isArticle ? styles.articleInput : styles.noteInput}
           value={value}
           onChangeText={setValue}
           placeholder={isArticle ? 'Paste or type a link…' : 'Jot a note…'}
           placeholderTextColor={theme.colors.muted}
-          autoFocus
+          autoFocus={process.env.EXPO_OS === 'ios'}
           multiline={!isArticle}
           autoCapitalize={isArticle ? 'none' : 'sentences'}
           autoCorrect={!isArticle}
@@ -226,13 +296,32 @@ export default function AddScreen() {
   );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((theme, rt) => ({
   content: {
     padding: theme.gap(2.5),
     paddingTop: theme.gap(2),
+    // Android sheets draw edge-to-edge behind the navigation bar.
+    paddingBottom: theme.gap(2.5) + (process.env.EXPO_OS === 'android' ? rt.insets.bottom : 0),
     gap: theme.gap(1.5),
   },
   heading: theme.type.sheetTitle,
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetHeaderSide: {
+    width: 48,
+  },
+  sheetHeaderEnd: {
+    alignItems: 'flex-end',
+  },
+  headerButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actions: {
     flexDirection: 'row',
     justifyContent: 'center',

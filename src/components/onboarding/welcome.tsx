@@ -34,7 +34,8 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
         </View>
         <View style={styles.actions}>
           <Button
-            title="Continue with iCloud"
+            // Android signs in through Apple's web flow, where "iCloud" means nothing.
+            title={process.env.EXPO_OS === 'ios' ? 'Continue with iCloud' : 'Continue with Apple'}
             size="lg"
             testID="apple-login-button"
             disabled={pending}
