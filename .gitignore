@@ -45,3 +45,6 @@ yarn-error.*
 *.apk
 # EAS Simulator session (carries a token - do not commit)
 .env.eas-simulator
+
+# Argent screen recordings are local QA evidence, not source
+.argent/recordings/
