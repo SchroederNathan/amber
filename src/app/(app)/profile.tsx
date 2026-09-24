@@ -1,5 +1,6 @@
 import { BiometricSetting } from '@/components/biometric-setting';
 import { Button } from '@/components/ui/button';
+import { UpdateSetting } from '@/components/update-setting';
 import { useAppLock } from '@/lib/app-lock';
 import { Wordmark } from '@/components/wordmark';
 import { useClerk, useUser } from '@clerk/expo';
@@ -28,6 +29,8 @@ export default function ProfileScreen() {
       </View>
 
       <BiometricSetting />
+
+      <UpdateSetting />
 
       <Button
         title="Sign out"
