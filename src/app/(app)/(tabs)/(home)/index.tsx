@@ -3,7 +3,6 @@ import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { ProgressiveBlurHeader } from 'progressive-blur';
 import { ActivityIndicator, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -32,7 +31,6 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <MasonryFeed items={items} numColumns={2} source={{ from: 'home' }} />
-      <ProgressiveBlurHeader />
     </View>
   );
 }
