@@ -88,10 +88,8 @@ function AuthenticatedAppLayout() {
           <Stack.Screen
             name="profile"
             options={{
-              presentation: 'formSheet',
-              headerShown: false,
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: 'fitToContents',
+              presentation: 'modal',
+              title: '',
               contentStyle: { backgroundColor: theme.colors.background },
             }}
           />
