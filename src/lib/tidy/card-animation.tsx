@@ -1,4 +1,4 @@
-import { motion } from '@/styles/motion';
+import { motion } from '@/theme/motion';
 import {
   createContext,
   useCallback,

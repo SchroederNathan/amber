@@ -1,5 +1,5 @@
 import { layoutMorphText, reconcileMorphCells, pruneMorphCells } from '@/lib/text-morph';
-import { motion } from '@/styles/motion';
+import { motion } from '@/theme/motion';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Text as RNText,
@@ -166,6 +166,12 @@ export type AnimatedTextProps = {
   /** Layout height. The canvas includes overflow for the glyph travel and blur. */
   height?: number;
   blurMax?: number;
+  /**
+   * Glyph color; defaults to the theme's foreground. Pass it from `useUnistyles()`
+   * rather than in `style`: Skia reads it in JS, so a Unistyles style's color
+   * would stay stale when the appearance or color scheme changes.
+   */
+  color?: string;
 };
 
 export function AnimatedText({
@@ -175,11 +181,12 @@ export function AnimatedText({
   width = DEFAULT_WIDTH,
   height = CANVAS_HEIGHT,
   blurMax = morph.blur,
+  color: colorProp,
 }: AnimatedTextProps) {
   const { theme } = useUnistyles();
   const flat = (RNStyleSheet.flatten(style) ?? {}) as TextStyle;
   const fontSize = typeof flat.fontSize === 'number' ? flat.fontSize : theme.type.sheetTitle.fontSize;
-  const color = typeof flat.color === 'string' ? flat.color : theme.colors.foreground;
+  const color = colorProp ?? theme.colors.foreground;
   const reducedMotion = useReducedMotion();
   const { fontScale } = useWindowDimensions();
   const usePlainText = reducedMotion || fontScale > 1;
@@ -193,7 +200,7 @@ export function AnimatedText({
   if (!font || usePlainText) {
     return (
       <View style={[styles.container, { width }, containerStyle]}>
-        <RNText numberOfLines={1} style={[theme.type.sheetTitle, { color }, style, { maxWidth: '100%' }]}>{text}</RNText>
+        <RNText numberOfLines={1} style={[theme.type.sheetTitle, style, { color, maxWidth: '100%' }]}>{text}</RNText>
       </View>
     );
   }

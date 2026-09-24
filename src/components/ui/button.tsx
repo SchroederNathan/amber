@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, View, type PressableProps } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { motion, motionCSS } from '@/styles/motion';
+import { motion, motionCSS } from '@/theme/motion';
 import { ThemedText } from './themed-text';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -12,7 +12,7 @@ const glass = isLiquidGlassAvailable();
 type Variant = 'primary' | 'secondary' | 'destructive';
 type Size = 'md' | 'lg';
 /** The surface the button sits on, which picks its palette. */
-type Tone = 'app' | 'onboarding' | 'media';
+type Tone = 'app' | 'media';
 
 type Props = Omit<PressableProps, 'children' | 'style'> & {
   title: string;
@@ -45,25 +45,16 @@ export function Button({
   }> = {
     app: {
       fill: theme.colors.primary,
-      onFill: theme.colors.onTint,
+      onFill: theme.colors.onPrimary,
       tint: theme.colors.glassTint,
       surface: theme.colors.surface,
       label: theme.colors.foreground,
       border: theme.colors.border,
       scheme: 'auto',
     },
-    onboarding: {
-      fill: theme.colors.primary,
-      onFill: theme.colors.onTint,
-      tint: theme.onboarding.glassTint,
-      surface: theme.onboarding.secondary,
-      label: theme.onboarding.foreground,
-      border: theme.onboarding.border,
-      scheme: 'auto',
-    },
     media: {
-      fill: theme.colors.primary,
-      onFill: theme.colors.onTint,
+      fill: theme.media.accent,
+      onFill: theme.media.onAccent,
       tint: theme.media.control,
       surface: theme.media.control,
       label: theme.media.foreground,

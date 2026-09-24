@@ -1,5 +1,5 @@
 import { Wordmark } from '@/components/wordmark';
-import { motion } from '@/styles/motion';
+import { motion } from '@/theme/motion';
 import {
   createContext,
   use,

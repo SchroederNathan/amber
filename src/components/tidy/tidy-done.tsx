@@ -1,7 +1,7 @@
 import { type FC } from 'react';
 import { Text } from 'react-native';
 import { Button } from '@/components/ui/button';
-import { fadeIn } from '@/styles/motion';
+import { fadeIn } from '@/theme/motion';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 

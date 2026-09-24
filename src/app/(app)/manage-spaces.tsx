@@ -63,7 +63,7 @@ export default function ManageSpacesScreen() {
               </Text>
               <Switch
                 accessibilityLabel={space.name}
-                trackColor={{ true: theme.colors.primary }}
+                trackColor={{ true: theme.colors.toggle }}
                 value={members.has(space._id)}
                 onValueChange={(next) => toggle(space._id, next)}
               />

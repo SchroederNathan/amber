@@ -4,7 +4,7 @@ import { useUnistyles } from 'react-native-unistyles';
 export default function TabsLayout() {
   const { theme } = useUnistyles();
   return (
-    <NativeTabs tintColor={theme.colors.tabTint} minimizeBehavior="onScrollDown">
+    <NativeTabs tintColor={theme.colors.tint} minimizeBehavior="onScrollDown">
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Icon
           sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }}

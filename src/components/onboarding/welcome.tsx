@@ -35,18 +35,16 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
         <View style={styles.actions}>
           <Button
             title="Continue with iCloud"
-            tone="onboarding"
             size="lg"
             testID="apple-login-button"
             disabled={pending}
             loading={pending && provider === 'apple'}
             onPress={() => { setProvider('apple'); onApple?.(); }}
-            icon={<Image source={require('../../../assets/brand/apple.svg')} style={styles.providerIcon} tintColor={theme.colors.onTint} contentFit="contain" accessible={false} />}
+            icon={<Image source={require('../../../assets/brand/apple.svg')} style={styles.providerIcon} tintColor={theme.colors.onPrimary} contentFit="contain" accessible={false} />}
           />
           <Button
             title="Continue with Google"
             testID="google-login-button"
-            tone="onboarding"
             size="lg"
             variant="secondary"
             disabled={pending}
@@ -67,15 +65,15 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
 }
 
 const styles = StyleSheet.create((theme) => ({
-  screen: { flex: 1, backgroundColor: theme.onboarding.background },
+  screen: { flex: 1, backgroundColor: theme.colors.background },
   content: { paddingHorizontal: 24, alignItems: 'center', gap: 12 },
-  wordmark: { fontFamily: theme.fonts.display, fontSize: 50, color: theme.onboarding.foreground, width: '100%', maxWidth: 460, textAlign: 'left' },
+  wordmark: { fontFamily: theme.fonts.display, fontSize: 50, color: theme.colors.foreground, width: '100%', maxWidth: 460, textAlign: 'left' },
   bottom: { flexGrow: 1, justifyContent: 'flex-end', gap: 26, width: '100%', maxWidth: 460 },
   copy: { gap: 12 },
-  body: { ...theme.type.body, lineHeight: 23, color: theme.onboarding.muted },
+  body: { ...theme.type.body, lineHeight: 23, color: theme.colors.muted },
   actions: { gap: 12 },
   providerIcon: { width: 24, height: 24 },
-  status: { ...theme.type.caption, textAlign: 'center', color: theme.onboarding.muted },
+  status: { ...theme.type.caption, textAlign: 'center', color: theme.colors.muted },
   error: { ...theme.type.footnote, textAlign: 'center', color: theme.colors.danger },
   dev: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 }));

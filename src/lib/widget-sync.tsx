@@ -1,5 +1,8 @@
 import type { FeedItem } from '@/components/item-card';
+import { getStoredColorScheme, useColorSchemeName } from '@/lib/color-scheme';
 import { displayHost } from '@/lib/url';
+import { createTheme, type ColorSchemeName } from '@/theme';
+import type { WidgetPalette } from '@/widgets/recent-saves-widget';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
@@ -39,6 +42,22 @@ async function ensureThumbnail(dir: Directory, item: FeedItem): Promise<string |
 
 function toPlainPath(uri: string): string {
   return decodeURIComponent(uri.replace(/^file:\/\//, ''));
+}
+
+// The widget runs in its own JS runtime and can't import the theme, so the
+// active scheme's colors travel with each snapshot.
+function widgetPalette(scheme: ColorSchemeName): WidgetPalette {
+  const pick = (mode: 'light' | 'dark') => {
+    const { colors } = createTheme(scheme, mode);
+    return {
+      background: colors.background,
+      tile: colors.surfaceMuted,
+      foreground: colors.foreground,
+      muted: colors.muted,
+      accent: colors.tint,
+    };
+  };
+  return { light: pick('light'), dark: pick('dark') };
 }
 
 function widgetTitle(item: FeedItem): string {
@@ -95,7 +114,7 @@ async function syncWidget(items: FeedItem[], isCurrent: () => boolean = () => tr
     }
   }
 
-  if (isCurrent()) RecentSavesWidget.updateSnapshot({ items: widgetItems });
+  if (isCurrent()) RecentSavesWidget.updateSnapshot({ items: widgetItems, palette: widgetPalette(getStoredColorScheme()) });
 }
 
 // Serialize syncs so a fast series of Convex pushes can't interleave file work.
@@ -118,6 +137,7 @@ export function hideRecentSavesWidget(): Promise<void> {
  */
 export function RecentSavesWidgetSync() {
   const { data: items } = useQuery(convexQuery(api.items.listItems, {}));
+  const scheme = useColorSchemeName();
   const lastKey = useRef<string | null>(null);
 
   useEffect(() => () => {
@@ -130,7 +150,7 @@ export function RecentSavesWidgetSync() {
       .filter((item) => item.status === 'ready')
       .slice(0, WIDGET_ITEM_COUNT);
     // Only re-sync when something the widget shows actually changed.
-    const key = recent
+    const key = scheme + '|' + recent
       .map((item) => `${item._id}:${item.title ?? ''}:${item.imageUrl ?? item.heroImageUrl ?? ''}`)
       .join('|');
     if (key === lastKey.current) return;
@@ -145,7 +165,7 @@ export function RecentSavesWidgetSync() {
         lastKey.current = null;
         console.warn('Recent Saves widget sync failed', error);
       });
-  }, [items]);
+  }, [items, scheme]);
 
   return null;
 }
