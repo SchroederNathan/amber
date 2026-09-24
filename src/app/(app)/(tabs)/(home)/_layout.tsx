@@ -30,7 +30,11 @@ export default function HomeStackLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index">
+      <Stack.Screen
+        name="index"
+        // iOS 26 native soft scroll edge: the feed fades out under the header.
+        options={{ scrollEdgeEffects: { top: 'soft' } }}
+      >
         <Stack.Title asChild>
           <Wordmark />
         </Stack.Title>
