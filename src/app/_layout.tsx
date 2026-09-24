@@ -2,6 +2,7 @@ import { OnboardingProvider } from '@/lib/onboarding';
 import { WelcomeTransitionProvider } from '@/lib/welcome-transition';
 import { AppAccessBoundary } from '@/lib/app-lock';
 import { PrivateDataProvider } from '@/lib/private-data';
+import { SplashProvider } from '@/lib/splash';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
@@ -57,15 +58,17 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <NavThemeProvider>
-          <WelcomeTransitionProvider>
-            <AppAccessBoundary signedOut={<Slot />}>
-              <PrivateDataProvider>
-                <OnboardingProvider>
-                  <Slot />
-                </OnboardingProvider>
-              </PrivateDataProvider>
-            </AppAccessBoundary>
-          </WelcomeTransitionProvider>
+          <SplashProvider>
+            <WelcomeTransitionProvider>
+              <AppAccessBoundary signedOut={<Slot />}>
+                <PrivateDataProvider>
+                  <OnboardingProvider>
+                    <Slot />
+                  </OnboardingProvider>
+                </PrivateDataProvider>
+              </AppAccessBoundary>
+            </WelcomeTransitionProvider>
+          </SplashProvider>
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         </NavThemeProvider>
       </ClerkProvider>

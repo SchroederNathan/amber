@@ -1,19 +1,18 @@
 import { Button } from '@/components/ui/button';
 import { Wordmark } from '@/components/wordmark';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+// Shown when access fails. Loading states use the splash (`LoadingScreen`).
 export function PrivacyScreen({
   title = 'Amber is locked',
   message,
-  busy = false,
   action,
   actionLabel,
   recover,
 }: {
   title?: string;
   message?: string | null;
-  busy?: boolean;
   action?: () => void;
   actionLabel?: string;
   recover?: () => void;
@@ -25,12 +24,10 @@ export function PrivacyScreen({
       <Text style={styles.message}>
         {message ?? 'Unlock to see your private saves.'}
       </Text>
-      {busy && <ActivityIndicator accessibilityLabel="Verifying access" />}
       {action && (
         <Button
           testID="unlock-button"
           title={actionLabel ?? 'Unlock Amber'}
-          disabled={busy}
           onPress={action}
           style={styles.button}
         />
@@ -38,7 +35,6 @@ export function PrivacyScreen({
       {recover && (
         <Pressable
           accessibilityRole="button"
-          disabled={busy}
           onPress={recover}
           style={styles.secondary}
         >

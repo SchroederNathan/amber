@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { Alert, AppState, StyleSheet, View } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { AppLockController } from './app-lock-controller';
 import { canResetLock, type LockRecoveryRequest } from './app-lock-recovery';
 import {
@@ -17,6 +17,7 @@ import {
   getBiometricLabel,
   resetLockAfterSignIn,
 } from './app-lock-storage';
+import { LoadingScreen, useSplashHold } from './splash';
 import { hideRecentSavesWidget } from './widget-sync';
 
 type AppLockValue = {
@@ -80,6 +81,9 @@ function AccountLock({
 
   const { status, busy, message, foreground } = snapshot;
   const enabled = status !== 'disabled';
+  // Inside the grace period the app stays mounted, so navigation survives a
+  // quick trip away. The splash hides saves while Amber is not in the foreground.
+  useSplashHold(status === 'unlocked' && !foreground && !busy, 'show');
   const value = useMemo(
     () => ({
       enabled,
@@ -91,14 +95,7 @@ function AccountLock({
     }),
     [enabled, busy, biometrics, message, controller],
   );
-  if (status === 'loading')
-    return (
-      <PrivacyScreen
-        title="Opening Amber"
-        busy
-        message="Checking your privacy settings…"
-      />
-    );
+  if (status === 'loading') return <LoadingScreen />;
   if (status === 'error')
     return (
       <PrivacyScreen
@@ -109,36 +106,20 @@ function AccountLock({
       />
     );
   if (status === 'locked') {
+    // While Face ID runs (or is about to), only the splash shows. The full
+    // screen appears once verification fails, so the user can retry or reset.
+    if (busy || !foreground) return <LoadingScreen show />;
     return (
       <PrivacyScreen
         message={message}
-        busy={busy}
         action={() => void controller.authenticate('unlock')}
         actionLabel={`Unlock with ${biometrics.label}`}
         recover={recover}
       />
     );
   }
-  // Inside the grace period the app stays mounted, so navigation survives a
-  // quick trip away. A cover hides saves while Amber is not in the foreground.
-  return (
-    <AppLockContext value={value}>
-      {children}
-      {enabled && !foreground && !busy && (
-        <View style={styles.cover}>
-          <PrivacyScreen
-            title="Saves hidden"
-            message="Amber hides your saves while it is in the background."
-          />
-        </View>
-      )}
-    </AppLockContext>
-  );
+  return <AppLockContext value={value}>{children}</AppLockContext>;
 }
-
-const styles = StyleSheet.create({
-  cover: { ...StyleSheet.absoluteFill, zIndex: 10 },
-});
 
 function ResetRecoveredLock({
   userId,
@@ -162,23 +143,15 @@ function ResetRecoveredLock({
       cancelled = true;
     };
   }, [userId, complete, attempt]);
+  if (!failed) return <LoadingScreen />;
   return (
     <PrivacyScreen
       title="Resetting your lock"
-      busy={!failed}
-      message={
-        failed
-          ? 'Could not reset your lock. Please try again.'
-          : 'Your account has been verified. You can enable biometrics again in your profile.'
-      }
-      action={
-        failed
-          ? () => {
-              setFailed(false);
-              setAttempt(attempt + 1);
-            }
-          : undefined
-      }
+      message="Could not reset your lock. Please try again."
+      action={() => {
+        setFailed(false);
+        setAttempt(attempt + 1);
+      }}
       actionLabel="Try again"
     />
   );
@@ -202,14 +175,7 @@ export function AppAccessBoundary({
       console.warn('Could not clear Recent Saves widget'),
     );
   }, [sessionId]);
-  if (!isLoaded)
-    return (
-      <PrivacyScreen
-        title="Opening Amber"
-        busy
-        message="Checking your account…"
-      />
-    );
+  if (!isLoaded) return <LoadingScreen />;
   if (!isSignedIn || !userId || !sessionId) return signedOut;
   if (recovery && recovery.userId !== userId) setRecovery(null);
   if (canResetLock(recovery, userId, sessionId)) {
