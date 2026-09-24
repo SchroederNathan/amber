@@ -1,4 +1,5 @@
 import { PrivacyScreen } from '@/components/privacy-screen';
+import { LoadingScreen } from '@/lib/splash';
 import { useAuth, useClerk } from '@clerk/expo';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useConvexAuth } from 'convex/react';
@@ -12,14 +13,7 @@ import {
 function VerifiedData({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useClerk();
-  if (isLoading)
-    return (
-      <PrivacyScreen
-        title="Opening Amber"
-        busy
-        message="Connecting to your account…"
-      />
-    );
+  if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated)
     return (
       <PrivacyScreen
@@ -57,18 +51,14 @@ export function PrivateDataProvider({
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
-  if (!clients)
+  if (failed)
     return (
       <PrivacyScreen
         title="Opening Amber"
-        busy={!failed}
-        message={
-          failed
-            ? 'Could not prepare private storage. Please restart Amber.'
-            : 'Preparing your saves…'
-        }
+        message="Could not prepare private storage. Please restart Amber."
       />
     );
+  if (!clients) return <LoadingScreen />;
   return (
     <ConvexProviderWithClerk client={clients.convex} useAuth={useAuth}>
       <QueryClientProvider client={clients.queryClient}>

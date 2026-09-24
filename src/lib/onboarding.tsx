@@ -1,4 +1,5 @@
 import { PrivacyScreen } from '@/components/privacy-screen';
+import { LoadingScreen } from '@/lib/splash';
 import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import {
@@ -47,27 +48,19 @@ export function OnboardingProvider({
     () => (onboarded === null ? null : { onboarded, completeOnboarding }),
     [onboarded, completeOnboarding],
   );
-  if (onboarded === null)
+  if (failed)
     return (
       <PrivacyScreen
         title="Opening Amber"
-        busy={!failed}
-        message={
-          failed
-            ? 'Could not read your setup. Please try again.'
-            : 'Loading your preferences…'
-        }
-        action={
-          failed
-            ? () => {
-                setFailed(false);
-                setAttempt(attempt + 1);
-              }
-            : undefined
-        }
+        message="Could not read your setup. Please try again."
+        action={() => {
+          setFailed(false);
+          setAttempt(attempt + 1);
+        }}
         actionLabel="Try again"
       />
     );
+  if (onboarded === null) return <LoadingScreen />;
   return <OnboardingContext value={value}>{children}</OnboardingContext>;
 }
 
