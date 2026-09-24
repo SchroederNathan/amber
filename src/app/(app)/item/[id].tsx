@@ -301,7 +301,7 @@ export default function ItemScreen() {
       <Stack.Title asChild>
         <ItemHeader item={activeItem} />
       </Stack.Title>
-      {/* The header is transparent here, so Android's dropdown needs its own fill. */}
+      {/* Android's dropdown (and its icon button) take this fill; it matches the bar. */}
       <Stack.Toolbar placement="right" backgroundColor={theme.colors.background}>
         <Stack.Toolbar.Menu icon={menuIcon} accessibilityLabel="More">
           <Stack.Toolbar.MenuAction icon={shareIcon} onPress={shareActive}>

@@ -12,7 +12,7 @@ function loadTheme() {
   const { outputFiles } = buildSync({
     stdin: {
       contents: "export { buildColors } from './colors'; export { colorSchemes, defaultColorScheme } from './schemes';",
-      resolveDir: path.join(__dirname, '../src/theme'),
+      resolveDir: path.dirname(require.resolve('../src/theme/colors.ts')),
       loader: 'ts',
     },
     bundle: true,

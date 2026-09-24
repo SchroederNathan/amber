@@ -45,7 +45,9 @@ type Props = {
 // every parent re-render (setActiveId on each swipe) re-rendered every mounted
 // page and its ~100+ paragraph Text nodes — the dominant swipe cost profiled.
 export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props) {
-  const headerHeight = useHeaderHeight();
+  // Only iOS lays content under the header; Android's bar sits above it.
+  const nativeHeaderHeight = useHeaderHeight();
+  const headerHeight = process.env.EXPO_OS === 'ios' ? nativeHeaderHeight : 0;
   const { theme } = useUnistyles();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();

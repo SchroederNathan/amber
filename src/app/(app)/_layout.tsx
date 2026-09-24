@@ -41,8 +41,10 @@ function AuthenticatedAppLayout() {
           <Stack.Screen
             name="item/[id]"
             options={{
-              // Transparent native header over the full-bleed hero; the screen
-              // fills in the toolbar buttons (share/delete) once the item loads.
+              // Transparent native header over the full-bleed hero on iOS; the
+              // screen fills in the toolbar buttons (share/delete) once the
+              // item loads. Android gets an opaque bar, as on the tabs.
+              ...barHeaderOptions(theme.colors.background),
               title: '',
               headerBackButtonDisplayMode: 'minimal',
             }}
@@ -91,6 +93,9 @@ function AuthenticatedAppLayout() {
             name="profile"
             options={{
               presentation: 'modal',
+              ...barHeaderOptions(theme.colors.background),
+              // The Close button dismisses it; Android would add a back arrow too.
+              headerBackVisible: false,
               title: '',
               contentStyle: { backgroundColor: theme.colors.background },
             }}

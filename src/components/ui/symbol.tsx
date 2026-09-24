@@ -15,6 +15,7 @@ import { Platform, type ImageSourcePropType } from 'react-native';
 // Material Symbol. Every SF Symbol the app uses gets its closest Material glyph
 // here, so screens keep passing plain SF names.
 const ANDROID_SYMBOLS: Partial<Record<SFSymbol, AndroidSymbol>> = {
+  'arrow.triangle.2.circlepath': 'sync',
   'arrow.triangle.2.circlepath.camera': 'cameraswitch',
   'arrow.up': 'arrow_upward',
   'arrow.up.right': 'arrow_outward',
@@ -25,10 +26,13 @@ const ANDROID_SYMBOLS: Partial<Record<SFSymbol, AndroidSymbol>> = {
   camera: 'photo_camera',
   checkmark: 'check',
   'chevron.left': 'arrow_back',
+  'chevron.right': 'chevron_right',
   'doc.on.doc': 'content_copy',
   ellipsis: 'more_horiz',
   envelope: 'mail',
+  faceid: 'face',
   link: 'link',
+  lock: 'lock',
   magnifyingglass: 'search',
   map: 'map',
   message: 'chat',
@@ -39,10 +43,12 @@ const ANDROID_SYMBOLS: Partial<Record<SFSymbol, AndroidSymbol>> = {
   'photo.on.rectangle': 'photo_library',
   'photo.on.rectangle.angled': 'photo_album',
   plus: 'add',
+  'rectangle.portrait.and.arrow.right': 'logout',
   safari: 'explore',
   sparkles: 'auto_awesome',
   'square.and.arrow.up': 'share',
   'square.and.pencil': 'edit_square',
+  touchid: 'fingerprint',
   trash: 'delete',
   xmark: 'close',
 };
