@@ -49,7 +49,7 @@ export const motion = {
     crossfade: { duration: duration.state, easing: easing.out, reduceMotion: ReduceMotion.Never },
   },
   // The launch/unlock wordmark is Amber's brand moment, so it gets its own
-  // choreography. Its exit only ever grows the mark: it never dips first.
+  // choreography. The mark only ever grows, then fades away: it never shrinks.
   splash: {
     breathe: { duration: 900, easing: easing.breathe, reduceMotion: ReduceMotion.Never },
     breatheOpacity: 0.7,
