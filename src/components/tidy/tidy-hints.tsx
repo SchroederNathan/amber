@@ -85,19 +85,19 @@ const Badge: FC<BadgeProps> = ({ direction, label, icon, accentColor }) => {
   }));
 
   const arcPath = useDerivedValue(() => {
-    const skPath = Skia.Path.Make();
     const sweepDegrees = Math.max(0, progress.get()) * 360;
-    skPath.addArc(
-      {
-        x: STROKE_WIDTH / 2,
-        y: STROKE_WIDTH / 2,
-        width: BADGE_SIZE - STROKE_WIDTH,
-        height: BADGE_SIZE - STROKE_WIDTH,
-      },
-      -90,
-      sweepDegrees,
-    );
-    return skPath;
+    return Skia.PathBuilder.Make()
+      .addArc(
+        {
+          x: STROKE_WIDTH / 2,
+          y: STROKE_WIDTH / 2,
+          width: BADGE_SIZE - STROKE_WIDTH,
+          height: BADGE_SIZE - STROKE_WIDTH,
+        },
+        -90,
+        sweepDegrees,
+      )
+      .detach();
   });
 
   return (

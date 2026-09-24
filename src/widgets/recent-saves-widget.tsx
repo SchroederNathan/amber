@@ -171,12 +171,12 @@ const RecentSavesWidget = (props: RecentSavesWidgetProps, environment: WidgetEnv
     <HStack spacing={12} modifiers={[containerBackground(c.background, 'widget'), padding({ all: 13 }), widgetURL('amber:///')]}>
       <ZStack
         alignment="bottomLeading"
-        modifiers={[frame({ width: 112, maxHeight: Infinity }), clipShape('roundedRectangle', 14)]}
+        modifiers={[frame({ width: 112 }), frame({ maxHeight: Infinity }), clipShape('roundedRectangle', 14)]}
       >
         {featured.imageUri ? (
           <Image
             uiImage={featured.imageUri}
-            modifiers={[resizable(), aspectRatio({ contentMode: 'fill' }), frame({ width: 112, maxHeight: Infinity })]}
+            modifiers={[resizable(), aspectRatio({ contentMode: 'fill' }), frame({ width: 112 }), frame({ maxHeight: Infinity })]}
           />
         ) : (
           <Rectangle modifiers={[foregroundStyle(c.tile)]} />

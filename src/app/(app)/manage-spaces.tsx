@@ -4,7 +4,7 @@ import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Switch, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -24,11 +24,9 @@ export default function ManageSpacesScreen() {
   // Local mirror of the memberships so the switches respond instantly; the
   // mutations catch up behind it (Convex confirms in the background).
   const [members, setMembers] = useState<Set<string> | null>(null);
-  useEffect(() => {
-    if (item && members === null) {
-      setMembers(new Set(item.spaces.map((s) => s._id)));
-    }
-  }, [item, members]);
+  if (item && members === null) {
+    setMembers(new Set(item.spaces.map((s) => s._id)));
+  }
 
   const toggle = (spaceId: Id<'spaces'>, next: boolean) => {
     setMembers((current) => {

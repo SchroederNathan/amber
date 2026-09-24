@@ -1,5 +1,5 @@
 import { requireNativeView } from 'expo';
-import { useHeaderHeight } from 'expo-router/build/react-navigation';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { Platform, StyleSheet, type ViewProps } from 'react-native';
 
 type NativeProps = ViewProps & {

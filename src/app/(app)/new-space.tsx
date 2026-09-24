@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -38,13 +38,11 @@ export default function NewSpaceScreen() {
 
   // Prefill once the space arrives (cached, so usually instant).
   const [prefilled, setPrefilled] = useState(false);
-  useEffect(() => {
-    if (editing && space && !prefilled) {
-      setName(space.name);
-      setDynamic(space.dynamic ?? false);
-      setPrefilled(true);
-    }
-  }, [editing, space, prefilled]);
+  if (editing && space && !prefilled) {
+    setName(space.name);
+    setDynamic(space.dynamic ?? false);
+    setPrefilled(true);
+  }
 
   const save = async () => {
     const trimmed = name.trim();

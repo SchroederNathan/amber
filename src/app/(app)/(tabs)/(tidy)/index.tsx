@@ -65,7 +65,7 @@ export default function TidyScreen() {
         sources={sources}
         selectedId={source.id}
         selectSource={selectSource}
-        limitedAccess={permission.accessPrivileges === 'limited'}
+        limitedAccess={(permission as PermissionResponse).accessPrivileges === 'limited'}
         loadNextBatch={loadNextBatch}
         noteDeleted={noteDeleted}
       />

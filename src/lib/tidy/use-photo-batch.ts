@@ -1,4 +1,4 @@
-import { AssetField, MediaType, Query, type Album, type AssetMetadata } from 'expo-media-library';
+import { AssetField, MediaType, Query, type Album } from 'expo-media-library';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { isReviewed } from './storage';
@@ -16,6 +16,9 @@ export type TidyPhoto = {
   height: number | null;
   creationTime: number | null;
 };
+
+// expo-media-library 58 no longer re-exports `AssetMetadata` from its root.
+type AssetMetadata = Awaited<ReturnType<Query['exeForMetadata']>>[number];
 
 const toTidyPhoto = (asset: AssetMetadata): TidyPhoto => ({
   id: asset.id,

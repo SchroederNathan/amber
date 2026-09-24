@@ -12,7 +12,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from '@/components/ui/symbol';
 import type { SFSymbol } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View, type TextInputInstance } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 type Mode = 'menu' | 'note' | 'article';
@@ -92,7 +92,7 @@ export default function AddScreen() {
   const createNoteItem = useMutation(api.items.createNoteItem);
   const saveImages = useSaveImages();
 
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const trimmed = value.trim();
   const canSave = trimmed.length > 0 && !saving;
 
