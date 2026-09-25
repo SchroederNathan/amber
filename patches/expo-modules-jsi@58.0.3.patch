@@ -1,0 +1,16 @@
+diff --git a/apple/scripts/build-xcframework.sh b/apple/scripts/build-xcframework.sh
+index fbb40943a219cc9b63190d55e981ee300feafbcc..5cf248037408d02f910d161ab4f8d4b74de01c52 100755
+--- a/apple/scripts/build-xcframework.sh
++++ b/apple/scripts/build-xcframework.sh
+@@ -227,7 +227,10 @@ build_slice() {
+     SWIFT_COMPILATION_MODE=wholemodule \
+     CLANG_ENABLE_CODE_COVERAGE=NO \
+     CLANG_COVERAGE_MAPPING=NO \
+-  )
++  ) 2>&1 | sed -E 's/^error: (the following command failed with exit code 0 but produced no further output)$/note: nested xcodebuild: \1/'
++  # Amber patch: Xcode 27's nested SwiftPM build prints that false "error:" line even when it
++  # succeeds, and the outer archive then fails with "Command PhaseScriptExecution emitted
++  # errors but did not return a nonzero exit code". pipefail keeps a real failure's status.
+ 
+   local product_path="${BUILD_PRODUCTS_PATH}/${build_dir_name}"
+   local framework_src="${product_path}/PackageFrameworks/${PACKAGE_NAME}.framework"
