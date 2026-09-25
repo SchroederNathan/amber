@@ -125,6 +125,31 @@ throughout; keep them accurate or functions fail at runtime.
 Both are wired into TypeScript via `tsconfig.json` `paths` entries (there's no metro symlink) —
 **add a `paths` entry per new local module** (see auto-memory `amber-local-module-tsconfig-paths`).
 
+### Siri, Spotlight & App Intents (`app-intents/`, `src/lib/app-intents.tsx`)
+
+`expo-app-intents` (alpha; pinned to `0.4.4` because npm `latest` is a `0.0.1` placeholder). The
+Swift intents live in the root `app-intents/` folder and are compiled into the app target as inline
+modules (`experiments.inlineModules.watchedDirectories` in `app.json`); Apple extracts their
+metadata at build time. iOS 27 schema intents sit behind `#if compiler(>=6.4)` so older Xcode still
+builds.
+
+- **Capture:** `SaveNoteIntent` (`.notes.createNote`; spaces are exposed as `.notes.folder`) and
+  `SaveLinkIntent` (plain intent) POST straight to the Convex HTTP action `/app-intents/capture`
+  (`convex/http.ts`) with a per-device capture token, so Siri saves without launching JS. The token
+  is minted by the `appIntents.issueCaptureToken` action and stored in the keychain through the
+  `AppIntentsSetup` inline module. If that fails, the intent queues an invocation for JS instead.
+- **Navigation:** `SearchAmberIntent` (`.system.searchInApp`), `OpenItemIntent` / `OpenSpaceIntent`
+  (`.system.open`) and `VisualSearchIntent` dispatch invocations. `AppIntentsBridge` (mounted in
+  `(app)/_layout.tsx`) routes them, publishes the `item` / `space` entity catalogs (never while the
+  app lock is on), and mirrors items into Spotlight via `AmberSpotlight`. Sign-out clears all of it
+  (`resetAppIntents`).
+- Gotchas: do not return `browser.*` schema entities (authentication policy 2); iOS 27 stalls the
+  action before `perform()`. Don't use the package's `registerIndexed`: its
+  `deleteAppEntities(ofType:)` hangs on the iOS 27 simulator and blocks catalog writes.
+  `AppIntentsSetup.getIntentLog()` returns the last intent runs for debugging. Exact schema
+  parameter shapes are in Xcode's `AppIntentSchemas.framework/.../AppIntentSchemas.sqlite`.
+- A dev-client build opened cold by Siri stops at the dev launcher; demo Siri with a Release build.
+
 ### Share-in flow
 
 `expo-sharing` registers a share extension. When content is shared into Amber, the OS launches it

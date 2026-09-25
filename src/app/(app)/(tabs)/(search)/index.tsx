@@ -3,10 +3,11 @@ import { MasonryFeed } from '@/components/masonry-feed';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { ProgressiveBlurHeader } from 'progressive-blur';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import type { SearchBarCommands } from 'react-native-screens';
 import { StyleSheet } from 'react-native-unistyles';
 
 function useDebounced<T>(value: T, delay: number): T {
@@ -19,14 +20,28 @@ function useDebounced<T>(value: T, delay: number): T {
 }
 
 export default function SearchScreen() {
-  const [search, setSearch] = useState('');
+  // Siri's "search Amber for ..." opens this tab with `q`; `t` marks each new request.
+  const { q, t } = useLocalSearchParams<{ q?: string; t?: string }>();
+  const request = q ? `${t ?? ''}|${q}` : null;
+  const [search, setSearch] = useState(q ?? '');
+  const [appliedRequest, setAppliedRequest] = useState(request);
+  if (request !== appliedRequest) {
+    setAppliedRequest(request);
+    if (q) setSearch(q);
+  }
   const query = useDebounced(search.trim(), 250);
+  const searchBar = useRef<SearchBarCommands>(null);
+
+  useEffect(() => {
+    if (q) searchBar.current?.setText(q);
+  }, [q, t]);
 
   const { data: results } = useQuery(convexQuery(api.items.searchItems, { query }));
 
   return (
     <View style={styles.container}>
       <Stack.SearchBar
+        ref={searchBar}
         placeholder="Search your saves"
         autoCapitalize="none"
         hideWhenScrolling={false}

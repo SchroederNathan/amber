@@ -120,4 +120,16 @@ export default defineSchema({
     .index("by_space", ["spaceId"])
     .index("by_item", ["itemId"])
     .index("by_user", ["userId"]),
+
+  // Per-device capture tokens for native App Intents (Siri), which run without
+  // the JS app and so have no Clerk JWT. Only the SHA-256 hex hash of the token
+  // is stored; the raw token lives in the device keychain.
+  captureTokens: defineTable({
+    userId: v.string(),
+    tokenHash: v.string(),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"]),
 });

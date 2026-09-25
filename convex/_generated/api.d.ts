@@ -9,9 +9,12 @@
  */
 
 import type * as ai from "../ai.js";
+import type * as appIntents from "../appIntents.js";
+import type * as http from "../http.js";
 import type * as items from "../items.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_memberships from "../model/memberships.js";
+import type * as model_tokens from "../model/tokens.js";
 import type * as spaces from "../spaces.js";
 
 import type {
@@ -22,9 +25,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
+  appIntents: typeof appIntents;
+  http: typeof http;
   items: typeof items;
   "model/auth": typeof model_auth;
   "model/memberships": typeof model_memberships;
+  "model/tokens": typeof model_tokens;
   spaces: typeof spaces;
 }>;
 

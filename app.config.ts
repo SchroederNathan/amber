@@ -64,6 +64,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     deploymentTarget: "17.0",
     bundleIdentifier: getAppId(),
     icon: icon ?? config.ios?.icon,
+    infoPlist: {
+      ...config.ios?.infoPlist,
+      // Dev and preview builds are named "Amber (Dev)" / "Amber (Preview)";
+      // this lets Siri and App Shortcut phrases still answer to "Amber".
+      INAlternativeAppNames: [{ INAlternativeAppName: appName }],
+    },
   },
   android: {
     ...config.android,

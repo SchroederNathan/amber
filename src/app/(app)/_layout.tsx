@@ -1,6 +1,7 @@
 import { useReducedMotion } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { useWelcomeTransition } from '@/lib/welcome-transition';
+import { AppIntentsBridge } from '@/lib/app-intents';
 import { useAppLock } from '@/lib/app-lock';
 import { barHeaderOptions } from '@/lib/header-options';
 import { useOnboarding } from '@/lib/onboarding';
@@ -17,6 +18,7 @@ export default function AppLayout() {
 }
 
 function AuthenticatedAppLayout() {
+  const { userId } = useAuth();
   const { reveal } = useWelcomeTransition();
   useEffect(() => { reveal(); }, [reveal]);
   const reducedMotion = useReducedMotion();
@@ -27,6 +29,7 @@ function AuthenticatedAppLayout() {
   return (
     <>
       {!lockEnabled && <RecentSavesWidgetSync />}
+      {userId && <AppIntentsBridge userId={userId} publishCatalogs={!lockEnabled} />}
       <Stack
         screenOptions={{
           animation: reducedMotion ? 'fade' : 'default',
