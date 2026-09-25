@@ -5,6 +5,7 @@ import { AppIntentsBridge } from '@/lib/app-intents';
 import { useAppLock } from '@/lib/app-lock';
 import { barHeaderOptions } from '@/lib/header-options';
 import { useOnboarding } from '@/lib/onboarding';
+import { ShareIntake } from '@/lib/share-intake';
 import { RecentSavesWidgetSync } from '@/lib/widget-sync';
 import { useAuth } from '@clerk/expo';
 import { Redirect, Stack } from 'expo-router';
@@ -30,6 +31,7 @@ function AuthenticatedAppLayout() {
     <>
       {!lockEnabled && <RecentSavesWidgetSync />}
       {userId && <AppIntentsBridge userId={userId} publishCatalogs={!lockEnabled} />}
+      <ShareIntake />
       <Stack
         screenOptions={{
           animation: reducedMotion ? 'fade' : 'default',
