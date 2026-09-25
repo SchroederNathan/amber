@@ -149,6 +149,9 @@ builds.
   `AppIntentsSetup.getIntentLog()` returns the last intent runs for debugging. Exact schema
   parameter shapes are in Xcode's `AppIntentSchemas.framework/.../AppIntentSchemas.sqlite`.
 - A dev-client build opened cold by Siri stops at the dev launcher; demo Siri with a Release build.
+- EAS iOS images top out at Xcode 26.6, so EAS builds compile out everything behind
+  `#if compiler(>=6.4)` (all iOS 27 schema intents). Code outside those guards must still pass the
+  metadata export alone: e.g. `ItemVisualQuery` needs the plain `OpenItemIntent` in the `#else`.
 
 ### Share-in flow
 
