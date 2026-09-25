@@ -2,7 +2,6 @@
 
 Generated PNGs with alpha, bundled locally; no remote image requests.
 
-- `welcome-collage.png`: archived concept artwork; no longer rendered in onboarding.
 - `device-camera.png`: base front-facing graphite device with a neutral camera icon.
 - `device-photos.png`: edit of the base, replacing only the center icon with photo cards.
 - `device-biometrics.png`: edit of the base, replacing only the center icon with a face scan.

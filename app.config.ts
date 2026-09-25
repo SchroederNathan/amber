@@ -34,7 +34,7 @@ function getIcon() {
     case "production":
       return undefined; // production keeps the icons from app.json
     default:
-      return "./assets/icon-dev.png";
+      return "./assets/app-icon/icon-dev.png";
   }
 }
 

@@ -177,7 +177,7 @@ and `src/app/(app)/share.tsx` ingests the payload.
 
 ## Path aliases
 
-`@/*` → `src/*`, `@convex/*` → `convex/*`, plus the per-module aliases above. Import from these,
+`@/*` → `src/*`, `@convex/*` → `convex/*`, `@assets/*` → `assets/*`, plus the per-module aliases above. Import from these,
 not deep relative paths.
 
 ## Environment variables

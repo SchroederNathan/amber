@@ -39,6 +39,7 @@
     "expo-screen-capture": "~58.0.2",
     "expo-secure-store": "~58.0.0",
     "expo-sharing": "~58.0.9",
+    "expo-splash-screen": "~58.0.1",
     "expo-status-bar": "~58.0.1",
     "expo-symbols": "~58.0.2",
     "expo-system-ui": "~58.0.2",

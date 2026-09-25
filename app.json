@@ -5,11 +5,12 @@
     "scheme": "amber",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-icon/icon.png",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#fafafa",
     "ios": {
       "supportsTablet": true,
+      "icon": "./assets/app-icon/amber.icon",
       "infoPlist": {
         "NSCameraUsageDescription": "Amber uses your camera so you can capture things you want to save for later.",
         "NSMicrophoneUsageDescription": "Amber needs access to your Microphone to record audio for video recordings.",
@@ -22,9 +23,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/app-icon/android/foreground.png",
+        "backgroundImage": "./assets/app-icon/android/background.png",
+        "monochromeImage": "./assets/app-icon/android/monochrome.png"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -38,7 +39,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/app-icon/favicon.png"
     },
     "plugins": [
       [
@@ -55,6 +56,18 @@
       "expo-image",
       "expo-router",
       "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash/light.png",
+          "backgroundColor": "#fafafa",
+          "dark": {
+            "image": "./assets/splash/dark.png",
+            "backgroundColor": "#0a0a0a"
+          },
+          "imageWidth": 200
+        }
+      ],
       "@clerk/expo",
       [
         "expo-secure-store",
