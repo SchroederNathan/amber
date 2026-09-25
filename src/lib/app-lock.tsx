@@ -24,6 +24,9 @@ import { hideRecentSavesWidget } from './widget-sync';
 type AppLockValue = {
   enabled: boolean;
   busy: boolean;
+  // Amber is in the foreground. It changes in the same update that locks, so
+  // work gated on it never starts in a tree the lock is about to tear down.
+  foreground: boolean;
   available: boolean;
   label: string;
   message: string | null;
@@ -89,12 +92,13 @@ function AccountLock({
     () => ({
       enabled,
       busy,
+      foreground,
       ...biometrics,
       message,
       enable: () => controller.authenticate('enable'),
       disable: () => controller.authenticate('disable'),
     }),
-    [enabled, busy, biometrics, message, controller],
+    [enabled, busy, foreground, biometrics, message, controller],
   );
   if (status === 'loading') return <LoadingScreen />;
   if (status === 'error')
