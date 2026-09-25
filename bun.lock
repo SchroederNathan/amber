@@ -1158,7 +1158,7 @@
 
     "expo-modules-core": ["expo-modules-core@58.0.6", "", { "dependencies": { "@expo/expo-modules-macros-plugin": "0.12.0", "expo-modules-jsi": "~58.0.3", "invariant": "^2.2.4" }, "peerDependencies": { "react": "*", "react-native": "*", "react-native-worklets": "^0.7.4 || ^0.8.0 || ^0.9.0 || ^0.10.0" }, "optionalPeers": ["react-native-worklets"] }, "sha512-ro114fsBHMbEPW3wY2sJGzx+sBlByBM2ABkVgJG2k2uUohYwlcGYz3kw2U6+nADNwYjVmxBoq+8+OntZ5VPfoA=="],
 
-    "expo-modules-jsi": ["expo-modules-jsi@58.0.3", "", { "peerDependencies": { "react-native": "*" } }, "sha512-zAnhZG5fEkfgEdC2JbmHy7wg8NQ8d+fsXk6jUPimOAsHmBgY03QW13QTVPpXD9xbY54aEXq4kVacj9cb7FtHvw=="],
+    "expo-modules-jsi": ["expo-modules-jsi@58.0.4", "", { "peerDependencies": { "react-native": "*" } }, "sha512-w7U43IzdLQrtBVgTeI1e+A3q/MjpuSvJ+Pno7MRCUuJsd3SAtyrGjLhpJHVZ5efSQIybP4HZ9v6k5hDOtqsTVw=="],
 
     "expo-observe": ["expo-observe@58.0.8", "", { "dependencies": { "expo-app-metrics": "~58.0.6", "expo-eas-client": "~58.0.0" }, "peerDependencies": { "@react-navigation/native": "^7.0.0", "expo": "*", "expo-router": "*", "react": "*", "react-native": "*" }, "optionalPeers": ["@react-navigation/native", "expo-router"] }, "sha512-Qy7QTOIvzyCBW4lihwaMw28Asf+gWNoAO6Lv3tOAZ/mS1YzoykJ3Sua4RuxF3BmZ7mT7basiM7zL7Q/sShIcVQ=="],
 
