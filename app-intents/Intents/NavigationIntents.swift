@@ -49,4 +49,22 @@ struct OpenSpaceIntent {
     return .result()
   }
 }
+#else
+/// Opens a saved item on SDKs without the iOS 27 schemas (EAS builds with Xcode 26). The
+/// metadata export fails without it: Visual Intelligence results (`ItemVisualQuery`) must be
+/// openable by an `OpenIntent`.
+@available(iOS 18.0, *)
+struct OpenItemIntent: OpenIntent {
+  static let title: LocalizedStringResource = "Open Save"
+
+  @Parameter(title: "Save")
+  var target: ItemEntity
+
+  @MainActor
+  func perform() async throws -> some IntentResult {
+    AmberIntentLog.record("OpenItemIntent.perform \(target.id)")
+    await AppIntentDispatcher.shared.dispatch(name: "openItem", params: ["id": .string(target.id)])
+    return .result()
+  }
+}
 #endif
