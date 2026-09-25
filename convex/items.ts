@@ -80,6 +80,7 @@ const itemFields = {
   siteName: v.optional(v.string()),
   heroImageUrl: v.optional(v.string()),
   note: v.optional(v.string()),
+  captureContext: v.optional(v.string()),
   intents: v.optional(v.array(intentValidator)),
   products: v.optional(v.array(productValidator)),
   productsStatus: v.optional(productsStatusValidator),
@@ -310,30 +311,51 @@ export const createImageItem = mutation({
   returns: v.id("items"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    if (
-      args.aspectRatio !== undefined &&
-      (!Number.isFinite(args.aspectRatio) || args.aspectRatio <= 0)
-    ) {
-      throw new Error("Invalid aspectRatio");
-    }
-    const itemId = await ctx.db.insert("items", {
-      userId,
-      type: "image",
-      status: "processing",
-      storageId: args.storageId,
-      aspectRatio: args.aspectRatio,
-      isSticker: args.isSticker,
-      capturedAt: args.capturedAt,
-      tags: [],
-      searchText: "",
-    });
-    if (args.spaceId !== undefined) {
-      await saveIntoSpace(ctx, userId, itemId, args.spaceId);
-    }
-    await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
-    return itemId;
+    return await insertImageItem(ctx, userId, args);
   },
 });
+
+/**
+ * Inserts an image item for `userId`, optionally files it into `spaceId`, and
+ * schedules AI processing. Same trust contract as `insertLinkItem`.
+ * Throws "Invalid aspectRatio" on a non-positive or non-finite ratio.
+ */
+export async function insertImageItem(
+  ctx: MutationCtx,
+  userId: string,
+  image: {
+    storageId: Id<"_storage">;
+    aspectRatio?: number;
+    isSticker?: boolean;
+    capturedAt?: number;
+    captureContext?: string;
+    spaceId?: Id<"spaces">;
+  },
+): Promise<Id<"items">> {
+  if (
+    image.aspectRatio !== undefined &&
+    (!Number.isFinite(image.aspectRatio) || image.aspectRatio <= 0)
+  ) {
+    throw new Error("Invalid aspectRatio");
+  }
+  const itemId = await ctx.db.insert("items", {
+    userId,
+    type: "image",
+    status: "processing",
+    storageId: image.storageId,
+    aspectRatio: image.aspectRatio,
+    isSticker: image.isSticker,
+    capturedAt: image.capturedAt,
+    captureContext: image.captureContext,
+    tags: [],
+    searchText: "",
+  });
+  if (image.spaceId !== undefined) {
+    await saveIntoSpace(ctx, userId, itemId, image.spaceId);
+  }
+  await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
+  return itemId;
+}
 
 /**
  * Inserts a link item for `userId`, optionally files it into `spaceId`, and
@@ -526,6 +548,31 @@ export const finalizeItem = internalMutation({
       intents: args.intents,
       status: args.status,
       searchText,
+    });
+    return null;
+  },
+});
+
+/**
+ * Puts one intent first on an item (the source-page link found after a Siri
+ * capture is classified). Drops a duplicate of the same kind and value and
+ * keeps the 5-intent cap.
+ */
+export const prependIntentInternal = internalMutation({
+  args: { itemId: v.id("items"), intent: intentValidator },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.itemId);
+    if (item === null) {
+      return null;
+    }
+    const key = (i: { kind: string; value: string }) =>
+      `${i.kind}|${i.value.toLowerCase()}`;
+    const rest = (item.intents ?? []).filter(
+      (i) => key(i) !== key(args.intent),
+    );
+    await ctx.db.patch(args.itemId, {
+      intents: [args.intent, ...rest].slice(0, 5),
     });
     return null;
   },

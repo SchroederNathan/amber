@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Saves notes and links straight to the Convex backend, so Siri can capture without launching
+/// Saves notes, links, and images straight to the Convex backend, so Siri can capture without launching
 /// the JavaScript app. The signed-in app hands over a per-device capture token (see
 /// `convex/appIntents.ts`); it lives in the keychain, readable after first unlock so a locked
 /// phone can still capture.
@@ -57,25 +57,60 @@ enum AmberCapture {
     return try? JSONDecoder().decode(Credentials.self, from: data)
   }
 
-  /// POSTs one capture and returns the new item id.
-  static func save(kind: String, text: String? = nil, url: String? = nil, spaceId: String? = nil)
-    async throws -> String
-  {
-    guard let credentials = load(), let endpoint = URL(string: credentials.siteUrl + "/app-intents/capture")
-    else {
-      throw Failure.signedOut
-    }
-
-    var body: [String: String] = ["kind": kind]
+  /// POSTs one capture and returns the new item id. `trace` is diagnostic only (see
+  /// `CaptureRouter.trace`); the server logs it.
+  static func save(
+    kind: String, text: String? = nil, url: String? = nil, storageId: String? = nil,
+    aspectRatio: Double? = nil, spaceId: String? = nil, trace: String? = nil
+  ) async throws -> String {
+    var body: [String: Any] = ["kind": kind]
     body["text"] = text
     body["url"] = url
+    body["storageId"] = storageId
+    body["aspectRatio"] = aspectRatio
     body["spaceId"] = spaceId
+    body["trace"] = trace
+
+    let json = try await post(path: "/app-intents/capture", body: body)
+    guard let itemId = json["itemId"] as? String else {
+      throw Failure.badResponse
+    }
+    return itemId
+  }
+
+  /// Uploads one image to Convex storage and returns its storage id, for a `kind: "image"`
+  /// capture.
+  static func uploadImage(_ data: Data, contentType: String) async throws -> String {
+    let json = try await post(path: "/app-intents/upload-url", body: [:])
+    guard let uploadUrl = (json["uploadUrl"] as? String).flatMap(URL.init(string:)) else {
+      throw Failure.badResponse
+    }
+    var request = URLRequest(url: uploadUrl, timeoutInterval: 30)
+    request.httpMethod = "POST"
+    request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+    let (responseData, response) = try await URLSession.shared.upload(for: request, from: data)
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    guard status == 200 else {
+      throw Failure.rejected(status, "upload failed")
+    }
+    let result = (try? JSONSerialization.jsonObject(with: responseData)) as? [String: Any]
+    guard let storageId = result?["storageId"] as? String else {
+      throw Failure.badResponse
+    }
+    return storageId
+  }
+
+  /// POSTs JSON to a capture endpoint with the device's token and returns the JSON reply.
+  private static func post(path: String, body: [String: Any]) async throws -> [String: Any] {
+    guard let credentials = load(), let endpoint = URL(string: credentials.siteUrl + path) else {
+      throw Failure.signedOut
+    }
 
     var request = URLRequest(url: endpoint, timeoutInterval: 15)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
-    request.httpBody = try JSONEncoder().encode(body)
+    request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
     let (data, response) = try await URLSession.shared.data(for: request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -87,10 +122,10 @@ enum AmberCapture {
       }
       throw Failure.rejected(status, json?["error"] as? String ?? "")
     }
-    guard let itemId = json?["itemId"] as? String else {
+    guard let json else {
       throw Failure.badResponse
     }
-    return itemId
+    return json
   }
 
   private static func baseQuery() -> [String: Any] {
