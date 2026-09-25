@@ -138,6 +138,15 @@ builds.
   (`convex/http.ts`) with a per-device capture token, so Siri saves without launching JS. The token
   is minted by the `appIntents.issueCaptureToken` action and stored in the keychain through the
   `AppIntentsSetup` inline module. If that fails, the intent queues an invocation for JS instead.
+- **"Save this" routing:** Siri sends "save this to Amber" to `SaveNoteIntent` whatever is on
+  screen, so `CaptureRouter` picks one item: a page URL Siri passed (link attribute, URL / web
+  archive / webloc / HTML attachment) saves a link; else photos and screenshots upload through
+  `/app-intents/upload-url` and save as image items with `captureContext` (Siri's words plus
+  on-device OCR); else a text that is just a URL saves a link; else a note. For image items with
+  `captureContext`, `ai.processItem` also looks for the page the screenshot shows (a full URL read
+  from the image, else a SerpAPI search that must match the domain and the headline) and puts an
+  "Open page" intent first. Each capture logs `app-intents capture trace:` (types and sizes only)
+  in the Convex logs.
 - **Navigation:** `SearchAmberIntent` (`.system.searchInApp`), `OpenItemIntent` / `OpenSpaceIntent`
   (`.system.open`) and `VisualSearchIntent` dispatch invocations. `AppIntentsBridge` (mounted in
   `(app)/_layout.tsx`) routes them, publishes the `item` / `space` entity catalogs (never while the
