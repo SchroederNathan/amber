@@ -11,6 +11,9 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
  *
  * Render it as a sibling AFTER the scrolling content, so the scroll view stays
  * the screen's first descendant (the native scroll edge effect relies on that).
+ *
+ * On Android the header is an opaque bar and content starts below it (see
+ * `barHeaderOptions`), so only the short tail under the bar's edge is drawn.
  */
 export function HeaderFade() {
   const headerHeight = useHeaderHeight();
@@ -19,16 +22,25 @@ export function HeaderFade() {
   const { theme } = useUnistyles();
   const bg = theme.colors.background;
 
-  // Solid behind the status bar, then eased so the fade has no visible band
-  // where it ends.
-  const stops = [
-    `${bg} 0%`,
-    `${bg} 40%`,
-    `${alpha(bg, 0.85)} 62%`,
-    `${alpha(bg, 0.45)} 82%`,
-    `${alpha(bg, 0.12)} 94%`,
-    `${alpha(bg, 0)} 100%`,
-  ];
+  // iOS: solid behind the status bar, then eased so the fade has no visible
+  // band where it ends. Android: the eased tail only.
+  const stops =
+    process.env.EXPO_OS === 'ios'
+      ? [
+          `${bg} 0%`,
+          `${bg} 40%`,
+          `${alpha(bg, 0.85)} 62%`,
+          `${alpha(bg, 0.45)} 82%`,
+          `${alpha(bg, 0.12)} 94%`,
+          `${alpha(bg, 0)} 100%`,
+        ]
+      : [
+          `${bg} 0%`,
+          `${alpha(bg, 0.7)} 35%`,
+          `${alpha(bg, 0.3)} 70%`,
+          `${alpha(bg, 0)} 100%`,
+        ];
+  const height = process.env.EXPO_OS === 'ios' ? headerHeight + FADE_TAIL : FADE_TAIL;
 
   return (
     <View
@@ -36,7 +48,7 @@ export function HeaderFade() {
       style={[
         styles.fade,
         {
-          height: headerHeight + FADE_TAIL,
+          height,
           experimental_backgroundImage: `linear-gradient(to bottom, ${stops.join(', ')})`,
         },
       ]}
