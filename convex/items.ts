@@ -335,28 +335,73 @@ export const createImageItem = mutation({
   },
 });
 
+/**
+ * Inserts a link item for `userId`, optionally files it into `spaceId`, and
+ * schedules AI processing. `userId` must already be authenticated/derived
+ * server-side by the caller (Clerk identity or a verified capture token).
+ * Throws "Invalid URL" on an empty URL and "Space not found" if `spaceId`
+ * isn't owned by `userId`.
+ */
+export async function insertLinkItem(
+  ctx: MutationCtx,
+  userId: string,
+  rawUrl: string,
+  spaceId?: Id<"spaces">,
+): Promise<Id<"items">> {
+  const url = normalizeUrl(rawUrl);
+  if (url === "https://") {
+    throw new Error("Invalid URL");
+  }
+  const itemId = await ctx.db.insert("items", {
+    userId,
+    type: "link",
+    status: "processing",
+    url,
+    tags: [],
+    searchText: "",
+  });
+  if (spaceId !== undefined) {
+    await saveIntoSpace(ctx, userId, itemId, spaceId);
+  }
+  await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
+  return itemId;
+}
+
+/**
+ * Inserts a note item for `userId`, optionally files it into `spaceId`, and
+ * schedules AI processing. Same trust contract as `insertLinkItem`.
+ * Throws "Note text is empty" on blank text.
+ */
+export async function insertNoteItem(
+  ctx: MutationCtx,
+  userId: string,
+  text: string,
+  spaceId?: Id<"spaces">,
+): Promise<Id<"items">> {
+  if (text.trim() === "") {
+    throw new Error("Note text is empty");
+  }
+  const itemId = await ctx.db.insert("items", {
+    userId,
+    type: "note",
+    status: "processing",
+    note: text,
+    tags: [],
+    searchText: "",
+  });
+  if (spaceId !== undefined) {
+    await saveIntoSpace(ctx, userId, itemId, spaceId);
+  }
+  await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
+  return itemId;
+}
+
 export const createLinkItem = mutation({
   args: { url: v.string(), spaceId: v.optional(v.id("spaces")) },
   returns: v.id("items"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const url = normalizeUrl(args.url);
-    if (url === "https://") {
-      throw new Error("Invalid URL");
-    }
-    const itemId = await ctx.db.insert("items", {
-      userId,
-      type: "link",
-      status: "processing",
-      url,
-      tags: [],
-      searchText: "",
-    });
-    if (args.spaceId !== undefined) {
-      await saveIntoSpace(ctx, userId, itemId, args.spaceId);
-    }
-    await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
-    return itemId;
+    return await insertLinkItem(ctx, userId, args.url, args.spaceId);
   },
 });
 
@@ -365,22 +410,7 @@ export const createNoteItem = mutation({
   returns: v.id("items"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    if (args.text.trim() === "") {
-      throw new Error("Note text is empty");
-    }
-    const itemId = await ctx.db.insert("items", {
-      userId,
-      type: "note",
-      status: "processing",
-      note: args.text,
-      tags: [],
-      searchText: "",
-    });
-    if (args.spaceId !== undefined) {
-      await saveIntoSpace(ctx, userId, itemId, args.spaceId);
-    }
-    await ctx.scheduler.runAfter(0, internal.ai.processItem, { itemId });
-    return itemId;
+    return await insertNoteItem(ctx, userId, args.text, args.spaceId);
   },
 });
 

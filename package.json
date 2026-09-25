@@ -16,6 +16,7 @@
     "ai": "^7.0.14",
     "convex": "^1.42.1",
     "expo": "^58.0.0-preview.6",
+    "expo-app-intents": "0.4.4",
     "expo-apple-authentication": "~58.0.1",
     "expo-auth-session": "~58.0.4",
     "expo-blur": "~58.0.1",

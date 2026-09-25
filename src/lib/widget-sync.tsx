@@ -6,10 +6,10 @@ import type { WidgetPalette } from '@/widgets/recent-saves-widget';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { Directory, File, Paths } from 'expo-file-system';
+import { ensureThumbnail } from '@/lib/thumbnails';
+import { Directory, File } from 'expo-file-system';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { Images } from 'react-native-nitro-image';
 
 const WIDGET_ITEM_COUNT = 5;
 const THUMB_PREFIX = 'recent-saves-';
@@ -17,31 +17,10 @@ const THUMB_MAX_DIM = 512;
 
 // Widget extensions have a hard memory cap (~30 MB), so full-size photos are
 // downsized to widget-friendly JPEGs before they enter the shared container.
-async function ensureThumbnail(dir: Directory, item: FeedItem): Promise<string | undefined> {
+function widgetThumbnail(dir: Directory, item: FeedItem): Promise<string> | undefined {
   const url = item.imageUrl ?? item.heroImageUrl;
   if (!url) return undefined;
-  const thumb = new File(dir, `${THUMB_PREFIX}${item._id}.jpg`);
-  if (thumb.exists) return thumb.uri;
-
-  const download = new File(Paths.cache, `widget-download-${item._id}`);
-  try {
-    if (download.exists) download.delete();
-    await File.downloadFileAsync(url, download);
-    const image = await Images.loadFromFileAsync(toPlainPath(download.uri));
-    const scale = Math.min(1, THUMB_MAX_DIM / Math.max(image.width, image.height));
-    const resized =
-      scale < 1
-        ? await image.resizeAsync(Math.round(image.width * scale), Math.round(image.height * scale))
-        : image;
-    await resized.saveToFileAsync(toPlainPath(thumb.uri), 'jpg', 80);
-    return thumb.uri;
-  } finally {
-    if (download.exists) download.delete();
-  }
-}
-
-function toPlainPath(uri: string): string {
-  return decodeURIComponent(uri.replace(/^file:\/\//, ''));
+  return ensureThumbnail(dir, `${THUMB_PREFIX}${item._id}.jpg`, url, THUMB_MAX_DIM);
 }
 
 // The widget runs in its own JS runtime and can't import the theme, so the
@@ -86,7 +65,7 @@ async function syncWidget(items: FeedItem[], isCurrent: () => boolean = () => tr
     items.map(async (item) => {
       let imageUri: string | undefined;
       try {
-        imageUri = await ensureThumbnail(dir, item);
+        imageUri = await widgetThumbnail(dir, item);
       } catch (error) {
         // A failed thumbnail falls back to the text tile; never block the sync.
         console.warn(`Widget thumbnail failed for ${item._id}`, error);

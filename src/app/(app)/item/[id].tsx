@@ -9,6 +9,7 @@ import type { Id } from '@convex/_generated/dataModel';
 import { FlashList, type FlashListRef, type ViewToken } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useMutation } from 'convex/react';
+import { AppEntityView } from 'expo-app-intents';
 import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
@@ -170,9 +171,10 @@ export default function ItemScreen() {
     ({ item }: { item: DetailItem }) => (
       // Each page is bounded to the screen so the inner vertical ScrollView
       // has a fixed height to scroll within (rather than growing to fit).
-      <View style={pageStyle}>
+      // AppEntityView tells Siri which save is on screen ("send this to Sam").
+      <AppEntityView entity="item" entityId={item._id} style={pageStyle}>
         <ItemDetail item={item} isZoomTarget={item._id === pushedId} />
-      </View>
+      </AppEntityView>
     ),
     [pageStyle, pushedId],
   );

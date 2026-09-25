@@ -18,6 +18,7 @@ import {
   resetLockAfterSignIn,
 } from './app-lock-storage';
 import { LoadingScreen, useSplashHold } from './splash';
+import { resetAppIntents } from './app-intents';
 import { hideRecentSavesWidget } from './widget-sync';
 
 type AppLockValue = {
@@ -175,6 +176,10 @@ export function AppAccessBoundary({
       console.warn('Could not clear Recent Saves widget'),
     );
   }, [sessionId]);
+  useEffect(() => {
+    if (!isLoaded || isSignedIn) return;
+    void resetAppIntents().catch(() => console.warn('Could not reset Siri data'));
+  }, [isLoaded, isSignedIn]);
   if (!isLoaded) return <LoadingScreen />;
   if (!isSignedIn || !userId || !sessionId) return signedOut;
   if (recovery && recovery.userId !== userId) setRecovery(null);
