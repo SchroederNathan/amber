@@ -187,7 +187,10 @@ export const captureInternal = internalMutation({
       if (text.length > MAX_CAPTURE_NOTE_LENGTH) {
         throw new Error("Note text is too long");
       }
-      const itemId = await insertNoteItem(ctx, userId, text, spaceId);
+      // Siri often turns "save this" on a web page into a note that copies
+      // the page, with no URL. The empty context marks the note as a native
+      // capture, so `ai.processItem` looks for that page.
+      const itemId = await insertNoteItem(ctx, userId, text, spaceId, "");
       return { itemId };
     }
 

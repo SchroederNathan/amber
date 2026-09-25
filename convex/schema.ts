@@ -22,9 +22,10 @@ export default defineSchema({
     siteName: v.optional(v.string()),
     heroImageUrl: v.optional(v.string()),
     note: v.optional(v.string()),
-    // What a native capture (Siri) knew about the save: the user's words and
-    // the text read from the image on device. Steers the classifier and the
-    // source-page lookup; absent for saves made inside the app.
+    // What a native capture (Siri) knew about the save: for images, the
+    // user's words and the text read from the image on device; for notes,
+    // empty. Steers the classifier and the source-page lookup; absent for
+    // saves made inside the app.
     captureContext: v.optional(v.string()),
     // AI-proposed pressable actions. Optional so pre-existing rows validate
     // without a backfill. `kind` is a closed union (mirrors items.ts).
