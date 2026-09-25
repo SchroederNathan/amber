@@ -41,7 +41,7 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
             disabled={pending}
             loading={pending && provider === 'apple'}
             onPress={() => { setProvider('apple'); onApple?.(); }}
-            icon={<Image source={require('../../../assets/brand/apple.svg')} style={styles.providerIcon} tintColor={theme.colors.onPrimary} contentFit="contain" accessible={false} />}
+            icon={<Image source={require('@assets/images/sign-in/apple.svg')} style={styles.providerIcon} tintColor={theme.colors.onPrimary} contentFit="contain" accessible={false} />}
           />
           <Button
             title="Continue with Google"
@@ -51,7 +51,7 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
             disabled={pending}
             loading={pending && provider === 'google'}
             onPress={() => { setProvider('google'); onGoogle?.(); }}
-            icon={<Image source={require('../../../assets/brand/google-g.png')} style={styles.providerIcon} contentFit="contain" accessible={false} />}
+            icon={<Image source={require('@assets/images/sign-in/google-g.png')} style={styles.providerIcon} contentFit="contain" accessible={false} />}
           />
           {error && <Text accessibilityRole="alert" selectable style={styles.error}>{error}</Text>}
           {__DEV__ && (

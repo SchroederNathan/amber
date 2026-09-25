@@ -37,10 +37,10 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 // Adapted from https://rnmotion.dev/animations/blurred-text-morph.
 
 const FONTS: Record<string, number> = {
-  'ExposureTrial-0': require('../../assets/fonts/ExposureTrial-0.otf'),
-  'Satoshi-Regular': require('../../assets/fonts/Satoshi-Regular.otf'),
-  'Satoshi-Medium': require('../../assets/fonts/Satoshi-Medium.otf'),
-  'Satoshi-Bold': require('../../assets/fonts/Satoshi-Bold.otf'),
+  'ExposureTrial-0': require('@assets/fonts/ExposureTrial-0.otf'),
+  'Satoshi-Regular': require('@assets/fonts/Satoshi-Regular.otf'),
+  'Satoshi-Medium': require('@assets/fonts/Satoshi-Medium.otf'),
+  'Satoshi-Bold': require('@assets/fonts/Satoshi-Bold.otf'),
 };
 
 const morph = motion.textMorph;
