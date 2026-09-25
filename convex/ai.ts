@@ -493,6 +493,34 @@ const captureAnalysisSchema = itemAnalysisSchema.extend({
   }),
 });
 
+// Siri notes: asked to save the page on screen, Siri often writes the page
+// into a note (its headline, then a summary or the recipe) and sends no URL.
+// The model reports which page, so the pipeline can save the link instead.
+const noteCaptureAnalysisSchema = itemAnalysisSchema.extend({
+  sourcePage: z.object({
+    isWebPage: z
+      .boolean()
+      .describe(
+        "True only if the note is a copy or summary of one specific web page the user was looking at (an article, recipe, video, post, or product page). False for the user's own thoughts, reminders, lists, or plans.",
+      ),
+    url: z
+      .string()
+      .describe(
+        "The full https:// URL of that page, only if it appears in the note. Empty string otherwise. Never guess.",
+      ),
+    domain: z
+      .string()
+      .describe(
+        "The site's domain (e.g. 'seriouseats.com'), only if the note names the site. Empty string otherwise. Never guess.",
+      ),
+    pageTitle: z
+      .string()
+      .describe(
+        "The page's headline as the note gives it, usually its first line. Empty string if none.",
+      ),
+  }),
+});
+
 type SourcePage = z.infer<typeof captureAnalysisSchema>["sourcePage"];
 
 type Intent = z.infer<typeof intentSchema>;
@@ -593,13 +621,14 @@ function titleWords(text: string): string[] {
 }
 
 /**
- * True when a search result is the page itself: at least 3 in 4 of the
+ * True when a search result is the page itself: at least `minShare` of the
  * headline's distinctive words appear in the result's title or URL. Keeps a
  * same-site talk page, archive, or category listing from counting.
  */
 function resultMatchesTitle(
   pageTitle: string,
   result: { title: string; link: string },
+  minShare = 0.75,
 ): boolean {
   const wanted = new Set(titleWords(pageTitle));
   if (wanted.size === 0) {
@@ -618,7 +647,7 @@ function resultMatchesTitle(
       hits++;
     }
   }
-  return hits / wanted.size >= 0.75;
+  return hits / wanted.size >= minShare;
 }
 
 /** True when `host` is `domain` or one of its subdomains. */
@@ -626,31 +655,37 @@ function hostMatches(host: string, domain: string): boolean {
   return host === domain || host.endsWith(`.${domain}`);
 }
 
+/** A headline searched without a known site must have this many words. */
+const MIN_SITELESS_TITLE_WORDS = 3;
+
 /**
- * Finds the real URL of the web page a screenshot shows, so the image can
- * link back to it. A URL read from the screenshot is used if it loads; else
- * one web search on the domain and headline, where a result counts only if
- * it is on that domain and matches the headline. Returns undefined rather
- * than a doubtful link.
+ * Finds the real URL of the web page a screenshot or Siri note shows, so the
+ * save can link back to it. A URL read from the capture is used if it loads;
+ * else one web search. With a known domain, a result counts only if it is on
+ * that domain and matches the headline; with none, only if it matches every
+ * distinctive word of an exact-phrase headline search. `searched` tells the
+ * caller the link came from the search. Returns undefined rather than a
+ * doubtful link.
  */
 async function resolveSourceUrl(
   page: SourcePage,
-): Promise<string | undefined> {
+): Promise<{ url: string; searched: boolean } | undefined> {
   if (!page.isWebPage) {
     return undefined;
   }
   const readUrl = page.url.trim();
   const domain = bareHost(page.domain) ?? bareHost(readUrl);
-  if (domain === undefined) {
-    return undefined;
-  }
 
   // A bare domain is the site, not the page: it would link to the home page.
   const readHost =
     /^https:\/\//i.test(readUrl) && hasPagePath(readUrl)
       ? bareHost(readUrl)
       : undefined;
-  if (readHost !== undefined && hostMatches(readHost, domain)) {
+  if (
+    readHost !== undefined &&
+    domain !== undefined &&
+    hostMatches(readHost, domain)
+  ) {
     try {
       const response = await fetch(readUrl, {
         redirect: "follow",
@@ -666,19 +701,26 @@ async function resolveSourceUrl(
         (response.ok || [401, 403, 429].includes(response.status)) &&
         hasPagePath(finalUrl)
       ) {
-        return finalUrl;
+        return { url: finalUrl, searched: false };
       }
     } catch {
       // An OCR misread or a dead link: fall through to the search.
     }
   }
 
-  const title = page.pageTitle.trim();
+  const title = page.pageTitle.replace(/["“”]/g, "").trim().slice(0, 200);
   const apiKey = process.env.SERPAPI_KEY;
   if (title === "" || !apiKey) {
     return undefined;
   }
-  const query = `site:${domain} ${title.slice(0, 200)}`;
+  if (
+    domain === undefined &&
+    new Set(titleWords(title)).size < MIN_SITELESS_TITLE_WORDS
+  ) {
+    return undefined;
+  }
+  const query =
+    domain !== undefined ? `site:${domain} ${title}` : `"${title}"`;
   const response = await fetch(
     `https://serpapi.com/search.json?engine=google&gl=us&hl=en&num=5&q=${encodeURIComponent(query)}&api_key=${apiKey}`,
     // Uncached searches have taken over a minute; this runs after the item
@@ -705,18 +747,68 @@ async function resolveSourceUrl(
     const host = bareHost(link);
     if (
       host !== undefined &&
-      hostMatches(host, domain) &&
-      resultMatchesTitle(title, {
-        title: typeof resultTitle === "string" ? resultTitle : "",
-        link,
-      })
+      (domain === undefined || hostMatches(host, domain)) &&
+      resultMatchesTitle(
+        title,
+        { title: typeof resultTitle === "string" ? resultTitle : "", link },
+        domain !== undefined ? 0.75 : 1,
+      )
     ) {
-      return link;
+      return { url: link, searched: true };
     }
   }
   return undefined;
 }
 
+/** Classifies a saved web page from what `fetchPage` read. */
+async function analyzeLink(
+  url: string,
+  page: PageData,
+  spacesBlock: string,
+): Promise<z.infer<typeof itemAnalysisSchema>> {
+  const { object } = await generateObject({
+    model: MODEL,
+    system: SYSTEM_PROMPT,
+    schema: itemAnalysisSchema,
+    prompt: [
+      "You are helping organize a save-it-for-later app. Analyze this saved web page and produce a title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.",
+      spacesBlock,
+      `URL: ${url}`,
+      page.title ? `Page title: ${page.title}` : "",
+      page.siteName ? `Site: ${page.siteName}` : "",
+      page.description ? `Meta description: ${page.description}` : "",
+      page.content
+        ? `Page content:\n${page.content.slice(0, 6000)}`
+        : "No page content could be extracted.",
+      INTENTS_PROMPT_BLOCK,
+    ]
+      .filter((line) => line !== "")
+      .join("\n\n"),
+  });
+  return object;
+}
+
+/** Maps the model's space names back to ids (case-insensitive, trimmed). */
+function matchSpaceIds(
+  spaces: { _id: Id<"spaces">; name: string }[],
+  names: string[],
+): Id<"spaces">[] {
+  const spaceIdByName = new Map(
+    spaces.map((s) => [s.name.trim().toLowerCase(), s._id]),
+  );
+  const spaceIds: Id<"spaces">[] = [];
+  for (const name of names) {
+    const id = spaceIdByName.get(name.trim().toLowerCase());
+    if (id !== undefined) {
+      spaceIds.push(id);
+    }
+  }
+  return spaceIds;
+}
+
+function cleanTags(tags: string[]): string[] {
+  return tags.map((t) => t.trim().toLowerCase()).filter(Boolean);
+}
 
 export const processItem = internalAction({
   args: { itemId: v.id("items") },
@@ -746,26 +838,7 @@ export const processItem = internalAction({
           throw new Error("Link item has no url");
         }
         page = await fetchPage(item.url);
-        const { object } = await generateObject({
-          model: MODEL,
-          system: SYSTEM_PROMPT,
-          schema: itemAnalysisSchema,
-          prompt: [
-            "You are helping organize a save-it-for-later app. Analyze this saved web page and produce a title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.",
-            spacesBlock,
-            `URL: ${item.url}`,
-            page.title ? `Page title: ${page.title}` : "",
-            page.siteName ? `Site: ${page.siteName}` : "",
-            page.description ? `Meta description: ${page.description}` : "",
-            page.content
-              ? `Page content:\n${page.content.slice(0, 6000)}`
-              : "No page content could be extracted.",
-            INTENTS_PROMPT_BLOCK,
-          ]
-            .filter((line) => line !== "")
-            .join("\n\n"),
-        });
-        result = object;
+        result = await analyzeLink(item.url, page, spacesBlock);
       } else if (item.type === "image") {
         if (!item.storageId) {
           throw new Error("Image item has no storageId");
@@ -838,37 +911,46 @@ export const processItem = internalAction({
         if (!item.note) {
           throw new Error("Note item has no text");
         }
-        const { object } = await generateObject({
-          model: MODEL,
-          system: SYSTEM_PROMPT,
-          schema: itemAnalysisSchema,
-          prompt: [
-            "You are helping organize a save-it-for-later app. Analyze this saved note and produce a short evocative title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.",
-            spacesBlock,
-            `Note:\n${item.note.slice(0, MAX_CONTENT_CHARS)}`,
-            INTENTS_PROMPT_BLOCK,
-          ].join("\n\n"),
-        });
-        result = object;
-      }
-
-      // Map returned space names back to ids (case-insensitive, trimmed).
-      const spaceIdByName = new Map(
-        spaces.map((s) => [s.name.trim().toLowerCase(), s._id]),
-      );
-      const spaceIds: Id<"spaces">[] = [];
-      for (const name of result.spaceNames) {
-        const id = spaceIdByName.get(name.trim().toLowerCase());
-        if (id !== undefined) {
-          spaceIds.push(id);
+        const instruction =
+          "You are helping organize a save-it-for-later app. Analyze this saved note and produce a short evocative title, a 1-2 sentence description, 4-8 lowercase tags (one or two words each), and matching space names.";
+        const note = `Note:\n${item.note.slice(0, MAX_CONTENT_CHARS)}`;
+        if (item.captureContext === undefined) {
+          const { object } = await generateObject({
+            model: MODEL,
+            system: SYSTEM_PROMPT,
+            schema: itemAnalysisSchema,
+            prompt: [instruction, spacesBlock, note, INTENTS_PROMPT_BLOCK].join(
+              "\n\n",
+            ),
+          });
+          result = object;
+        } else {
+          // A native (Siri) capture: the note may be Siri's copy of the page
+          // on screen, so the model also names that page.
+          const { object } = await generateObject({
+            model: MODEL,
+            system: SYSTEM_PROMPT,
+            schema: noteCaptureAnalysisSchema,
+            prompt: [
+              instruction,
+              "The user saved this with Siri. Asked to save what is on screen, Siri often writes the web page into the note (its headline, then a summary or the recipe) instead of sending the link. Also fill in sourcePage.",
+              spacesBlock,
+              note,
+              INTENTS_PROMPT_BLOCK,
+            ].join("\n\n"),
+          });
+          result = object;
+          sourcePage = object.sourcePage;
         }
       }
+
+      const spaceIds = matchSpaceIds(spaces, result.spaceNames);
 
       await ctx.runMutation(internal.items.finalizeItem, {
         itemId: args.itemId,
         title: result.title,
         description: result.description,
-        tags: result.tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
+        tags: cleanTags(result.tags),
         content: item.type === "link" ? page?.content : undefined,
         siteName: item.type === "link" ? page?.siteName : undefined,
         heroImageUrl: item.type === "link" ? page?.heroImageUrl : undefined,
@@ -889,18 +971,57 @@ export const processItem = internalAction({
       if (sourcePage !== undefined) {
         // After finalize, so a slow web search never holds the save back.
         try {
-          const sourceUrl = await resolveSourceUrl(sourcePage);
+          const source = await resolveSourceUrl(sourcePage);
           console.log(
-            `source page for ${args.itemId}: webPage=${sourcePage.isWebPage} domain=${sourcePage.domain || "-"} readUrl=${sourcePage.url !== ""} found=${sourceUrl ?? "-"}`,
+            `source page for ${args.itemId}: type=${item.type} webPage=${sourcePage.isWebPage} domain=${sourcePage.domain || "-"} readUrl=${sourcePage.url !== ""} found=${source?.url ?? "-"} searched=${source?.searched ?? "-"}`,
           );
-          if (sourceUrl !== undefined) {
+          if (source !== undefined && item.type === "note") {
+            // Read the page before converting, so a page that will not load
+            // leaves the note as it is instead of a failed link.
+            const sourcePageData = await fetchPage(source.url);
+            // A found page must also call itself by the headline: a login
+            // wall ("Instagram") or a different page keeps the note.
+            if (
+              source.searched &&
+              !resultMatchesTitle(sourcePage.pageTitle, {
+                title: sourcePageData.title ?? "",
+                link: source.url,
+              })
+            ) {
+              console.log(
+                `source page for ${args.itemId}: page title does not match, keeping the note`,
+              );
+            } else {
+              const link = await analyzeLink(
+                source.url,
+                sourcePageData,
+                spacesBlock,
+              );
+              await ctx.runMutation(internal.items.convertNoteToLinkInternal, {
+                itemId: args.itemId,
+                url: source.url,
+                title: link.title,
+                description: link.description,
+                tags: cleanTags(link.tags),
+                content: sourcePageData.content,
+                siteName: sourcePageData.siteName,
+                heroImageUrl: sourcePageData.heroImageUrl,
+                aspectRatio: sourcePageData.heroAspectRatio,
+                intents: sanitizeIntents(link.intents),
+              });
+              await ctx.runMutation(internal.items.setSpacesForItem, {
+                itemId: args.itemId,
+                spaceIds: matchSpaceIds(spaces, link.spaceNames),
+              });
+            }
+          } else if (source !== undefined) {
             await ctx.runMutation(internal.items.prependIntentInternal, {
               itemId: args.itemId,
-              intent: { kind: "open_url", label: "Open page", value: sourceUrl },
+              intent: { kind: "open_url", label: "Open page", value: source.url },
             });
           }
         } catch (error) {
-          // The lookup is a bonus: the image is already saved without it.
+          // The lookup is a bonus: the note or image is already saved.
           console.error(`resolveSourceUrl failed for ${args.itemId}:`, error);
         }
       }

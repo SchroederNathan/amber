@@ -145,9 +145,15 @@ builds.
   `/app-intents/upload-url` and save as image items with `captureContext` (Siri's words plus
   on-device OCR); else a text that is just a URL saves a link; else a note. For image items with
   `captureContext`, `ai.processItem` also looks for the page the screenshot shows (a full URL read
-  from the image, else a SerpAPI search that must match the domain and the headline) and puts an
-  "Open page" intent first. Each capture logs `app-intents capture trace:` (types and sizes only)
-  in the Convex logs.
+  from the image, else a SerpAPI search that must match the domain and the headline; needs the
+  `SERPAPI_KEY` Convex env var) and puts an
+  "Open page" intent first. On a web page, Siri often sends no URL at all: it writes the page into
+  the note (headline, then a summary or the recipe). So Siri notes also get `captureContext: ""`,
+  the classifier says if the note copies a web page, and the same lookup runs (a URL in the note,
+  else a site search, else an exact-headline search that must match every headline word). A page
+  found by search must also have a matching `<title>`/`og:title`; then `convertNoteToLinkInternal`
+  turns the note into a normal link item (OG image, article text). Each capture logs
+  `app-intents capture trace:` (types and sizes only) in the Convex logs.
 - **Navigation:** `SearchAmberIntent` (`.system.searchInApp`), `OpenItemIntent` / `OpenSpaceIntent`
   (`.system.open`) and `VisualSearchIntent` dispatch invocations. `AppIntentsBridge` (mounted in
   `(app)/_layout.tsx`) routes them, publishes the `item` / `space` entity catalogs (never while the

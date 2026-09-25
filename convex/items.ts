@@ -392,6 +392,8 @@ export async function insertLinkItem(
 /**
  * Inserts a note item for `userId`, optionally files it into `spaceId`, and
  * schedules AI processing. Same trust contract as `insertLinkItem`.
+ * `captureContext` marks a native (Siri) capture, which turns on the
+ * source-page lookup in `ai.processItem`.
  * Throws "Note text is empty" on blank text.
  */
 export async function insertNoteItem(
@@ -399,6 +401,7 @@ export async function insertNoteItem(
   userId: string,
   text: string,
   spaceId?: Id<"spaces">,
+  captureContext?: string,
 ): Promise<Id<"items">> {
   if (text.trim() === "") {
     throw new Error("Note text is empty");
@@ -408,6 +411,7 @@ export async function insertNoteItem(
     type: "note",
     status: "processing",
     note: text,
+    captureContext,
     tags: [],
     searchText: "",
   });
@@ -573,6 +577,56 @@ export const prependIntentInternal = internalMutation({
     );
     await ctx.db.patch(args.itemId, {
       intents: [args.intent, ...rest].slice(0, 5),
+    });
+    return null;
+  },
+});
+
+/**
+ * Turns a Siri note into the link it was copied from, once the source page is
+ * found and read: the item then looks as if the link had been saved in the
+ * app. Siri's copy of the page is dropped for the page's own content. A no-op
+ * unless the item is still a note (deleted or already converted).
+ */
+export const convertNoteToLinkInternal = internalMutation({
+  args: {
+    itemId: v.id("items"),
+    url: v.string(),
+    title: v.string(),
+    description: v.string(),
+    tags: v.array(v.string()),
+    content: v.optional(v.string()),
+    siteName: v.optional(v.string()),
+    heroImageUrl: v.optional(v.string()),
+    aspectRatio: v.optional(v.number()),
+    intents: v.optional(v.array(intentValidator)),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.itemId);
+    if (item === null || item.type !== "note") {
+      return null;
+    }
+    await ctx.db.patch(args.itemId, {
+      type: "link",
+      url: normalizeUrl(args.url),
+      note: undefined,
+      captureContext: undefined,
+      title: args.title,
+      description: args.description,
+      tags: args.tags,
+      content: args.content,
+      siteName: args.siteName,
+      heroImageUrl: args.heroImageUrl,
+      aspectRatio: args.aspectRatio,
+      intents: args.intents,
+      status: "ready",
+      searchText: buildSearchText({
+        title: args.title,
+        description: args.description,
+        tags: args.tags,
+        siteName: args.siteName,
+      }),
     });
     return null;
   },
