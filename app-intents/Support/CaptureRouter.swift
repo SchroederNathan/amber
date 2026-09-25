@@ -119,6 +119,7 @@ enum CaptureRouter {
 
   /// Converts anything but JPEG and PNG to JPEG (so the classifier can read it), reads the
   /// display aspect ratio, and runs on-device text recognition.
+  @available(iOS 18.0, *)
   static func prepare(_ attachment: Attachment) async -> PreparedImage? {
     guard let source = CGImageSourceCreateWithData(attachment.data as CFData, nil),
       CGImageSourceGetCount(source) > 0
@@ -134,7 +135,7 @@ enum CaptureRouter {
     }
 
     let recognized = (try? await RecognizeTextRequest().perform(on: attachment.data)) ?? []
-    let text = recognized.map(\.transcript).joined(separator: "\n")
+    let text = recognized.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     return PreparedImage(
       data: data,
       contentType: contentType,
