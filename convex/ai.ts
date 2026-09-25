@@ -466,6 +466,35 @@ const itemAnalysisSchema = z.object({
     ),
 });
 
+// Native (Siri) image captures are often screenshots of a web page. The model
+// also reports which page, so the pipeline can link the save back to it.
+const captureAnalysisSchema = itemAnalysisSchema.extend({
+  sourcePage: z.object({
+    isWebPage: z
+      .boolean()
+      .describe(
+        "True only if the image is a screenshot of a web page or article in a browser or app",
+      ),
+    url: z
+      .string()
+      .describe(
+        "The full https:// URL of the page, only if you can read it completely in the image or context. Empty string otherwise. Never guess a path.",
+      ),
+    domain: z
+      .string()
+      .describe(
+        "The site's domain as shown (e.g. 'seriouseats.com'), from the address bar, a logo, or the context. Empty string if unknown.",
+      ),
+    pageTitle: z
+      .string()
+      .describe(
+        "The page or article headline exactly as shown. Empty string if none.",
+      ),
+  }),
+});
+
+type SourcePage = z.infer<typeof captureAnalysisSchema>["sourcePage"];
+
 type Intent = z.infer<typeof intentSchema>;
 
 const ALLOWED_INTENT_KINDS = new Set<string>(INTENT_KINDS);
@@ -524,6 +553,170 @@ function spacesPromptBlock(
   return `The user organizes items into spaces. Candidate spaces:\n${lines}\n\nIn spaceNames, include only the exact names of spaces this item CLEARLY belongs to. Only include confident matches. If none clearly match, return an empty array.`;
 }
 
+/** Lowercased hostname without a leading "www.", or undefined if unparsable. */
+function bareHost(urlOrDomain: string): string | undefined {
+  const raw = urlOrDomain.trim().toLowerCase();
+  if (raw === "") {
+    return undefined;
+  }
+  try {
+    const host = new URL(/^https?:\/\//.test(raw) ? raw : `https://${raw}`)
+      .hostname;
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)
+      ? host.replace(/^www\./, "")
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** True when a URL names a page, not just a site's home page. */
+function hasPagePath(url: string): boolean {
+  try {
+    return new URL(url).pathname.replace(/\/+$/, "") !== "";
+  } catch {
+    return false;
+  }
+}
+
+const TITLE_STOPWORDS = new Set([
+  "the", "and", "for", "with", "from", "that", "this", "your", "you", "are",
+  "how", "what", "why", "best", "recipe", "recipes",
+]);
+
+/** The distinctive lowercase words of a title or URL slug. */
+function titleWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word.length >= 3 && !TITLE_STOPWORDS.has(word));
+}
+
+/**
+ * True when a search result is the page itself: at least 3 in 4 of the
+ * headline's distinctive words appear in the result's title or URL. Keeps a
+ * same-site talk page, archive, or category listing from counting.
+ */
+function resultMatchesTitle(
+  pageTitle: string,
+  result: { title: string; link: string },
+): boolean {
+  const wanted = new Set(titleWords(pageTitle));
+  if (wanted.size === 0) {
+    return false;
+  }
+  let path = result.link;
+  try {
+    path = decodeURIComponent(new URL(result.link).pathname);
+  } catch {
+    // Keep the raw link.
+  }
+  const found = new Set([...titleWords(result.title), ...titleWords(path)]);
+  let hits = 0;
+  for (const word of wanted) {
+    if (found.has(word)) {
+      hits++;
+    }
+  }
+  return hits / wanted.size >= 0.75;
+}
+
+/** True when `host` is `domain` or one of its subdomains. */
+function hostMatches(host: string, domain: string): boolean {
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
+/**
+ * Finds the real URL of the web page a screenshot shows, so the image can
+ * link back to it. A URL read from the screenshot is used if it loads; else
+ * one web search on the domain and headline, where a result counts only if
+ * it is on that domain and matches the headline. Returns undefined rather
+ * than a doubtful link.
+ */
+async function resolveSourceUrl(
+  page: SourcePage,
+): Promise<string | undefined> {
+  if (!page.isWebPage) {
+    return undefined;
+  }
+  const readUrl = page.url.trim();
+  const domain = bareHost(page.domain) ?? bareHost(readUrl);
+  if (domain === undefined) {
+    return undefined;
+  }
+
+  // A bare domain is the site, not the page: it would link to the home page.
+  const readHost =
+    /^https:\/\//i.test(readUrl) && hasPagePath(readUrl)
+      ? bareHost(readUrl)
+      : undefined;
+  if (readHost !== undefined && hostMatches(readHost, domain)) {
+    try {
+      const response = await fetch(readUrl, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        },
+      });
+      // Bot walls (401/403/429) still prove the page exists.
+      const finalUrl = response.url || readUrl;
+      if (
+        (response.ok || [401, 403, 429].includes(response.status)) &&
+        hasPagePath(finalUrl)
+      ) {
+        return finalUrl;
+      }
+    } catch {
+      // An OCR misread or a dead link: fall through to the search.
+    }
+  }
+
+  const title = page.pageTitle.trim();
+  const apiKey = process.env.SERPAPI_KEY;
+  if (title === "" || !apiKey) {
+    return undefined;
+  }
+  const query = `site:${domain} ${title.slice(0, 200)}`;
+  const response = await fetch(
+    `https://serpapi.com/search.json?engine=google&gl=us&hl=en&num=5&q=${encodeURIComponent(query)}&api_key=${apiKey}`,
+    // Uncached searches have taken over a minute; this runs after the item
+    // is ready, so a slow search delays only the link.
+    { signal: AbortSignal.timeout(90000) },
+  );
+  if (!response.ok) {
+    throw new Error(`SerpAPI responded ${response.status}`);
+  }
+  const results = ((await response.json()) as { organic_results?: unknown[] })
+    ?.organic_results;
+  for (const raw of Array.isArray(results) ? results : []) {
+    const { link, title: resultTitle } = raw as {
+      link?: unknown;
+      title?: unknown;
+    };
+    if (
+      typeof link !== "string" ||
+      !/^https:\/\//i.test(link) ||
+      !hasPagePath(link)
+    ) {
+      continue;
+    }
+    const host = bareHost(link);
+    if (
+      host !== undefined &&
+      hostMatches(host, domain) &&
+      resultMatchesTitle(title, {
+        title: typeof resultTitle === "string" ? resultTitle : "",
+        link,
+      })
+    ) {
+      return link;
+    }
+  }
+  return undefined;
+}
+
 
 export const processItem = internalAction({
   args: { itemId: v.id("items") },
@@ -546,6 +739,7 @@ export const processItem = internalAction({
 
       let page: PageData | undefined;
       let result: z.infer<typeof itemAnalysisSchema>;
+      let sourcePage: SourcePage | undefined;
 
       if (item.type === "link") {
         if (!item.url) {
@@ -580,28 +774,66 @@ export const processItem = internalAction({
         if (imageUrl === null) {
           throw new Error("Image file not found in storage");
         }
-        const { object } = await generateObject({
-          model: MODEL,
-          system: SYSTEM_PROMPT,
-          schema: itemAnalysisSchema,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: [
-                    "You are helping organize a save-it-for-later app. Analyze this saved image and produce a short evocative title, a 1-2 sentence description of what it shows, 4-8 lowercase tags (one or two words each), and matching space names.",
-                    spacesBlock,
-                    INTENTS_PROMPT_BLOCK,
-                  ].join("\n\n"),
-                },
-                { type: "image", image: new URL(imageUrl) },
-              ],
-            },
-          ],
-        });
-        result = object;
+        const instruction =
+          "You are helping organize a save-it-for-later app. Analyze this saved image and produce a short evocative title, a 1-2 sentence description of what it shows, 4-8 lowercase tags (one or two words each), and matching space names.";
+        const image = { type: "image" as const, image: new URL(imageUrl) };
+
+        if (item.captureContext === undefined) {
+          const { object } = await generateObject({
+            model: MODEL,
+            system: SYSTEM_PROMPT,
+            schema: itemAnalysisSchema,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: [instruction, spacesBlock, INTENTS_PROMPT_BLOCK].join(
+                      "\n\n",
+                    ),
+                  },
+                  image,
+                ],
+              },
+            ],
+          });
+          result = object;
+        } else {
+          // A native (Siri) capture: the user's words and the on-device text
+          // recognition steer the classifier, and the model names the page a
+          // screenshot shows so the save can link back to it.
+          const context = item.captureContext.trim();
+          const { object } = await generateObject({
+            model: MODEL,
+            system: SYSTEM_PROMPT,
+            schema: captureAnalysisSchema,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: [
+                      instruction,
+                      "The user saved this with Siri, often as a screenshot of what was on their screen. Describe the content (the recipe, article, product, place), not the fact that it is a screenshot, and ignore phone chrome such as the status bar and browser toolbars. Also fill in sourcePage.",
+                      context !== ""
+                        ? `What Siri passed along, followed by text read from the image on the device:\n${context.slice(0, MAX_CONTENT_CHARS)}`
+                        : "",
+                      spacesBlock,
+                      INTENTS_PROMPT_BLOCK,
+                    ]
+                      .filter((line) => line !== "")
+                      .join("\n\n"),
+                  },
+                  image,
+                ],
+              },
+            ],
+          });
+          result = object;
+          sourcePage = object.sourcePage;
+        }
       } else {
         if (!item.note) {
           throw new Error("Note item has no text");
@@ -652,6 +884,25 @@ export const processItem = internalAction({
           itemId: args.itemId,
           spaceIds,
         });
+      }
+
+      if (sourcePage !== undefined) {
+        // After finalize, so a slow web search never holds the save back.
+        try {
+          const sourceUrl = await resolveSourceUrl(sourcePage);
+          console.log(
+            `source page for ${args.itemId}: webPage=${sourcePage.isWebPage} domain=${sourcePage.domain || "-"} readUrl=${sourcePage.url !== ""} found=${sourceUrl ?? "-"}`,
+          );
+          if (sourceUrl !== undefined) {
+            await ctx.runMutation(internal.items.prependIntentInternal, {
+              itemId: args.itemId,
+              intent: { kind: "open_url", label: "Open page", value: sourceUrl },
+            });
+          }
+        } catch (error) {
+          // The lookup is a bonus: the image is already saved without it.
+          console.error(`resolveSourceUrl failed for ${args.itemId}:`, error);
+        }
       }
 
       // If the user filed this item straight into spaces while it was still

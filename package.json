@@ -83,6 +83,7 @@
     "@shopify/react-native-skia"
   ],
   "patchedDependencies": {
-    "@clerk/expo@3.7.6": "patches/@clerk%2Fexpo@3.7.6.patch"
+    "@clerk/expo@3.7.6": "patches/@clerk%2Fexpo@3.7.6.patch",
+    "expo-modules-jsi@58.0.3": "patches/expo-modules-jsi@58.0.3.patch"
   }
 }
