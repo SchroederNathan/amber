@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
-        "image": "macos-tahoe-26.5-xcode-26.6"
+        "image": "macos-tahoe-26.6-xcode-27.1"
       },
       "env": {
         "APP_VARIANT": "development"
@@ -17,7 +17,7 @@
     "preview": {
       "distribution": "internal",
       "ios": {
-        "image": "macos-tahoe-26.5-xcode-26.6"
+        "image": "macos-tahoe-26.6-xcode-27.1"
       },
       "env": {
         "APP_VARIANT": "preview"
@@ -28,7 +28,7 @@
       "environment": "production",
       "channel": "production",
       "ios": {
-        "image": "macos-tahoe-26.5-xcode-26.6"
+        "image": "macos-tahoe-26.6-xcode-27.1"
       },
       "env": {
         "APP_VARIANT": "production"

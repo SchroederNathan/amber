@@ -37,8 +37,9 @@ There is no test suite.
 
 Custom native modules (`modules/subject-lift`, `modules/progressive-blur`) and a share extension
 (`expo-sharing`) mean **Expo Go will not work** — you need a dev-client build. EAS build images are
-pinned to Xcode 26.6 in `eas.json`; note (from auto-memory) EAS *cloud* iOS builds have failed on
-Xcode 26.4 while local Xcode 26.6 works.
+pinned to Xcode 27.1 (`macos-tahoe-26.6-xcode-27.1`, beta) in `eas.json`. Without a pin, SDK 58
+resolves to Xcode 27.0. Xcode 27.1 needs `expo-modules-jsi` >= 58.0.4 (older prebuilt
+`.swiftinterface` fails to compile).
 
 ### Version pins that must not drift (from hard-won auto-memory)
 
@@ -149,9 +150,9 @@ builds.
   `AppIntentsSetup.getIntentLog()` returns the last intent runs for debugging. Exact schema
   parameter shapes are in Xcode's `AppIntentSchemas.framework/.../AppIntentSchemas.sqlite`.
 - A dev-client build opened cold by Siri stops at the dev launcher; demo Siri with a Release build.
-- EAS iOS images top out at Xcode 26.6, so EAS builds compile out everything behind
-  `#if compiler(>=6.4)` (all iOS 27 schema intents). Code outside those guards must still pass the
-  metadata export alone: e.g. `ItemVisualQuery` needs the plain `OpenItemIntent` in the `#else`.
+- EAS builds now use Xcode 27.1 (Swift 6.4), so the iOS 27 schema intents behind
+  `#if compiler(>=6.4)` compile on EAS too. Code outside those guards must still pass the metadata
+  export alone on older Xcode: e.g. `ItemVisualQuery` needs the plain `OpenItemIntent` in the `#else`.
 
 ### Share-in flow
 
