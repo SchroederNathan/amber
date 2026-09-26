@@ -1,6 +1,6 @@
 import { motion } from '@/theme/motion';
 import { Image } from 'expo-image';
-import { memo, useState, type FC } from 'react';
+import { memo, useMemo, useState, type FC } from 'react';
 import { Text, View } from 'react-native';
 import Animated, {
   useAnimatedReaction,
@@ -55,6 +55,20 @@ const TidyCardComponent: FC<Props> = ({ photo, index, topStart }) => {
     opacity: withTiming(isDragging.get() ? 1 : 0, motion.timing.fade),
   }));
 
+  // Locale date formatting is surprisingly costly, and mount-window flips
+  // re-render nearby cards mid-swipe — format once per photo, not per render.
+  const formattedDate = useMemo(
+    () =>
+      photo.creationTime != null
+        ? new Date(photo.creationTime).toLocaleDateString(undefined, {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })
+        : null,
+    [photo.creationTime],
+  );
+
   return (
     <TidyCardContainer index={index}>
       {mounted && (
@@ -66,15 +80,9 @@ const TidyCardComponent: FC<Props> = ({ photo, index, topStart }) => {
           transition={motion.duration.feedback}
         />
       )}
-      {mounted && photo.creationTime != null && (
+      {mounted && formattedDate != null && (
         <View style={styles.dateChip}>
-          <Text style={styles.dateText}>
-            {new Date(photo.creationTime).toLocaleDateString(undefined, {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </Text>
+          <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
       )}
       <Animated.View style={[styles.hints, rHintsStyle]} pointerEvents="none">
