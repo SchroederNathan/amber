@@ -1,7 +1,8 @@
 import type { IntentKind } from '@/lib/intents';
 import { SymbolView } from '@/components/ui/symbol';
 import type { SFSymbol } from 'expo-symbols';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // The app owns the kind → icon mapping so the model can never emit an invalid

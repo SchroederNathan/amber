@@ -12,7 +12,8 @@ import { Link } from 'expo-router';
 import { useActionMenu } from '@/components/ui/action-menu';
 import { SymbolView } from '@/components/ui/symbol';
 import { ProgressiveBlurHeader } from 'progressive-blur';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 

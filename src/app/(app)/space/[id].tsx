@@ -12,7 +12,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, useToolbarIcon } from '@/components/ui/symbol';
 import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useMemo } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 

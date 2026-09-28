@@ -16,13 +16,13 @@ import type { FunctionReturnType } from 'convex/server';
 import { memo, useLayoutEffect, useRef } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   Text,
   useWindowDimensions,
   View,
   type ScrollViewInstance,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
