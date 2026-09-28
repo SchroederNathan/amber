@@ -14,6 +14,7 @@ import {
 type OnboardingContextValue = {
   onboarded: boolean;
   completeOnboarding: () => Promise<void>;
+  resetOnboarding: () => Promise<void>;
 };
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
@@ -44,9 +45,17 @@ export function OnboardingProvider({
     await SecureStore.setItemAsync(key, 'true');
     setOnboarded(true);
   }, [key]);
+  // Dev-only: the (app) layout guard sends the user back to onboarding.
+  const resetOnboarding = useCallback(async () => {
+    await SecureStore.deleteItemAsync(key);
+    setOnboarded(false);
+  }, [key]);
   const value = useMemo(
-    () => (onboarded === null ? null : { onboarded, completeOnboarding }),
-    [onboarded, completeOnboarding],
+    () =>
+      onboarded === null
+        ? null
+        : { onboarded, completeOnboarding, resetOnboarding },
+    [onboarded, completeOnboarding, resetOnboarding],
   );
   if (failed)
     return (
