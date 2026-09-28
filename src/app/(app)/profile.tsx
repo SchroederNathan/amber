@@ -2,6 +2,7 @@ import { BiometricSetting, useBiometricFooter } from '@/components/biometric-set
 import { SettingsGroup, SettingsRow } from '@/components/settings-list';
 import { UpdateSetting, useVersionLabel } from '@/components/update-setting';
 import { useAppLock } from '@/lib/app-lock';
+import { useOnboarding } from '@/lib/onboarding';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useClerk, useUser } from '@clerk/expo';
@@ -9,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import { SymbolView, useToolbarIcon } from '@/components/ui/symbol';
-import { Alert, Platform, PlatformColor, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, Platform, PlatformColor, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export default function ProfileScreen() {
@@ -17,6 +18,7 @@ export default function ProfileScreen() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { busy } = useAppLock();
+  const { resetOnboarding } = useOnboarding();
   const { theme } = useUnistyles();
   const biometricFooter = useBiometricFooter();
   const versionLabel = useVersionLabel();
@@ -97,6 +99,34 @@ export default function ProfileScreen() {
         <SettingsGroup title="App" footer={versionLabel}>
           <UpdateSetting />
         </SettingsGroup>
+
+        {__DEV__ && (
+          <SettingsGroup
+            title="Developer"
+            footer="Apps can't revoke their own permissions. Turn them off in Settings before you reset onboarding."
+          >
+            <SettingsRow
+              icon="arrow.up.right.square"
+              label="Open app settings"
+              testID="dev-open-settings"
+              onPress={() => {
+                void Linking.openSettings().catch(() => {});
+              }}
+            />
+            <SettingsRow
+              icon="arrow.uturn.backward"
+              label="Reset onboarding"
+              destructive
+              disabled={busy}
+              testID="dev-reset-onboarding"
+              onPress={() => {
+                void resetOnboarding().catch(() => {
+                  Alert.alert('Could not reset onboarding');
+                });
+              }}
+            />
+          </SettingsGroup>
+        )}
 
         <SettingsGroup>
           <SettingsRow
