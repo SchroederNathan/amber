@@ -60,11 +60,12 @@ export function BiometricSetting() {
   );
 }
 
-/** Footer copy for the privacy group: the lock's last error, or why it's unavailable. */
+/** Footer copy for the privacy group: the lock's last error, why it's unavailable, or the widget note. */
 export function useBiometricFooter() {
   const { enabled, available, message } = useAppLock();
   if (message) return message;
   if (!available && !enabled) return `Set up ${biometricMethods} in your device settings to use the lock.`;
-  // Only iOS has the home-screen widget.
-  return enabled && process.env.EXPO_OS === 'ios' ? 'Widget previews are hidden while the lock is on.' : null;
+  // Only iOS has the home-screen widget. Shown whether the lock is on or off,
+  // so the footer does not appear and vanish as the switch flips.
+  return process.env.EXPO_OS === 'ios' ? 'Widget previews are hidden while the lock is on.' : null;
 }
