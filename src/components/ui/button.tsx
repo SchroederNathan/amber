@@ -1,6 +1,7 @@
 import { GlassView, isLiquidGlassAvailable, type GlassColorScheme } from 'expo-glass-effect';
 import { useState, type ReactNode } from 'react';
-import { Pressable, View, type PressableProps } from 'react-native';
+import { View } from 'react-native';
+import { Pressable, type PressableProps } from 'react-native-gesture-handler';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { motion, motionCSS } from '@/theme/motion';

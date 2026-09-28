@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Wordmark } from '@/components/wordmark';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 
 // Shown when access fails. Loading states use the splash (`LoadingScreen`).

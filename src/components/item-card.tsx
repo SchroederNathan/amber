@@ -9,7 +9,8 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useActionMenu } from '@/components/ui/action-menu';
 import { SymbolView } from '@/components/ui/symbol';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 

@@ -12,7 +12,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from '@/components/ui/symbol';
 import type { SFSymbol } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View, type TextInputInstance } from 'react-native';
+import { Alert, Text, TextInput, View, type TextInputInstance } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 type Mode = 'menu' | 'note' | 'article';

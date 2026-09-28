@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Button } from '@/components/ui/button';

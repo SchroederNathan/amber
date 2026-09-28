@@ -3,7 +3,8 @@ import * as Linking from 'expo-linking';
 import { usePermissions, type PermissionResponse } from 'expo-media-library';
 import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState, type FC } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { EmptyState } from '@/components/empty-state';
