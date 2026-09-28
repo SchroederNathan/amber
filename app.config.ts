@@ -100,5 +100,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "./plugins/with-android-accent",
+    "./plugins/with-plain-splash",
   ],
 });
