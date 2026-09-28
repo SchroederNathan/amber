@@ -3,14 +3,28 @@ import { useAppLock } from '@/lib/app-lock';
 import { biometricMethods } from '@/lib/app-lock-storage';
 import { Host, Switch } from '@expo/ui';
 import { accessibilityLabel, tint } from '@expo/ui/swift-ui/modifiers';
+import { useState } from 'react';
 import { Switch as RNSwitch } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 
-/** "Face ID lock" row. The switch runs the biometric prompt before it flips. */
+/**
+ * "Face ID lock" row. The switch flips as soon as it is tapped and holds the
+ * new value while the biometric prompt runs. If the prompt fails, it slides back.
+ */
 export function BiometricSetting() {
-  const { enabled, available, label, busy, enable, disable } = useAppLock();
+  const { enabled, available, label, enable, disable } = useAppLock();
   const { theme } = useUnistyles();
-  const disabled = busy || (!enabled && !available);
+  // The value the user asked for, shown until the prompt settles. Both switches
+  // are controlled, so without it the toggle stays put (and greys out) until
+  // Face ID finishes, then jumps.
+  const [pending, setPending] = useState<boolean | null>(null);
+  const value = pending ?? enabled;
+  const disabled = !enabled && !available;
+  const toggle = (next: boolean) => {
+    if (pending !== null) return;
+    setPending(next);
+    void (next ? enable() : disable()).finally(() => setPending(null));
+  };
   return (
     <SettingsRow
       icon={label === 'Face ID' ? 'faceid' : label === 'Touch ID' ? 'touchid' : 'lock'}
@@ -23,9 +37,9 @@ export function BiometricSetting() {
           <RNSwitch
             testID="biometric-setting"
             accessibilityLabel={`${label} lock`}
-            value={enabled}
+            value={value}
             disabled={disabled}
-            onValueChange={(next) => void (next ? enable() : disable())}
+            onValueChange={toggle}
             trackColor={{ true: theme.colors.toggle }}
             thumbColor={theme.colors.toggleThumb}
           />
@@ -34,9 +48,9 @@ export function BiometricSetting() {
           <Host matchContents>
             <Switch
               testID="biometric-setting"
-              value={enabled}
+              value={value}
               disabled={disabled}
-              onValueChange={(next) => void (next ? enable() : disable())}
+              onValueChange={toggle}
               modifiers={[tint(theme.colors.toggle), accessibilityLabel(`${label} lock`)]}
             />
           </Host>
