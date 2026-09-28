@@ -2,6 +2,7 @@ import { PrivacyScreen } from '@/components/privacy-screen';
 import { LoadingScreen } from '@/lib/splash';
 import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
+import { createMMKV } from 'react-native-mmkv';
 import {
   createContext,
   use,
@@ -18,6 +19,12 @@ type OnboardingContextValue = {
 };
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
+// Onboarding asks for permissions, and a reinstall resets them. Each store
+// alone can outlive a reinstall: the iOS Keychain (SecureStore) is kept after
+// uninstall, and Android can restore app files (MMKV) from a backup but never
+// SecureStore. Onboarding counts as done only when both stores say so.
+const installStore = createMMKV({ id: 'onboarding' });
+
 export function OnboardingProvider({
   children,
 }: {
@@ -32,7 +39,8 @@ export function OnboardingProvider({
     let cancelled = false;
     void SecureStore.getItemAsync(key)
       .then((value) => {
-        if (!cancelled) setOnboarded(value === 'true');
+        if (!cancelled)
+          setOnboarded(value === 'true' && installStore.getBoolean(key) === true);
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -43,11 +51,13 @@ export function OnboardingProvider({
   }, [key, attempt]);
   const completeOnboarding = useCallback(async () => {
     await SecureStore.setItemAsync(key, 'true');
+    installStore.set(key, true);
     setOnboarded(true);
   }, [key]);
   // Dev-only: the (app) layout guard sends the user back to onboarding.
   const resetOnboarding = useCallback(async () => {
     await SecureStore.deleteItemAsync(key);
+    installStore.remove(key);
     setOnboarded(false);
   }, [key]);
   const value = useMemo(
