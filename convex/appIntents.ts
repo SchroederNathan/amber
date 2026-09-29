@@ -134,6 +134,7 @@ export const captureInternal = internalMutation({
     url: v.optional(v.string()),
     storageId: v.optional(v.string()),
     aspectRatio: v.optional(v.number()),
+    isSticker: v.optional(v.boolean()),
     spaceId: v.optional(v.string()),
   },
   returns: v.union(v.null(), v.object({ itemId: v.id("items") })),
@@ -174,9 +175,12 @@ export const captureInternal = internalMutation({
       const itemId = await insertImageItem(ctx, userId, {
         storageId,
         aspectRatio: args.aspectRatio,
+        isSticker: args.isSticker,
         // Marks the item as a native capture, which turns on the source-page
-        // lookup in `ai.processItem`, so it is set even when empty.
-        captureContext: context ?? "",
+        // lookup in `ai.processItem`, so it is set even when empty. A sticker
+        // is one object cut out on the device, not a screenshot of a page, so
+        // it is classified like a camera sticker instead.
+        captureContext: args.isSticker === true ? undefined : (context ?? ""),
         spaceId,
       });
       return { itemId };

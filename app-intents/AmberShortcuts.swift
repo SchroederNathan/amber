@@ -39,6 +39,16 @@ struct AmberShortcuts: AppShortcutsProvider {
     #endif
     if #available(iOS 18.0, *) {
       AppShortcut(
+        intent: SaveImageIntent(),
+        phrases: [
+          "Save this image to \(.applicationName)",
+          "Save this photo to \(.applicationName)",
+          "Save this screenshot to \(.applicationName)",
+        ],
+        shortTitle: "Save an Image",
+        systemImageName: "photo"
+      )
+      AppShortcut(
         intent: SaveLinkIntent(),
         phrases: [
           "Save this page to \(.applicationName)",

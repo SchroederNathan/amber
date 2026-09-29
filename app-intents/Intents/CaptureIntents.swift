@@ -83,57 +83,17 @@ struct SaveNoteIntent {
   }
 
   /// Photos and screenshots: uploaded straight to Amber as image items, with Siri's words and
-  /// the text read on the device as context for the classifier. Images that fail wait for the
-  /// app, as before.
+  /// the text read on the device as context for the classifier. "Save this chair" on one photo
+  /// saves the chair alone as a sticker. Images that fail wait for the app, as before.
   @MainActor
   private func saveImages(_ images: [CaptureRouter.Attachment], text: String, trace: String) async throws
     -> (NoteEntity, IntentDialog)
   {
-    var savedIds: [String] = []
-    var unsaved: [CaptureRouter.Attachment] = []
-    for image in images {
-      do {
-        let prepared = await Task.detached(priority: .userInitiated) { await CaptureRouter.prepare(image) }.value
-        guard let prepared else {
-          throw AmberCapture.Failure.badResponse
-        }
-        let storageId = try await AmberCapture.uploadImage(prepared.data, contentType: prepared.contentType)
-        let context = [
-          text.isEmpty ? nil : "Siri: \(text)",
-          prepared.recognizedText.isEmpty ? nil : "Text in the image:\n\(prepared.recognizedText)",
-        ].compactMap { $0 }.joined(separator: "\n\n")
-        let itemId = try await AmberCapture.save(
-          kind: "image", text: context, storageId: storageId, aspectRatio: prepared.aspectRatio,
-          spaceId: folder?.id, trace: trace)
-        AmberIntentLog.record("SaveNoteIntent saved image \(itemId)")
-        savedIds.append(itemId)
-      } catch {
-        AmberIntentLog.record("SaveNoteIntent image capture failed: \(error)")
-        unsaved.append(image)
-      }
-    }
-
-    if !unsaved.isEmpty {
-      let paths = try Self.stage(unsaved)
-      await AppIntentDispatcher.shared.dispatch(
-        name: "saveImages",
-        params: [
-          "paths": .array(paths.map(AppIntentValue.string)),
-          "spaceId": folder.map { .string($0.id) } ?? .null,
-        ]
-      )
-    }
-
+    let saved = try await ImageCapture.save(
+      images, words: text, sticker: StickerTarget(words: text), spaceId: folder?.id, spaceName: folder?.name,
+      intent: "SaveNoteIntent", trace: trace)
     let label = text.isEmpty ? (images.count == 1 ? "Image" : "Images") : text
-    let entity = NoteEntity(id: savedIds.first ?? UUID().uuidString, text: label, folder: folder)
-    if unsaved.isEmpty {
-      let dialog: IntentDialog = images.count == 1 ? savedDialog : "Saved \(images.count) images\(whereSuffix) in Amber."
-      return (entity, dialog)
-    }
-    if savedIds.isEmpty {
-      return (entity, "Your images will be saved\(whereSuffix) when you open Amber.")
-    }
-    return (entity, "Saved \(savedIds.count) of \(images.count) images. Amber will save the rest when you open it.")
+    return (NoteEntity(id: saved.itemId ?? UUID().uuidString, text: label, folder: folder), saved.dialog)
   }
 
   @MainActor
@@ -163,22 +123,52 @@ struct SaveNoteIntent {
     if title.isEmpty || body.hasPrefix(title) { return body }
     return "\(title)\n\n\(body)"
   }
-
-  /// Copies images somewhere JavaScript can read them after the intent returns.
-  static func stage(_ images: [CaptureRouter.Attachment]) throws -> [String] {
-    guard !images.isEmpty else { return [] }
-    let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-    let directory = caches.appendingPathComponent("siri-attachments", isDirectory: true)
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    return try images.map { image in
-      let ext = image.type?.preferredFilenameExtension ?? "jpg"
-      let destination = directory.appendingPathComponent("\(UUID().uuidString).\(ext)")
-      try image.data.write(to: destination)
-      return destination.path
-    }
-  }
 }
 #endif
+
+/// "Save this image to Amber." A plain intent with an image parameter, so classic Siri,
+/// Shortcuts, and the share sheet can hand Amber photos and screenshots on any iOS 18 device.
+/// Naming an object in "Cut Out" ("the chair") saves that object as a die-cut sticker instead.
+@available(iOS 18.0, *)
+struct SaveImageIntent: AppIntent {
+  static let title: LocalizedStringResource = "Save an Image"
+  static let description = IntentDescription(
+    "Saves photos and screenshots to Amber, which tags and files them. Name an object to cut it out as a sticker.")
+  static let openAppWhenRun: Bool = false
+
+  @Parameter(title: "Images", supportedContentTypes: [.image], requestValueDialog: "Which image should Amber save?")
+  var images: [IntentFile]
+
+  @Parameter(
+    title: "Cut Out", description: "An object to cut out of the image as a sticker, like \"the chair\".")
+  var cutOut: String?
+
+  static var parameterSummary: some ParameterSummary {
+    Summary("Save \(\.$images) to Amber") {
+      \.$cutOut
+    }
+  }
+
+  @MainActor
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    let files = images
+      .map { CaptureRouter.Attachment(data: $0.data, type: $0.type, filename: $0.filename) }
+      .filter(CaptureRouter.isImage)
+    guard !files.isEmpty else {
+      throw $images.needsValueError("Which image should Amber save?")
+    }
+    let words = cutOut?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let batch = Array(files.prefix(CaptureRouter.maxImages))
+    let trace = CaptureRouter.trace(
+      intent: "SaveImageIntent", name: words, content: nil, linkAttributes: [], attachments: files,
+      route: .images(batch))
+    AmberIntentLog.record("SaveImageIntent.perform \(trace)")
+    let saved = try await ImageCapture.save(
+      batch, words: words, sticker: StickerTarget(words: words, explicit: true), spaceId: nil, spaceName: nil,
+      intent: "SaveImageIntent", trace: trace)
+    return .result(dialog: saved.dialog)
+  }
+}
 
 /// "Save this page to Amber." A plain intent with a URL parameter, so Siri can pass it the page
 /// on screen. It returns only a dialog: returning a `browser.bookmark` schema entity (or using the
