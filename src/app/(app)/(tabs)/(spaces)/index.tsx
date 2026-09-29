@@ -11,7 +11,6 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useActionMenu } from '@/components/ui/action-menu';
 import { SymbolView } from '@/components/ui/symbol';
-import { ProgressiveBlurHeader } from 'progressive-blur';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -225,7 +224,6 @@ export default function SpacesScreen() {
           );
         }}
       />
-      <ProgressiveBlurHeader />
     </View>
   );
 }
