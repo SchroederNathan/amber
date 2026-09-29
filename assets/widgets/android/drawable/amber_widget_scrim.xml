@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Darkens the bottom of the featured photo so its caption stays legible (same stops as the iOS widget). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+  <gradient
+    android:angle="270"
+    android:startColor="#00000000"
+    android:centerColor="#00000000"
+    android:centerY="0.35"
+    android:endColor="#A6000000" />
+</shape>

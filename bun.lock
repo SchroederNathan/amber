@@ -79,6 +79,7 @@
   ],
   "patchedDependencies": {
     "@clerk/expo@3.7.6": "patches/@clerk%2Fexpo@3.7.6.patch",
+    "expo-widgets@58.0.6": "patches/expo-widgets@58.0.6.patch",
   },
   "packages": {
     "2g": ["2g@0.4.4", "", { "peerDependencies": { "typescript": ">=5.8.0" }, "optionalPeers": ["typescript"], "bin": { "2g": "bin/cli.js" } }, "sha512-ZwH02IRQicm+92YzJZMS8imSAJaqTPI+VASb1zMnisotnWcEP4e7nb57Mr8C2dGAA5G8ZmialbMmpkGLWgAY/w=="],
