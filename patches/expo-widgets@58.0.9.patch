@@ -1,0 +1,223 @@
+diff --git a/android/src/main/java/expo/modules/widgets/ExpoWidgetEmittableTree.kt b/android/src/main/java/expo/modules/widgets/ExpoWidgetEmittableTree.kt
+index 58ad313..5697a7d 100644
+--- a/android/src/main/java/expo/modules/widgets/ExpoWidgetEmittableTree.kt
++++ b/android/src/main/java/expo/modules/widgets/ExpoWidgetEmittableTree.kt
+@@ -4,7 +4,9 @@ package expo.modules.widgets
+ 
+ import android.annotation.SuppressLint
+ import android.content.Context
++import android.content.Intent
+ import android.graphics.Color as AndroidColor
++import android.net.Uri
+ import androidx.compose.ui.unit.DpSize
+ import androidx.compose.ui.unit.TextUnit
+ import androidx.compose.ui.unit.dp
+@@ -59,14 +61,18 @@ import expo.modules.ui.convertibles.HorizontalArrangementDefault
+ import expo.modules.ui.convertibles.VerticalAlignment
+ import expo.modules.ui.convertibles.VerticalArrangementDefault
+ import androidx.compose.ui.graphics.Color
++import androidx.glance.BackgroundModifier
+ import androidx.glance.Emittable
+ import androidx.glance.EmittableButton
++import androidx.glance.EmittableWithChildren
++import androidx.glance.EmittableWithText
+ import androidx.glance.EmittableImage
+ import androidx.glance.ImageProvider
+ import androidx.glance.TintColorFilterParams
+ import androidx.glance.GlanceModifier
+ import androidx.glance.action.clickable
+ import androidx.glance.appwidget.CheckboxDefaults
++import androidx.glance.appwidget.action.actionStartActivity
+ import androidx.glance.appwidget.cornerRadius
+ import androidx.glance.appwidget.EmittableCheckBox
+ import androidx.glance.appwidget.EmittableCircularProgressIndicator
+@@ -102,6 +108,8 @@ import androidx.glance.text.TextDecoration
+ import androidx.glance.text.TextDefaults
+ import androidx.glance.text.TextStyle
+ import androidx.glance.unit.ColorProvider
++import androidx.glance.unit.FixedColorProvider
++import androidx.glance.color.ColorProvider as DayNightColorProvider
+ import androidx.glance.appwidget.lazy.EmittableLazyColumn
+ import androidx.glance.appwidget.lazy.EmittableLazyListItem
+ import androidx.glance.appwidget.lazy.ReservedItemIdRangeEnd
+@@ -129,6 +137,60 @@ internal fun ReadableMap.toPeekRoot(context: Context, source: String, size: DpSi
+ 
+ internal fun createErrorRoot(message: String): Emittable = createErrorText(message)
+ 
++/**
++ * Copies the colors of [night] (the same layout rendered for the dark theme)
++ * into this tree as day/night colors. Widget content is only rendered on
++ * update, so fixed colors would keep the theme of the last update; day/night
++ * colors let the launcher follow the system theme on its own. Parts whose
++ * structure differs between the two renders keep this tree's colors.
++ */
++internal fun Emittable.withNightColors(night: Emittable): Emittable {
++  mergeNightColors(this, night)
++  return this
++}
++
++private fun mergeNightColors(day: Emittable, night: Emittable) {
++  if (day::class != night::class) return
++  day.modifier = day.modifier.withNightColors(night.modifier)
++  if (day is EmittableWithText && night is EmittableWithText) {
++    day.style = day.style?.let { style -> style.copy(color = dayNight(style.color, night.style?.color)) }
++  }
++  if (day is EmittableImage && night is EmittableImage) {
++    val dayTint = (day.colorFilterParams as? TintColorFilterParams)?.colorProvider
++    val nightTint = (night.colorFilterParams as? TintColorFilterParams)?.colorProvider
++    if (dayTint != null) {
++      day.colorFilterParams = TintColorFilterParams(dayNight(dayTint, nightTint))
++    }
++  }
++  if (day is EmittableWithChildren && night is EmittableWithChildren && day.children.size == night.children.size) {
++    day.children.zip(night.children).forEach { (dayChild, nightChild) -> mergeNightColors(dayChild, nightChild) }
++  }
++}
++
++private fun GlanceModifier.withNightColors(night: GlanceModifier): GlanceModifier {
++  val dayElements = foldIn(mutableListOf<GlanceModifier.Element>()) { list, element -> list.apply { add(element) } }
++  val nightElements = night.foldIn(mutableListOf<GlanceModifier.Element>()) { list, element -> list.apply { add(element) } }
++  if (dayElements.size != nightElements.size) {
++    return this
++  }
++  return dayElements.zip(nightElements).fold(GlanceModifier as GlanceModifier) { modifier, (dayElement, nightElement) ->
++    modifier.then(
++      if (dayElement is BackgroundModifier.Color && nightElement is BackgroundModifier.Color) {
++        BackgroundModifier.Color(dayNight(dayElement.colorProvider, nightElement.colorProvider))
++      } else {
++        dayElement
++      }
++    )
++  }
++}
++
++private fun dayNight(day: ColorProvider, night: ColorProvider?): ColorProvider {
++  if (day !is FixedColorProvider || night !is FixedColorProvider || day.color == night.color) {
++    return day
++  }
++  return DayNightColorProvider(day = day.color, night = night.color)
++}
++
+ private fun createErrorText(message: String): EmittableText {
+   return EmittableText().also {
+     it.text = message
+@@ -419,6 +481,13 @@ private fun ModifierType.toPeekModifier(converterContext: ConverterContext): Gla
+     "background" -> asRecord<BackgroundParams>(converterContext)?.color?.toGlanceColorProvider()
+       ?.let { GlanceModifier.background(it) }
+     "cornerRadius" -> asRecord<CornerRadiusParams>(converterContext)?.let { GlanceModifier.cornerRadius(it.radius.dp) }
++    // Opens a URL (usually an app deep link) when the element is tapped, like SwiftUI's widgetURL.
++    "widgetURL" -> this["url"]?.asString()?.let { url ->
++      val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
++        .setPackage(converterContext.applicationContext.packageName)
++        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
++      GlanceModifier.clickable(actionStartActivity(intent))
++    }
+     // Unsupported Expo UI modifiers are ignored until they have exact Glance semantics.
+     else -> null
+   } ?: GlanceModifier
+@@ -543,7 +612,8 @@ private fun VerticalAlignment.toGlanceVerticalAlignment(): Alignment.Vertical {
+ private fun TextFontWeight.toGlanceFontWeight(): FontWeight {
+   return when (this) {
+     TextFontWeight.BOLD, TextFontWeight.W700, TextFontWeight.W800, TextFontWeight.W900 -> FontWeight.Bold
+-    TextFontWeight.NORMAL, TextFontWeight.W100, TextFontWeight.W200, TextFontWeight.W300, TextFontWeight.W400, TextFontWeight.W500, TextFontWeight.W600 -> FontWeight.Normal
++    TextFontWeight.W500, TextFontWeight.W600 -> FontWeight.Medium
++    TextFontWeight.NORMAL, TextFontWeight.W100, TextFontWeight.W200, TextFontWeight.W300, TextFontWeight.W400 -> FontWeight.Normal
+   }
+ }
+ 
+diff --git a/android/src/main/java/expo/modules/widgets/ExpoWidgetsPeekWidget.kt b/android/src/main/java/expo/modules/widgets/ExpoWidgetsPeekWidget.kt
+index 1d044a5..6ec1629 100644
+--- a/android/src/main/java/expo/modules/widgets/ExpoWidgetsPeekWidget.kt
++++ b/android/src/main/java/expo/modules/widgets/ExpoWidgetsPeekWidget.kt
+@@ -22,12 +22,23 @@ internal class ExpoWidgetsPeekWidget(
+     size: DpSize
+   ): Emittable {
+     val appContext = context.applicationContext
++    WidgetsRevisions.read(widgetName)
+     val layout = WidgetsLayoutRegistry.layout(appContext, widgetName)
+       ?: return createErrorRoot("No layout found for $widgetName")
+     val props = WidgetsLayoutRegistry.props(appContext, widgetName)
+-    val environment = getWidgetEnvironment(appContext)
+-    val node = evaluateLayout(appContext, layout, props, environment)
++    // SizeMode.Exact renders once per size the launcher reports, so the layout
++    // can pick a composition for the size it is drawn at.
++    val environment = getWidgetEnvironment(appContext) + (
++      "widgetSize" to mapOf(
++        "width" to size.width.value.toDouble(),
++        "height" to size.height.value.toDouble()
++      )
++    )
++    // Rendered for both themes so colors switch with the system theme (see withNightColors).
++    val day = evaluateLayout(appContext, layout, props, environment + ("colorScheme" to "light"))
++    val night = evaluateLayout(appContext, layout, props, environment + ("colorScheme" to "dark"))
+ 
+-    return node.toPeekRoot(appContext, widgetName, size)
++    return day.toPeekRoot(appContext, widgetName, size)
++      .withNightColors(night.toPeekRoot(appContext, widgetName, size))
+   }
+ }
+diff --git a/android/src/main/java/expo/modules/widgets/WidgetsUpdater.kt b/android/src/main/java/expo/modules/widgets/WidgetsUpdater.kt
+index 578d4ad..c6d3dfe 100644
+--- a/android/src/main/java/expo/modules/widgets/WidgetsUpdater.kt
++++ b/android/src/main/java/expo/modules/widgets/WidgetsUpdater.kt
+@@ -2,7 +2,11 @@ package expo.modules.widgets
+ 
+ import android.appwidget.AppWidgetManager
+ import android.content.Context
++import androidx.compose.runtime.MutableIntState
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.snapshots.Snapshot
+ import androidx.glance.appwidget.AppWidgetId
++import java.util.concurrent.ConcurrentHashMap
+ import kotlinx.coroutines.CoroutineName
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Dispatchers
+@@ -43,6 +47,8 @@ internal object WidgetsUpdater {
+     val appWidgetManager = AppWidgetManager.getInstance(context)
+     val componentName = widgetProviderComponentName(context, name)
+     val widget = ExpoWidgetsPeekWidget(name)
++    // Recomposes sessions that are still alive; update() starts the others.
++    WidgetsRevisions.bump(name)
+ 
+     appWidgetManager.getAppWidgetIds(componentName).forEach { appWidgetId ->
+       widget.update(context, AppWidgetId(appWidgetId))
+@@ -53,3 +59,26 @@ internal object WidgetsUpdater {
+     return context.resources.getStringArray(R.array.expo_widgets_names).toList()
+   }
+ }
++
++/**
++ * A snapshot-state counter per widget. Glance keeps a widget's session (its
++ * composition) alive for a while after an update, and `update()` on a live
++ * session only recomposes content that reads changed state. `provideRoot` reads
++ * nothing Compose can observe (props come from SharedPreferences), so without
++ * this, every update that lands while a session is alive is dropped and the
++ * widget keeps showing the earlier props.
++ */
++internal object WidgetsRevisions {
++  private val revisions = ConcurrentHashMap<String, MutableIntState>()
++
++  /** Call during composition so the widget's content recomposes on [bump]. */
++  fun read(name: String): Int = state(name).intValue
++
++  fun bump(name: String) {
++    Snapshot.withMutableSnapshot {
++      state(name).intValue += 1
++    }
++  }
++
++  private fun state(name: String) = revisions.getOrPut(name) { mutableIntStateOf(0) }
++}
+diff --git a/bundle/react-stub.ts b/bundle/react-stub.ts
+index dc78634..242545b 100644
+--- a/bundle/react-stub.ts
++++ b/bundle/react-stub.ts
+@@ -28,3 +28,8 @@ export const createContext = <T>(defaultValue: T): StubContext<T> => ({
+ });
+ 
+ export const useContext = <T>(context: StubContext<T>): T => context._currentValue;
++
++// @expo/ui 58.0.9's recycled-row lists wrap a component in `memo` at module
++// scope, so the whole widget bundle failed to load without it. Widgets render
++// once per update, so there is nothing to memoize: return the component.
++export const memo = <T>(component: T): T => component;

@@ -2,7 +2,7 @@ import type { FeedItem } from '@/components/item-card';
 import { getStoredColorScheme, useColorSchemeName } from '@/lib/color-scheme';
 import { displayHost } from '@/lib/url';
 import { createTheme, type ColorSchemeName } from '@/theme';
-import type { WidgetPalette } from '@/widgets/recent-saves-widget';
+import type { WidgetPalette } from '@/widgets/recent-saves-widget.types';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
@@ -12,11 +12,14 @@ import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 const WIDGET_ITEM_COUNT = 5;
+// The home-screen widget exists on iOS (WidgetKit) and Android (Glance).
+const HAS_WIDGET = Platform.OS === 'ios' || Platform.OS === 'android';
 const THUMB_PREFIX = 'recent-saves-';
 const THUMB_MAX_DIM = 512;
 
-// Widget extensions have a hard memory cap (~30 MB), so full-size photos are
-// downsized to widget-friendly JPEGs before they enter the shared container.
+// Widget extensions have a hard memory cap (~30 MB) on iOS and Android widget
+// updates have a bitmap budget, so full-size photos are downsized to
+// widget-friendly JPEGs before they enter the shared container.
 function widgetThumbnail(dir: Directory, item: FeedItem): Promise<string> | undefined {
   const url = item.imageUrl ?? item.heroImageUrl;
   if (!url) return undefined;
@@ -103,7 +106,7 @@ let widgetGeneration = 0;
 // Invalidate pending publications before waiting for thumbnail work to finish.
 export function hideRecentSavesWidget(): Promise<void> {
   widgetGeneration++;
-  if (Platform.OS !== 'ios') return Promise.resolve();
+  if (!HAS_WIDGET) return Promise.resolve();
   const clear = syncChain.catch(() => {}).then(() => syncWidget([]));
   syncChain = clear.catch(() => {});
   return clear;
@@ -124,7 +127,7 @@ export function RecentSavesWidgetSync() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'ios' || items === undefined) return;
+    if (!HAS_WIDGET || items === undefined) return;
     const recent = items
       .filter((item) => item.status === 'ready')
       .slice(0, WIDGET_ITEM_COUNT);

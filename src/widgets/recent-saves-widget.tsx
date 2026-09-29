@@ -14,30 +14,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 
-export type WidgetSaveItem = {
-  id: string;
-  title: string;
-  subtitle: string;
-  kind: 'image' | 'link' | 'note';
-  /** file:// URI of a pre-sized thumbnail inside `widgetsDirectory`. */
-  imageUri?: string;
-};
-
-export type WidgetColors = {
-  background: string;
-  tile: string;
-  foreground: string;
-  muted: string;
-  accent: string;
-};
-
-/** The app's active color scheme, sent with every snapshot (see lib/widget-sync). */
-export type WidgetPalette = { light: WidgetColors; dark: WidgetColors };
-
-export type RecentSavesWidgetProps = {
-  items: WidgetSaveItem[];
-  palette?: WidgetPalette;
-};
+import type { RecentSavesWidgetProps, WidgetSaveItem } from './recent-saves-widget.types';
 
 // Everything (palette, helpers) lives inside the component: the `'widget'`
 // directive extracts this one function into the widget extension's JS runtime,
