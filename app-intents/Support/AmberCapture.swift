@@ -61,13 +61,14 @@ enum AmberCapture {
   /// `CaptureRouter.trace`); the server logs it.
   static func save(
     kind: String, text: String? = nil, url: String? = nil, storageId: String? = nil,
-    aspectRatio: Double? = nil, spaceId: String? = nil, trace: String? = nil
+    aspectRatio: Double? = nil, isSticker: Bool = false, spaceId: String? = nil, trace: String? = nil
   ) async throws -> String {
     var body: [String: Any] = ["kind": kind]
     body["text"] = text
     body["url"] = url
     body["storageId"] = storageId
     body["aspectRatio"] = aspectRatio
+    body["isSticker"] = isSticker ? true : nil
     body["spaceId"] = spaceId
     body["trace"] = trace
 

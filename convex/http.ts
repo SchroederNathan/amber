@@ -28,6 +28,7 @@ type CapturePayload =
       kind: "image";
       storageId: string;
       aspectRatio?: number;
+      isSticker?: boolean;
       text?: string;
       spaceId?: string;
     };
@@ -48,7 +49,7 @@ function parseCaptureBody(body: unknown): CapturePayload | string {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return "Body must be a JSON object";
   }
-  const { kind, text, url, spaceId, storageId, aspectRatio } = body as Record<
+  const { kind, text, url, spaceId, storageId, aspectRatio, isSticker } = body as Record<
     string,
     unknown
   >;
@@ -98,10 +99,18 @@ function parseCaptureBody(body: unknown): CapturePayload | string {
     if (text !== undefined && text !== null && typeof text !== "string") {
       return "text must be a string";
     }
+    if (
+      isSticker !== undefined &&
+      isSticker !== null &&
+      typeof isSticker !== "boolean"
+    ) {
+      return "isSticker must be a boolean";
+    }
     return {
       kind,
       storageId,
       aspectRatio: typeof aspectRatio === "number" ? aspectRatio : undefined,
+      isSticker: isSticker === true ? true : undefined,
       // Context is advisory, so overlong context is cut instead of refused.
       text:
         typeof text === "string"
@@ -172,6 +181,7 @@ http.route({
         url: payload.kind === "link" ? payload.url : undefined,
         storageId: payload.kind === "image" ? payload.storageId : undefined,
         aspectRatio: payload.kind === "image" ? payload.aspectRatio : undefined,
+        isSticker: payload.kind === "image" ? payload.isSticker : undefined,
         spaceId: payload.spaceId,
       });
     } catch (error) {
