@@ -53,6 +53,7 @@
           ]
         }
       ],
+      "expo-build-properties",
       "expo-image",
       "expo-router",
       "expo-status-bar",
