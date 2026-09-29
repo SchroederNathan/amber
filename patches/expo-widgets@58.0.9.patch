@@ -221,3 +221,98 @@ index dc78634..242545b 100644
 +// scope, so the whole widget bundle failed to load without it. Widgets render
 +// once per update, so there is nothing to memoize: return the component.
 +export const memo = <T>(component: T): T => component;
+diff --git a/ios/Widgets/EntryView.swift b/ios/Widgets/EntryView.swift
+index 0e6138e..8a39067 100644
+--- a/ios/Widgets/EntryView.swift
++++ b/ios/Widgets/EntryView.swift
+@@ -13,6 +13,9 @@ public struct WidgetsEntryView: View {
+   private var widgetEnvironment: [String: Any] {
+     var env: [String: Any] = getWidgetEnvironment(environment: environment)
+     env["timestamp"] = Int(entry.date.timeIntervalSince1970 * 1000)
++    if let size = entry.displaySize, size.width > 0, size.height > 0 {
++      env["widgetSize"] = ["width": Double(size.width), "height": Double(size.height)]
++    }
+     return env
+   }
+ 
+diff --git a/ios/Widgets/TimelineEntry.swift b/ios/Widgets/TimelineEntry.swift
+index 3f48c02..86f09e0 100644
+--- a/ios/Widgets/TimelineEntry.swift
++++ b/ios/Widgets/TimelineEntry.swift
+@@ -1,8 +1,12 @@
+ import WidgetKit
++import CoreGraphics
+ 
+ public struct WidgetsTimelineEntry: WidgetKit.TimelineEntry {
+   public let date: Date
+   public let name: String
+   public let props: [String: Any]?
+   public let entryIndex: Int?
++  /// The widget's size in points, from the timeline context. The layout reads it as
++  /// `environment.widgetSize`, like on Android.
++  public var displaySize: CGSize? = nil
+ }
+diff --git a/ios/Widgets/TimelineProvider.swift b/ios/Widgets/TimelineProvider.swift
+index f339d98..259093c 100644
+--- a/ios/Widgets/TimelineProvider.swift
++++ b/ios/Widgets/TimelineProvider.swift
+@@ -2,7 +2,7 @@ import WidgetKit
+ 
+ public struct WidgetsTimelineProvider: TimelineProvider {
+   public func placeholder(in context: Context) -> WidgetsTimelineEntry {
+-    WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil)
++    WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil, displaySize: context.displaySize)
+   }
+ 
+   public func getSnapshot(
+@@ -11,12 +11,12 @@ public struct WidgetsTimelineProvider: TimelineProvider {
+     let groupIdentifier =
+       Bundle.main.object(forInfoDictionaryKey: "ExpoWidgetsAppGroupIdentifier") as? String
+     guard let groupIdentifier else {
+-      completion(WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil))
++      completion(WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil, displaySize: context.displaySize))
+       return
+     }
+ 
+-    let entries = parseTimeline(identifier: groupIdentifier, name: name, family: context.family)
+-    completion(entries.first ?? WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil))
++    let entries = parseTimeline(identifier: groupIdentifier, name: name, family: context.family, displaySize: context.displaySize)
++    completion(entries.first ?? WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil, displaySize: context.displaySize))
+   }
+ 
+   public func getTimeline(
+@@ -29,7 +29,7 @@ public struct WidgetsTimelineProvider: TimelineProvider {
+       fatalError("Could not get the app group identifier from Info.plist")
+     }
+ 
+-    let entries = parseTimeline(identifier: groupIdentifier, name: name, family: context.family)
++    let entries = parseTimeline(identifier: groupIdentifier, name: name, family: context.family, displaySize: context.displaySize)
+ 
+     let timeline = Timeline<WidgetsTimelineEntry>(entries: entries, policy: .atEnd)
+     completion(timeline)
+diff --git a/ios/Widgets/Utils.swift b/ios/Widgets/Utils.swift
+index 76b2199..64bd4d0 100644
+--- a/ios/Widgets/Utils.swift
++++ b/ios/Widgets/Utils.swift
+@@ -14,9 +14,9 @@ public struct WidgetConfigurationOption {
+   }
+ }
+ 
+-func parseTimeline(identifier: String, name: String, family: WidgetFamily) -> [WidgetsTimelineEntry] {
++func parseTimeline(identifier: String, name: String, family: WidgetFamily, displaySize: CGSize? = nil) -> [WidgetsTimelineEntry] {
+   guard let timeline = WidgetsStorage.getArray(forKey: "__expo_widgets_\(name)_timeline") else {
+-    return [WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil)]
++    return [WidgetsTimelineEntry(date: Date(), name: name, props: WidgetsLayoutRegistry.initialProps(for: name), entryIndex: nil, displaySize: displaySize)]
+   }
+ 
+   let entries: [WidgetsTimelineEntry?] = timeline.enumerated().map { index, entry in
+@@ -25,7 +25,8 @@ func parseTimeline(identifier: String, name: String, family: WidgetFamily) -> [W
+         date: Date(timeIntervalSince1970: Double(timestamp) / 1000),
+         name: name,
+         props: props,
+-        entryIndex: index
++        entryIndex: index,
++        displaySize: displaySize
+       )
+     }
+     return nil

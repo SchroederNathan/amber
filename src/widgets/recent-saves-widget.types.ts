@@ -7,6 +7,8 @@ export type WidgetSaveItem = {
   kind: 'image' | 'link' | 'note';
   /** file:// URI of a pre-sized thumbnail inside `widgetsDirectory`. */
   imageUri?: string;
+  /** Width / height of the image, so the layout can show it uncropped. */
+  aspectRatio?: number;
 };
 
 export type WidgetColors = {

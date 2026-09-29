@@ -8,10 +8,13 @@ import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { ensureThumbnail } from '@/lib/thumbnails';
 import { Directory, File } from 'expo-file-system';
+import { Images } from 'react-native-nitro-image';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
-const WIDGET_ITEM_COUNT = 5;
+// Enough for a full masonry column pair on the small widget; the medium one
+// shows the first 5.
+const WIDGET_ITEM_COUNT = 8;
 // The home-screen widget exists on iOS (WidgetKit) and Android (Glance).
 const HAS_WIDGET = Platform.OS === 'ios' || Platform.OS === 'android';
 const THUMB_PREFIX = 'recent-saves-';
@@ -40,6 +43,18 @@ function widgetPalette(scheme: ColorSchemeName): WidgetPalette {
     };
   };
   return { light: pick('light'), dark: pick('dark') };
+}
+
+// The widget sizes each image frame to the image's shape, so it needs the
+// ratio. Saves carry it from the backend; otherwise read it off the thumbnail.
+async function widgetAspectRatio(item: FeedItem, imageUri: string): Promise<number | undefined> {
+  if (item.aspectRatio && Number.isFinite(item.aspectRatio) && item.aspectRatio > 0) return item.aspectRatio;
+  try {
+    const image = await Images.loadFromFileAsync(decodeURIComponent(imageUri.replace(/^file:\/\//, '')));
+    return image.height > 0 ? image.width / image.height : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function widgetTitle(item: FeedItem): string {
@@ -79,6 +94,7 @@ async function syncWidget(items: FeedItem[], isCurrent: () => boolean = () => tr
         subtitle: widgetSubtitle(item),
         kind: item.type,
         imageUri,
+        aspectRatio: imageUri ? await widgetAspectRatio(item, imageUri) : undefined,
       };
     }),
   );
@@ -133,7 +149,7 @@ export function RecentSavesWidgetSync() {
       .slice(0, WIDGET_ITEM_COUNT);
     // Only re-sync when something the widget shows actually changed.
     const key = scheme + '|' + recent
-      .map((item) => `${item._id}:${item.title ?? ''}:${item.imageUrl ?? item.heroImageUrl ?? ''}`)
+      .map((item) => `${item._id}:${item.title ?? ''}:${item.imageUrl ?? item.heroImageUrl ?? ''}:${item.aspectRatio ?? ''}`)
       .join('|');
     if (key === lastKey.current) return;
     lastKey.current = key;
