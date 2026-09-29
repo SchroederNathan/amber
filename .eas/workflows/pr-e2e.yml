@@ -100,6 +100,10 @@ jobs:
       PR_JSON: ${{ toJSON(github.event.pull_request || '') }}
       SKIP_EXPLORE: ${{ toJSON(inputs.explore == false) }}
       MANUAL_GOAL: ${{ toJSON(inputs.goal || '') }}
+      # TesterArmy's CI defaults (1 retry, read-only trace cache, `.only`
+      # rejected) turn on from CI. Set it here so they do not depend on the
+      # runner image.
+      CI: '1'
       E2E_TELEMETRY_DISABLED: '1'
     outputs:
       suite_exit: ${{ steps.suite.outputs.exit_code }}
@@ -147,7 +151,7 @@ jobs:
         id: suite
         run: |
           set +e
-          bun x eas-cli@latest simulator:exec bun run e2e --reporter list,junit,markdown
+          bun x eas-cli@latest simulator:exec bun run e2e
           CODE=$?
           set -e
           mkdir -p e2e-results
