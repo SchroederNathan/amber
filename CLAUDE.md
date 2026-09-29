@@ -31,7 +31,10 @@ the lockfile is `bun.lock` and every command runs through bun. Use `bunx` for on
 - `bunx convex dev` — run/deploy the Convex backend locally against the dev deployment and
   keep `convex/_generated/*` in sync. Required whenever backend functions or schema change.
 
-There is no test suite.
+- `bun run test` — Node regression tests in `tests/`.
+- `bun run e2e` / `bun run e2e:explore "<goal>"` — TesterArmy `e2e` device tests in `e2e/`
+  (config: `e2e.config.ts`, pinned canary). CI runs them on EAS Simulator through
+  `.eas/workflows/pr-e2e.yml`; see `.eas/workflows/README.md`.
 
 ### Native builds
 

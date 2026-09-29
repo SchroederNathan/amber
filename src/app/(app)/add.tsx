@@ -32,6 +32,10 @@ function ActionButton({
   const { theme } = useUnistyles();
   return (
     <Pressable
+      // Without a label, iOS reads the SF Symbol name too ("compose, Note").
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={`add-${label.toLowerCase()}`}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
@@ -245,6 +249,7 @@ export default function AddScreen() {
       {isComposer ? (
         <TextInput
           ref={inputRef}
+          testID="add-input"
           style={isArticle ? styles.articleInput : styles.noteInput}
           value={value}
           onChangeText={setValue}

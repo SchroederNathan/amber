@@ -23,6 +23,18 @@
         "APP_VARIANT": "preview"
       }
     },
+    "e2e": {
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": true,
+        "image": "macos-tahoe-26.6-xcode-27.1"
+      },
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_E2E": "1"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "environment": "production",
