@@ -89,6 +89,6 @@
   ],
   "patchedDependencies": {
     "@clerk/expo@3.7.6": "patches/@clerk%2Fexpo@3.7.6.patch",
-    "expo-widgets@58.0.6": "patches/expo-widgets@58.0.6.patch"
+    "expo-widgets@58.0.9": "patches/expo-widgets@58.0.9.patch"
   }
 }

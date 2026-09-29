@@ -208,3 +208,16 @@ index 578d4ad..c6d3dfe 100644
 +
 +  private fun state(name: String) = revisions.getOrPut(name) { mutableIntStateOf(0) }
 +}
+diff --git a/bundle/react-stub.ts b/bundle/react-stub.ts
+index dc78634..242545b 100644
+--- a/bundle/react-stub.ts
++++ b/bundle/react-stub.ts
+@@ -28,3 +28,8 @@ export const createContext = <T>(defaultValue: T): StubContext<T> => ({
+ });
+ 
+ export const useContext = <T>(context: StubContext<T>): T => context._currentValue;
++
++// @expo/ui 58.0.9's recycled-row lists wrap a component in `memo` at module
++// scope, so the whole widget bundle failed to load without it. Widgets render
++// once per update, so there is nothing to memoize: return the component.
++export const memo = <T>(component: T): T => component;
