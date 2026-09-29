@@ -58,6 +58,8 @@ function AuthenticatedAppLayout() {
             name="space/[id]"
             options={{
               ...barHeaderOptions(theme.colors.background),
+              // iOS 26 native soft scroll edge: the feed fades out under the header.
+              scrollEdgeEffects: { top: 'soft' },
               title: '',
               headerBackButtonDisplayMode: 'minimal',
             }}

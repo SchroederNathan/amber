@@ -12,7 +12,11 @@ export default function SearchStackLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index">
+      <Stack.Screen
+        name="index"
+        // iOS 26 native soft scroll edge: content fades out under the header.
+        options={{ scrollEdgeEffects: { top: 'soft' } }}
+      >
         <Stack.Title asChild>
           <Text style={styles.title}>search</Text>
         </Stack.Title>

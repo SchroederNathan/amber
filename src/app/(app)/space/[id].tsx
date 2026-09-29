@@ -10,7 +10,6 @@ import { useMutation } from 'convex/react';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView, useToolbarIcon } from '@/components/ui/symbol';
-import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useMemo } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
@@ -152,7 +151,6 @@ export default function SpaceScreen() {
             />
           }
         />
-        <ProgressiveBlurHeader />
       </View>
     </>
   );

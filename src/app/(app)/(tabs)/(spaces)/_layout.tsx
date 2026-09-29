@@ -28,7 +28,11 @@ export default function SpacesStackLayout() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index">
+      <Stack.Screen
+        name="index"
+        // iOS 26 native soft scroll edge: content fades out under the header.
+        options={{ scrollEdgeEffects: { top: 'soft' } }}
+      >
         <Stack.Title asChild>
           <Text style={styles.title}>spaces</Text>
         </Stack.Title>

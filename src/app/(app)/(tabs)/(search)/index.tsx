@@ -4,7 +4,6 @@ import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ProgressiveBlurHeader } from 'progressive-blur';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { SearchBarCommands } from 'react-native-screens';
@@ -61,7 +60,6 @@ export default function SearchScreen() {
       ) : (
         <MasonryFeed items={results ?? []} source={{ from: 'search', q: query }} />
       )}
-      <ProgressiveBlurHeader />
     </View>
   );
 }
