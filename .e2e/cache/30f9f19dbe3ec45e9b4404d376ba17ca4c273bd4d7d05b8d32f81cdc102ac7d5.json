@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-09-29T15:55:36.428Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap tab \"Spaces\"",
+        "target": {
+          "role": "tab",
+          "name": "Spaces"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/amber.e2e.ts::amber::the%20tab%20bar%20reaches%20Spaces%20and%20Search",
+      "targetId": "ios",
+      "instructionDigest": "a8bd9cff8a2e226d0afbe378a09a8d7f262b12e251ad7de158d0975aeb773c90"
+    },
+    "summary": "Opened the Spaces tab. The Spaces screen is visible with the Spaces tab selected and its collection cards displayed.",
+    "startPath": "com.schroedernathan.preview / index",
+    "endPath": "com.schroedernathan.preview / index",
+    "endAnchors": [
+      {
+        "role": "button",
+        "name": "New space"
+      },
+      {
+        "role": "other",
+        "name": "Vertical scroll bar, 1 page"
+      },
+      {
+        "role": "text",
+        "name": "spaces"
+      }
+    ],
+    "endWaitMs": 14559
+  }
+}

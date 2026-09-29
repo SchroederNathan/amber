@@ -21,7 +21,7 @@ if (!suite) {
   lines.push(`**Suite:** ${icon} ${passed} passed, ${failed} failed, ${flaky} flaky, ${skipped} skipped`);
   // Members of a serial group have no attempts of their own; the group keeps them.
   const groups = new Map((suite.serialGroups ?? []).map((group) => [group.id, group]));
-  for (const result of suite.results.filter((r) => r.status === 'failed' || r.status === 'timed-out')) {
+  for (const result of suite.results.filter((r) => ['failed', 'timed-out', 'interrupted'].includes(r.status))) {
     const attempts = result.attempts.length > 0 ? result.attempts : groups.get(result.serialGroupId)?.attempts ?? [];
     const error = attempts.at(-1)?.error;
     lines.push(`- **${result.titlePath.join(' › ')}**: \`${error?.code ?? result.status}\` ${oneLine(error?.message)}`);

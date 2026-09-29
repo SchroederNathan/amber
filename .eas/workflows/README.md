@@ -78,6 +78,20 @@ client (`com.schroedernathan.dev`) instead of an `e2e` build:
 (set -a; . ./.env.local; set +a; E2E_DEVICE=<udid> bun run e2e)
 ```
 
+### Trace cache
+
+`.e2e/cache/` is committed. It holds recorded `agent.act` steps, and CI
+replays them without model calls (CI mode reads the cache but never writes
+it). A step whose UI changed hands off to the agent, and the run still passes.
+
+A local run records new steps and re-records ones the agent had to finish.
+Record against an `e2e` build (`com.schroedernathan.preview`), not the dev
+client: the cache key includes the app id, so dev-client entries never replay
+in CI. Download the newest `e2e` simulator build from EAS, install it on a
+simulator, run the suite, and commit the changed files in `.e2e/cache/` with
+the UI change. Review them first: they hold the typed text. `bunx e2e cache ls`
+lists the entries.
+
 Quirks the suite works around (see comments in `e2e/amber.e2e.ts`):
 
 - Home feed cards are missing from agent-device's accessibility snapshot
@@ -93,7 +107,7 @@ Quirks the suite works around (see comments in `e2e/amber.e2e.ts`):
 1. EAS `development` environment: add `EXPO_PUBLIC_DEV_PASSWORD` (the
    password of `dev+clerk_test@example.com`, sensitive). The `e2e` build
    embeds it, as dev builds do. `AI_GATEWAY_API_KEY` is already there; the
-   test agents call Claude through the AI Gateway.
+   test agents call GPT-6 Luna through the AI Gateway.
 2. If the "Check EAS credentials" step fails, add an `EXPO_TOKEN` secret
    (a robot token with access to this project) to the `development`
    environment. `simulator:start` needs it.

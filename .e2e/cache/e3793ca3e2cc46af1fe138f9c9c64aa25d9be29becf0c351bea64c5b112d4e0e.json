@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-09-29T15:55:36.429Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap tab \"Search\"",
+        "target": {
+          "role": "tab",
+          "name": "Search"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/amber.e2e.ts::amber::the%20tab%20bar%20reaches%20Spaces%20and%20Search",
+      "targetId": "ios",
+      "instructionDigest": "19d06a174f9d4393c25930a99b55a26a5edfdcce6e8c68c6ede846a57f6dd03d"
+    },
+    "summary": "Opened the Search tab. The Search screen is visible with its search field and “Find anything” prompt, and Search is selected in the tab bar.",
+    "startPath": "com.schroedernathan.preview / index",
+    "endPath": "com.schroedernathan.preview / index",
+    "endAnchors": [
+      {
+        "role": "text",
+        "name": "search"
+      },
+      {
+        "role": "textbox",
+        "name": "Search your saves",
+        "placeholder": "Search your saves"
+      },
+      {
+        "role": "text",
+        "name": "Find anything"
+      },
+      {
+        "role": "text",
+        "name": "Search goes through titles, tags, and descriptions Amber wrote for your saves."
+      }
+    ],
+    "endWaitMs": 14185
+  }
+}

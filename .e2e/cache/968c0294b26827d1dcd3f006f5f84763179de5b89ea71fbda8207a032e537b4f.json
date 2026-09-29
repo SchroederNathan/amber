@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-09-29T15:57:29.704Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tapAt",
+        "summary": "tap the point (203, 238) on scroll-view",
+        "point": {
+          "x": 203,
+          "y": 238
+        },
+        "viewport": {
+          "width": 440,
+          "height": 956
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Delete\"",
+        "target": {
+          "role": "button",
+          "name": "Delete"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/amber.e2e.ts::amber::saves%20a%20note%2C%20the%20AI%20files%20it%2C%20and%20it%20can%20be%20deleted",
+      "targetId": "ios",
+      "instructionDigest": "ec49a6c2b39b007a0eaad3f3ef6ae6e5db2d3d62ecad8817ea793cfc352dcc5d"
+    },
+    "summary": "Took a screenshot of the Home feed, tapped the ⋯ control under the top-left Quilkilin Bakery Run card, then tapped Delete. The confirmation sheet closed; no further feed checks were performed.",
+    "startPath": "com.schroedernathan.preview / index",
+    "endPath": "com.schroedernathan.preview / index",
+    "endWaitMs": 16450
+  }
+}

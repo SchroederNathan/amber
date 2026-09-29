@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-09-29T15:57:29.703Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "typeText",
+        "summary": "type \"Try the rye loaf at Quilkilin bakery on…\" into the focused field",
+        "value": "{{param:/text}}",
+        "replace": false
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/amber.e2e.ts::amber::saves%20a%20note%2C%20the%20AI%20files%20it%2C%20and%20it%20can%20be%20deleted",
+      "targetId": "ios",
+      "instructionDigest": "c6f29bddc30283024b2007f7cae08d8975ca11c85645d758071884f60bf61a01"
+    },
+    "summary": "Typed “Try the rye loaf at Quilkilin bakery on Saturday” into the focused note field; the add-input field shows the full text. No other controls were tapped.",
+    "startPath": "com.schroedernathan.preview / add",
+    "endPath": "com.schroedernathan.preview / add",
+    "endAnchors": [
+      {
+        "role": "textbox",
+        "testId": "add-input"
+      }
+    ],
+    "endWaitMs": 12592
+  }
+}

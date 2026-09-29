@@ -1,5 +1,5 @@
 import { test } from '@e2e-dev/mobile';
-import { expect } from 'e2e';
+import { expect, unique } from 'e2e';
 import { z } from 'zod';
 
 // A pronounceable made-up name, different on every run (e.g. "Morvelin").
@@ -65,13 +65,23 @@ test.describe('amber', { serial: true }, () => {
     // agent-device reports every control in the form sheet as covered (by
     // the sheet's full-screen dismiss region), so plain taps and fills are
     // refused. tapCenter taps at a position, which goes to that point directly.
-    await tapCenter(screen.getByTestId('add-note'));
-    await expect(screen.getByTestId('add-input')).toBeVisible();
+    // A tap that lands while the sheet is still sliding up can be lost (1 of
+    // 2 local runs), and a position tap does not wait for the sheet to settle.
+    // Tap again until the composer opens.
+    const input = screen.getByTestId('add-input');
+    for (let taps = 0; !(await input.isVisible()); taps++) {
+      if (taps === 3) throw new Error('The note composer did not open after 3 taps on Note.');
+      await tapCenter(screen.getByTestId('add-note'));
+      await input.waitFor({ timeout: 3_000 }).catch(() => {});
+    }
+    await expect(input).toBeVisible();
 
     // The composer focuses its field on open. The locator fill is refused
     // too, but the agent can type into the focused field.
+    // unique() marks the value as different on every run, so the trace cache
+    // can still replay this step with the new value.
     const text = `Try the rye loaf at ${bakery} bakery on Saturday`;
-    await agent.act('type {text} into the focused note field. Do not tap anything.', { params: { text } });
+    await agent.act('type {text} into the focused note field. Do not tap anything.', { params: { text: unique(text) } });
     await tapCenter(screen.getByRole('button', { name: 'Save' }));
 
     // Feed cards are missing from the external accessibility snapshot that
@@ -95,7 +105,7 @@ test.describe('amber', { serial: true }, () => {
       await agent.act(
         'take a screenshot, tap the ⋯ button under the first card in the Home feed (top left, titled {title}), ' +
           'then choose Delete. Stop as soon as you have tapped Delete; do not check the feed afterwards.',
-        { agent: 'explorer', params: { title } },
+        { agent: 'explorer', params: { title: unique(title) } },
       );
       await agent.waitFor(`the first card in the Home feed (top left) is no longer titled "${title}"`, {
         vision: 'only',

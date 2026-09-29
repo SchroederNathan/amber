@@ -49,6 +49,8 @@ yarn-error.*
 # Argent screen recordings are local QA evidence, not source
 .argent/recordings/
 
-# TesterArmy e2e reports, screenshots, and videos
-.e2e/
+# TesterArmy e2e reports, screenshots, and videos. The trace cache is
+# committed so CI can replay recorded agent steps without model calls.
+.e2e/*
+!.e2e/cache/
 e2e-results/
