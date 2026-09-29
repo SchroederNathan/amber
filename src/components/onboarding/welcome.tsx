@@ -55,7 +55,8 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
             icon={<Image source={require('@assets/images/sign-in/google-g.png')} style={styles.providerIcon} contentFit="contain" accessible={false} />}
           />
           {error && <Text accessibilityRole="alert" selectable style={styles.error}>{error}</Text>}
-          {__DEV__ && (
+          {/* The `e2e` build profile is a Release build, so E2E runs sign in through here too. */}
+          {(__DEV__ || process.env.EXPO_PUBLIC_E2E === '1') && (
             <Pressable testID="dev-login-button" accessibilityRole="button" onPress={() => { setProvider(null); onDevLogin?.(); }} disabled={pending} style={styles.dev}>
               <Text style={styles.status}>Dev login</Text>
             </Pressable>

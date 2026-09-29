@@ -1,0 +1,208 @@
+name: PR E2E (TesterArmy on EAS Simulator)
+
+# Builds (or repacks) an iOS simulator build of the PR, starts an EAS
+# Simulator session with it installed, then runs two TesterArmy `e2e` passes:
+#   1. `e2e run`: the scripted suite in e2e/. It blocks the PR when it fails.
+#   2. `e2e explore`: an agent reads the PR title, description, and changed
+#      screens and hunts for bugs there. It only reports; it never blocks.
+# Results go to a PR comment and the run's artifacts.
+
+on:
+  pull_request:
+    branches: ['main']
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - 'src/**'
+      - 'convex/**'
+      - 'modules/**'
+      - 'app-intents/**'
+      - 'plugins/**'
+      - 'assets/**'
+      - 'e2e/**'
+      - 'e2e.config.ts'
+      - 'app.json'
+      - 'app.config.ts'
+      - 'eas.json'
+      - 'package.json'
+      - 'bun.lock'
+  workflow_dispatch:
+    inputs:
+      explore:
+        type: boolean
+        default: true
+        description: Also run the agentic explore pass
+      goal:
+        type: string
+        required: false
+        description: Explore goal (defaults to a general bug hunt on manual runs)
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  fingerprint:
+    name: Fingerprint the e2e build
+    type: fingerprint
+    # Match the `e2e` build profile in eas.json.
+    environment: development
+    env:
+      APP_VARIANT: preview
+      EXPO_PUBLIC_E2E: '1'
+
+  get_build:
+    name: Find a simulator build with this fingerprint
+    type: get-build
+    needs: [fingerprint]
+    params:
+      platform: ios
+      profile: e2e
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      wait_for_in_progress: true
+
+  # Same native layer: swap in this PR's JavaScript (minutes, not a full build).
+  repack:
+    name: Repack with this PR's JavaScript
+    type: repack
+    needs: [get_build]
+    if: ${{ needs.get_build.outputs.build_id }}
+    environment: development
+    env:
+      APP_VARIANT: preview
+      EXPO_PUBLIC_E2E: '1'
+    params:
+      build_id: ${{ needs.get_build.outputs.build_id }}
+      profile: e2e
+
+  # Native layer changed: full simulator build.
+  build:
+    name: Build iOS simulator app
+    type: build
+    needs: [get_build]
+    if: ${{ !needs.get_build.outputs.build_id }}
+    params:
+      platform: ios
+      profile: e2e
+
+  e2e:
+    name: E2E on EAS Simulator
+    after: [repack, build]
+    if: ${{ after.repack.status == 'success' || after.build.status == 'success' }}
+    # Holds AI_GATEWAY_API_KEY (agent model calls) and EXPO_TOKEN.
+    environment: development
+    # Node 22.23 (e2e needs >= 22.12).
+    image: sdk-57
+    # Job env values must be strings. On a manual run the PR fields are empty
+    # and the inputs are booleans, so pass them through toJSON(), which
+    # always returns a string. e2e/ci/pr.mjs and explore-goal.mjs parse them.
+    env:
+      BUILD_ID: ${{ after.repack.outputs.build_id || after.build.outputs.build_id }}
+      PR_JSON: ${{ toJSON(github.event.pull_request || '') }}
+      SKIP_EXPLORE: ${{ toJSON(inputs.explore == false) }}
+      MANUAL_GOAL: ${{ toJSON(inputs.goal || '') }}
+      E2E_TELEMETRY_DISABLED: '1'
+    outputs:
+      suite_exit: ${{ steps.suite.outputs.exit_code }}
+      summary: ${{ steps.summary.outputs.markdown }}
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+
+      # The image has `bun` but no `bunx` shim, so every step uses `bun x`.
+      - name: Check EAS credentials
+        run: |
+          bun --version
+          if ! bun x eas-cli@latest whoami; then
+            echo "EAS CLI is not signed in. Add an EXPO_TOKEN secret to the EAS 'development' environment."
+            exit 1
+          fi
+
+      - name: Start EAS Simulator session
+        id: session
+        run: |
+          PR_NUMBER="$(node e2e/ci/pr.mjs number)"
+          NAME="PR #${PR_NUMBER} e2e"
+          [ -z "$PR_NUMBER" ] && NAME="Manual e2e run"
+          printf '# managed by eas-cli\n' > .env.eas-simulator
+          bun x eas-cli@latest simulator:start --platform ios --type agent-device \
+            --build-id "$BUILD_ID" --name "$NAME" --tag pr-e2e \
+            --max-idle-time-minutes 10 --non-interactive
+          # Wait until the session is live: IN_PROGRESS with a remote config.
+          for i in $(seq 1 60); do
+            S=$(bun x eas-cli@latest simulator:get --json --non-interactive 2>/dev/null || true)
+            if echo "$S" | grep -q '"status": *"IN_PROGRESS"' && echo "$S" | grep -q remoteConfig; then
+              echo "Session is live."
+              exit 0
+            fi
+            if echo "$S" | grep -qE '"status": *"(STOPPED|ERRORED)"'; then
+              echo "Session failed to boot."
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "Session did not become live in 15 minutes."
+          exit 1
+
+      - name: Run the e2e suite
+        id: suite
+        run: |
+          set +e
+          bun x eas-cli@latest simulator:exec bun run e2e --reporter list,junit,markdown
+          CODE=$?
+          set -e
+          mkdir -p e2e-results
+          [ -d .e2e ] && cp -R .e2e e2e-results/suite
+          set-output exit_code "$CODE"
+          set-env SUITE_EXIT "$CODE"
+
+      - name: Explore the PR's changes (agent, non-blocking)
+        run: |
+          if [ "$SKIP_EXPLORE" = "true" ]; then
+            echo "Explore pass turned off for this run."
+            exit 0
+          fi
+          BASE_SHA="$(node e2e/ci/pr.mjs base_sha)"
+          if [ -n "$BASE_SHA" ]; then
+            git fetch --depth=1 origin "$BASE_SHA" 2>/dev/null || true
+            export CHANGED_FILES="$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null || true)"
+          fi
+          GOAL="$(node e2e/ci/explore-goal.mjs)"
+          echo "Goal: $GOAL"
+          rm -rf .e2e
+          bun x eas-cli@latest simulator:exec bun run e2e:explore "$GOAL" --max-steps 6 --video || \
+            echo "Explore reported issues or could not finish. It does not block the PR."
+          [ -d .e2e ] && cp -R .e2e e2e-results/explore || true
+
+      - name: Summarize
+        id: summary
+        if: ${{ always() }}
+        run: |
+          mkdir -p e2e-results
+          node e2e/ci/summarize.mjs e2e-results/suite/report.json e2e-results/explore/report.json > e2e-results/summary.md
+          cat e2e-results/summary.md
+          set-output markdown "$(cat e2e-results/summary.md)"
+
+      - uses: eas/upload_artifact
+        if: ${{ always() }}
+        with:
+          type: other
+          name: e2e-results
+          path: |
+            e2e-results/**/*
+
+      - name: Stop EAS Simulator session
+        if: ${{ always() }}
+        run: |
+          bun x eas-cli@latest simulator:stop --non-interactive || true
+          printf '# managed by eas-cli\n' > .env.eas-simulator
+
+      - name: Fail the job if the suite failed
+        run: exit "${SUITE_EXIT:-1}"
+
+  comment:
+    name: Post results to the PR
+    type: github-comment
+    after: [e2e]
+    if: ${{ github.event_name == 'pull_request' && after.e2e.outputs.summary }}
+    params:
+      payload: ${{ after.e2e.outputs.summary }}

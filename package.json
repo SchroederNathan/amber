@@ -63,7 +63,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@e2e-dev/mobile": "0.8.0-canary-20260928184528",
     "@types/react": "~19.3.0",
+    "e2e": "0.15.0-canary-20260928184528",
     "esbuild": "0.27.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.2",
@@ -76,7 +78,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test \"tests/*.test.mjs\""
+    "test": "node --experimental-strip-types --test \"tests/*.test.mjs\"",
+    "e2e": "e2e run",
+    "e2e:explore": "e2e explore --agent explorer"
   },
   "private": true,
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",

@@ -48,3 +48,7 @@ yarn-error.*
 
 # Argent screen recordings are local QA evidence, not source
 .argent/recordings/
+
+# TesterArmy e2e reports, screenshots, and videos
+.e2e/
+e2e-results/
