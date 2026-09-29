@@ -131,7 +131,7 @@ Both are wired into TypeScript via `tsconfig.json` `paths` entries (there's no m
 
 ### Siri, Spotlight & App Intents (`app-intents/`, `src/lib/app-intents.tsx`)
 
-`expo-app-intents` (alpha; pinned to `0.4.4` because npm `latest` is a `0.0.1` placeholder). The
+`expo-app-intents` (alpha; `~0.4.7`, the SDK 58 version from `expo install`, because npm `latest` is a `0.0.1` placeholder). The
 Swift intents live in the root `app-intents/` folder and are compiled into the app target as inline
 modules (`experiments.inlineModules.watchedDirectories` in `app.json`); Apple extracts their
 metadata at build time. iOS 27 schema intents sit behind `#if compiler(>=6.4)` so older Xcode still
