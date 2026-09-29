@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the widget picker shows for "Recent Saves": the 4x2 layout of
+     src/widgets/recent-saves-widget.android.tsx, with placeholder rows. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/amber_widget_preview_background"
+  android:orientation="horizontal"
+  android:padding="8dp">
+  <LinearLayout
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="2"
+    android:background="@drawable/amber_widget_preview_tile"
+    android:gravity="bottom"
+    android:orientation="vertical"
+    android:padding="10dp">
+    <ImageView
+      android:layout_width="18dp"
+      android:layout_height="18dp"
+      android:src="@drawable/amber_widget_inbox"
+      android:tint="@color/amber_widget_accent" />
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="4dp"
+      android:fontFamily="sans-serif-medium"
+      android:maxLines="2"
+      android:text="@string/recent_saves_display_name"
+      android:textColor="@color/amber_widget_foreground"
+      android:textSize="13sp" />
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:text="@string/recent_saves_description"
+      android:textColor="@color/amber_widget_muted"
+      android:textSize="11sp" />
+  </LinearLayout>
+  <LinearLayout
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_marginStart="12dp"
+    android:layout_weight="3"
+    android:orientation="vertical">
+    <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+      <FrameLayout
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/amber_widget_preview_thumb">
+        <ImageView
+          android:layout_width="16dp"
+          android:layout_height="16dp"
+          android:layout_gravity="center"
+          android:src="@drawable/amber_widget_link"
+          android:tint="@color/amber_widget_accent" />
+      </FrameLayout>
+      <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+        <ImageView
+          android:layout_width="104dp"
+          android:layout_height="8dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+        <ImageView
+          android:layout_width="64dp"
+          android:layout_height="6dp"
+          android:layout_marginTop="5dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+      </LinearLayout>
+    </LinearLayout>
+    <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+      <FrameLayout
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/amber_widget_preview_thumb">
+        <ImageView
+          android:layout_width="16dp"
+          android:layout_height="16dp"
+          android:layout_gravity="center"
+          android:src="@drawable/amber_widget_image"
+          android:tint="@color/amber_widget_accent" />
+      </FrameLayout>
+      <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+        <ImageView
+          android:layout_width="84dp"
+          android:layout_height="8dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+        <ImageView
+          android:layout_width="44dp"
+          android:layout_height="6dp"
+          android:layout_marginTop="5dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+      </LinearLayout>
+    </LinearLayout>
+    <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+      <FrameLayout
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/amber_widget_preview_thumb">
+        <ImageView
+          android:layout_width="16dp"
+          android:layout_height="16dp"
+          android:layout_gravity="center"
+          android:src="@drawable/amber_widget_description"
+          android:tint="@color/amber_widget_accent" />
+      </FrameLayout>
+      <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+        <ImageView
+          android:layout_width="112dp"
+          android:layout_height="8dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+        <ImageView
+          android:layout_width="56dp"
+          android:layout_height="6dp"
+          android:layout_marginTop="5dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+      </LinearLayout>
+    </LinearLayout>
+    <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+      <FrameLayout
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/amber_widget_preview_thumb">
+        <ImageView
+          android:layout_width="16dp"
+          android:layout_height="16dp"
+          android:layout_gravity="center"
+          android:src="@drawable/amber_widget_link"
+          android:tint="@color/amber_widget_accent" />
+      </FrameLayout>
+      <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+        <ImageView
+          android:layout_width="72dp"
+          android:layout_height="8dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+        <ImageView
+          android:layout_width="52dp"
+          android:layout_height="6dp"
+          android:layout_marginTop="5dp"
+          android:src="@drawable/amber_widget_preview_bar" />
+      </LinearLayout>
+    </LinearLayout>
+  </LinearLayout>
+</LinearLayout>

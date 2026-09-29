@@ -88,17 +88,30 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-widgets",
       {
+        enableAndroid: true,
         widgets: [
           {
             name: "RecentSaves",
             displayName: "Recent Saves",
             description: "Your latest saves, at a glance.",
-            supportedFamilies: ["systemSmall", "systemMedium"],
-            contentMarginsDisabled: true,
+            ios: {
+              supportedFamilies: ["systemSmall", "systemMedium"],
+              contentMarginsDisabled: true,
+            },
+            // One resizable widget: 4x2 by default, down to 2x2 (110dp),
+            // where the layout switches to the small grid.
+            android: {
+              minWidth: 110,
+              minHeight: 110,
+              targetCellWidth: 4,
+              targetCellHeight: 2,
+              initialLayout: "./src/widgets/recent-saves-widget.android.tsx",
+            },
           },
         ],
       },
     ],
+    "./plugins/with-android-widget",
     "./plugins/with-android-accent",
     "./plugins/with-plain-splash",
   ],
