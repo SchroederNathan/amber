@@ -37,17 +37,11 @@ struct AmberShortcuts: AppShortcutsProvider {
       )
     }
     #endif
+    // `SaveImageIntent` has no phrases on purpose. "Save this image to Amber" then reaches
+    // `SaveNoteIntent`, which gets the image on screen; a plain intent gets no screen content,
+    // so Siri made the user pick the image in Shortcuts. The builder only allows `#available`,
+    // so the phrases cannot be kept for older iOS alone.
     if #available(iOS 18.0, *) {
-      AppShortcut(
-        intent: SaveImageIntent(),
-        phrases: [
-          "Save this image to \(.applicationName)",
-          "Save this photo to \(.applicationName)",
-          "Save this screenshot to \(.applicationName)",
-        ],
-        shortTitle: "Save an Image",
-        systemImageName: "photo"
-      )
       AppShortcut(
         intent: SaveLinkIntent(),
         phrases: [

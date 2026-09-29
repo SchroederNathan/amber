@@ -126,8 +126,9 @@ struct SaveNoteIntent {
 }
 #endif
 
-/// "Save this image to Amber." A plain intent with an image parameter, so classic Siri,
-/// Shortcuts, and the share sheet can hand Amber photos and screenshots on any iOS 18 device.
+/// A plain intent with an image parameter, so Shortcuts and the share sheet can hand Amber
+/// photos and screenshots on any iOS 18 device. It has no Siri phrases: Siri cannot fill the
+/// parameter from the screen, so "save this image to Amber" goes to `SaveNoteIntent` instead.
 /// Naming an object in "Cut Out" ("the chair") saves that object as a die-cut sticker instead.
 @available(iOS 18.0, *)
 struct SaveImageIntent: AppIntent {
