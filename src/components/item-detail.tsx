@@ -387,6 +387,7 @@ function SimilarGrid({ items }: { items: DetailItem[] }) {
 // intentionally small so opening a detail page does not eagerly build that
 // interaction stack below the fold.
 function SimilarItemCard({ item }: { item: DetailItem }) {
+  const { theme } = useUnistyles();
   const imageUri = item.imageUrl ?? item.heroImageUrl;
   const aspectRatio = Math.min(
     Math.max(item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1), 0.5),
@@ -424,7 +425,14 @@ function SimilarItemCard({ item }: { item: DetailItem }) {
             </View>
           )
         ) : (
-          <View style={[styles.similarTextFace, item.type === 'note' && styles.similarNoteFace]}>
+          <View
+            style={[
+              styles.similarTextFace,
+              item.type === 'note' && styles.similarNoteFace,
+              item.type === 'note' &&
+                item.noteColor && { backgroundColor: theme.noteColors[item.noteColor] },
+            ]}
+          >
             <Text style={styles.similarTextFaceTitle} numberOfLines={4}>
               {title}
             </Text>

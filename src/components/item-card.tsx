@@ -3,6 +3,7 @@ import { SuggestedBadge } from '@/components/suggested-badge';
 import { displayHost, shareUrl } from '@/lib/url';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
+import type { NoteColor } from '@convex/model/noteColors';
 import { useMutation } from 'convex/react';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -22,6 +23,7 @@ export type FeedItem = {
   url?: string;
   siteName?: string;
   note?: string;
+  noteColor?: NoteColor;
   imageUrl?: string | null;
   heroImageUrl?: string;
   aspectRatio?: number;
@@ -133,7 +135,14 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
                 />
               </View>
             ) : (
-              <View style={[styles.textFace, item.type === 'note' && styles.noteFace]}>
+              <View
+                style={[
+                  styles.textFace,
+                  item.type === 'note' && styles.noteFace,
+                  item.type === 'note' &&
+                    item.noteColor && { backgroundColor: theme.noteColors[item.noteColor] },
+                ]}
+              >
                 {item.type === 'link' && (
                   <SymbolView
                     name="link"

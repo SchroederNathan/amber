@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { noteColorValidator } from "./model/noteColors";
 
 export default defineSchema({
   items: defineTable({
@@ -22,6 +23,9 @@ export default defineSchema({
     siteName: v.optional(v.string()),
     heroImageUrl: v.optional(v.string()),
     note: v.optional(v.string()),
+    // The color the user picked for a note in the composer. Absent means the
+    // default note fill.
+    noteColor: v.optional(noteColorValidator),
     // What a native capture (Siri) knew about the save: for images, the
     // user's words and the text read from the image on device; for notes,
     // empty. Steers the classifier and the source-page lookup; absent for

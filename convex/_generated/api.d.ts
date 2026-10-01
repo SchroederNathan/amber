@@ -14,6 +14,7 @@ import type * as http from "../http.js";
 import type * as items from "../items.js";
 import type * as model_auth from "../model/auth.js";
 import type * as model_memberships from "../model/memberships.js";
+import type * as model_noteColors from "../model/noteColors.js";
 import type * as model_tokens from "../model/tokens.js";
 import type * as spaces from "../spaces.js";
 
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   items: typeof items;
   "model/auth": typeof model_auth;
   "model/memberships": typeof model_memberships;
+  "model/noteColors": typeof model_noteColors;
   "model/tokens": typeof model_tokens;
   spaces: typeof spaces;
 }>;

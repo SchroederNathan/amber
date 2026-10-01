@@ -1,6 +1,7 @@
 import { buildColors, buildMedia, type Mode } from './colors';
 import { control, opacity } from './controls';
 import { motion } from './motion';
+import { buildNoteColors } from './note-colors';
 import { radius } from './radius';
 import { colorSchemes, type ColorSchemeName } from './schemes';
 import { shadows } from './shadows';
@@ -26,6 +27,7 @@ export function createTheme(scheme: ColorSchemeName, mode: Mode) {
     shadows,
     colors: buildColors(definition, mode),
     media: buildMedia(definition),
+    noteColors: buildNoteColors(mode),
   };
 }
 

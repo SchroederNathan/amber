@@ -4,6 +4,7 @@ import { isProbablyUrl } from '@/lib/url';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
+import { NOTE_COLORS, type NoteColor } from '@convex/model/noteColors';
 import { useMutation } from 'convex/react';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +18,62 @@ import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 type Mode = 'menu' | 'note' | 'article';
+
+const NOTE_COLOR_LABELS: Record<NoteColor, string> = {
+  yellow: 'Yellow',
+  green: 'Green',
+  blue: 'Blue',
+  pink: 'Pink',
+};
+
+// The note composer's color row: "no color" first, then each note color. The
+// picked color fills the note field, and the saved card wears it in the feed.
+function NoteColorPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: NoteColor | undefined;
+  onChange: (color: NoteColor | undefined) => void;
+  disabled?: boolean;
+}) {
+  const { theme } = useUnistyles();
+  const options = [undefined, ...NOTE_COLORS];
+  return (
+    <View style={styles.colorRow} accessibilityRole="radiogroup" accessibilityLabel="Note color">
+      {options.map((color) => {
+        const selected = color === value;
+        return (
+          <Pressable
+            key={color ?? 'none'}
+            accessibilityRole="radio"
+            accessibilityLabel={color ? NOTE_COLOR_LABELS[color] : 'No color'}
+            accessibilityState={{ selected, disabled }}
+            testID={`note-color-${color ?? 'none'}`}
+            hitSlop={6}
+            disabled={disabled}
+            onPress={() => {
+              if (process.env.EXPO_OS === 'ios') Haptics.selectionAsync();
+              onChange(color);
+            }}
+            style={[styles.colorRing, selected && { borderColor: theme.colors.foreground }]}
+          >
+            <View
+              style={[
+                styles.colorSwatch,
+                {
+                  backgroundColor: color
+                    ? theme.noteColors[color]
+                    : theme.colors.primarySoft,
+                },
+              ]}
+            />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function ActionButton({
   icon,
@@ -92,6 +149,7 @@ export default function AddScreen() {
   const [mode, setMode] = useState<Mode>('menu');
   const [saving, setSaving] = useState(false);
   const [value, setValue] = useState('');
+  const [noteColor, setNoteColor] = useState<NoteColor | undefined>();
 
   const createLinkItem = useMutation(api.items.createLinkItem);
   const createNoteItem = useMutation(api.items.createNoteItem);
@@ -137,6 +195,7 @@ export default function AddScreen() {
 
   const openComposer = (next: Mode) => {
     setValue('');
+    setNoteColor(undefined);
     setMode(next);
   };
 
@@ -147,7 +206,7 @@ export default function AddScreen() {
       if (mode === 'article') {
         await createLinkItem({ url: trimmed, spaceId: pinnedSpaceId });
       } else {
-        await createNoteItem({ text: trimmed, spaceId: pinnedSpaceId });
+        await createNoteItem({ text: trimmed, spaceId: pinnedSpaceId, color: noteColor });
       }
       success();
     } catch {
@@ -250,7 +309,11 @@ export default function AddScreen() {
         <TextInput
           ref={inputRef}
           testID="add-input"
-          style={isArticle ? styles.articleInput : styles.noteInput}
+          style={[
+            isArticle ? styles.articleInput : styles.noteInput,
+            !isArticle &&
+              noteColor && { backgroundColor: theme.noteColors[noteColor] },
+          ]}
           value={value}
           onChangeText={setValue}
           placeholder={isArticle ? 'Paste or type a link…' : 'Jot a note…'}
@@ -264,7 +327,11 @@ export default function AddScreen() {
           onSubmitEditing={isArticle ? save : undefined}
           editable={!saving}
         />
-      ) : (
+      ) : null}
+      {mode === 'note' ? (
+        <NoteColorPicker value={noteColor} onChange={setNoteColor} disabled={saving} />
+      ) : null}
+      {isComposer ? null : (
         <View style={styles.actions}>
           <ActionButton
             icon="square.and.pencil"
@@ -359,6 +426,26 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     textAlignVertical: 'top',
+  },
+  colorRow: {
+    flexDirection: 'row',
+    gap: theme.gap(1),
+    paddingHorizontal: theme.spacing.xs,
+  },
+  // A transparent ring that turns `foreground` when its color is picked.
+  colorRing: {
+    width: 36,
+    height: 36,
+    padding: 3,
+    borderRadius: theme.radius.full,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorSwatch: {
+    flex: 1,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.imageBorder,
   },
   articleInput: {
     ...theme.type.reader,
