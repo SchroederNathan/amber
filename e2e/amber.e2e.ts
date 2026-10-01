@@ -143,9 +143,12 @@ test.describe('amber', { serial: true }, () => {
 
     // Feed cards are missing from agent-device's snapshot, so judge the color
     // from pixels. The feed is newest first: the new note is the first card.
-    // Wait for the AI to finish too, so the cleanup below knows its title.
+    // Name its subject too: the explore pass leaves colored notes on the shared
+    // account, so a yellow card alone could be an old one. Wait for the AI to
+    // finish as well, so the cleanup below knows its title.
     await agent.waitFor(
-      'the first card in the Home feed (top left) has a yellow background, and it shows no loading spinner',
+      'the first card in the Home feed (top left) has a yellow background, is a note about a bakery or bread, ' +
+        'and shows no loading spinner',
       { vision: 'only', timeout: 120_000, interval: 5_000 },
     );
     const title = await agent.extract('the title text on the first card in the Home feed (top left)', {
