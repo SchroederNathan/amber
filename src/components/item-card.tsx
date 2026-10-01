@@ -135,7 +135,12 @@ export function ItemCard({ item, source }: { item: FeedItem; source?: ItemSource
                 />
               </View>
             ) : (
+              // Not collapsable: Unistyles sets this view's fill natively, so
+              // Fabric can flatten it as layout-only and, when it mounts later
+              // (a new note, a recycled cell), draw the fill over the text. New
+              // notes showed a blank face until the app restarted.
               <View
+                collapsable={false}
                 style={[
                   styles.textFace,
                   item.type === 'note' && styles.noteFace,

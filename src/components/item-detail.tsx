@@ -236,9 +236,20 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
         ) : null}
 
         {item.type === 'note' && item.note && item.title ? (
-          <Text selectable style={styles.paragraph}>
-            {item.note}
-          </Text>
+          // A colored note's text sits on a sheet of its color, like the
+          // composer field it was typed in.
+          <View
+            collapsable={false}
+            style={
+              item.noteColor
+                ? [styles.noteSheet, { backgroundColor: theme.noteColors[item.noteColor] }]
+                : undefined
+            }
+          >
+            <Text selectable style={styles.paragraph}>
+              {item.note}
+            </Text>
+          </View>
         ) : null}
 
         {paragraphs.length > 0 ? (
@@ -425,7 +436,9 @@ function SimilarItemCard({ item }: { item: DetailItem }) {
             </View>
           )
         ) : (
+          // Not collapsable, like the feed card's face (see item-card.tsx).
           <View
+            collapsable={false}
             style={[
               styles.similarTextFace,
               item.type === 'note' && styles.similarNoteFace,
@@ -523,6 +536,11 @@ const styles = StyleSheet.create((theme) => ({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingTop: theme.gap(2),
+  },
+  noteSheet: {
+    padding: theme.gap(2),
+    borderRadius: theme.radius.lg,
+    borderCurve: 'continuous',
   },
   paragraph: {
     ...theme.type.body,
