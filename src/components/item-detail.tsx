@@ -161,6 +161,20 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           </View>
         ) : null}
 
+        {item.type === 'note' && item.note && item.noteColor ? (
+          // A colored note leads with its text on a sheet of its color, like
+          // the composer field it was typed in, so the color is the first
+          // thing on the page.
+          <View
+            collapsable={false}
+            style={[styles.noteSheet, { backgroundColor: theme.noteColors[item.noteColor] }]}
+          >
+            <Text selectable style={styles.paragraph}>
+              {item.note}
+            </Text>
+          </View>
+        ) : null}
+
         {item.url ? (
           <View style={styles.titleContainer}>
             <Pressable
@@ -235,21 +249,10 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           <ProductsSection item={item} />
         ) : null}
 
-        {item.type === 'note' && item.note && item.title ? (
-          // A colored note's text sits on a sheet of its color, like the
-          // composer field it was typed in.
-          <View
-            collapsable={false}
-            style={
-              item.noteColor
-                ? [styles.noteSheet, { backgroundColor: theme.noteColors[item.noteColor] }]
-                : undefined
-            }
-          >
-            <Text selectable style={styles.paragraph}>
-              {item.note}
-            </Text>
-          </View>
+        {item.type === 'note' && item.note && item.title && !item.noteColor ? (
+          <Text selectable style={styles.paragraph}>
+            {item.note}
+          </Text>
         ) : null}
 
         {paragraphs.length > 0 ? (
