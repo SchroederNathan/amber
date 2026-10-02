@@ -1,18 +1,29 @@
 import type { E2EConfig } from 'e2e';
-import { createAgent } from 'e2e/agent';
 import { mobile } from '@e2e-dev/mobile';
+import { easSimulators } from '@e2e-dev/eas';
 import { mobileTools } from '@e2e-dev/mobile/tools';
 import { gateway } from 'ai';
 
-// The `e2e` EAS build profile builds APP_VARIANT=preview, so CI drives
-// `com.schroedernathan.preview`. Point E2E_APP_ID at `com.schroedernathan.dev`
-// to run the suite against a local dev client instead. E2E_DEVICE (a simulator
-// name or UDID) pins the device when several are booted.
+// With E2E_EAS_BUILD_ID set (CI does), the run gets its own hosted EAS Simulators
+// iPhone with that simulator build installed, started when the run starts and
+// stopped when it ends; EXPO_TOKEN (or an `eas login`) authenticates it.
+// Without it, the run drives a local booted simulator: E2E_DEVICE (a name or
+// UDID) pins one when several are booted.
+// Not EAS_BUILD_ID: EAS Build sets that one for the job itself and fetches the
+// job's sources with it, so overriding it in a workflow job breaks the job.
+const easBuildId = process.env.E2E_EAS_BUILD_ID;
 const iphone = mobile({
   platform: 'ios',
-  app: process.env.E2E_APP_ID ?? 'com.schroedernathan.preview',
-  device: process.env.E2E_DEVICE,
+  device: easBuildId ? easSimulators({ buildId: easBuildId, tags: ['pr-e2e'] }) : process.env.E2E_DEVICE,
+  // Drawing touches into a recording on an EAS iOS simulator outlasts the
+  // attempt's cleanup (@e2e-dev/eas README).
+  videoTouches: easBuildId ? false : undefined,
 });
+
+// The `e2e` EAS build profile builds APP_VARIANT=preview, so CI drives
+// `com.schroedernathan.preview`. Point E2E_APP_ID at `com.schroedernathan.dev`
+// to run the suite against a local dev client instead.
+const app = { bundleId: process.env.E2E_APP_ID ?? 'com.schroedernathan.preview' };
 
 // What the app calls things. The act loop and the judges both read it, so it
 // holds facts only. Instructions for the actor go in `system` below.
@@ -42,20 +53,20 @@ const tools = mobileTools(iphone);
 
 export default {
   tests: 'e2e/**/*.e2e.ts',
-  targets: [{ name: 'ios', engine: iphone }],
+  targets: [{ name: 'ios', engine: iphone, app }],
   workers: 1,
   reporters: ['list', 'junit', 'markdown'],
   agents: {
     // Fast, cheap model for the scripted suite's `agent.act` steps.
-    default: createAgent({ model: gateway('openai/gpt-6-luna-fast'), tools, context, system }),
+    default: { model: gateway('openai/gpt-6-luna-fast'), tools, context, system },
     // Stronger model for `e2e explore`, which plans its own flows.
-    explorer: createAgent({
+    explorer: {
       model: gateway('openai/gpt-6-luna'),
       tools,
       context,
       system:
         `${system} You are testing a pull request build. Stay on the screens the goal names. ` +
         'Do not delete items you did not create, and do not change account or privacy settings.',
-    }),
+    },
   },
 } satisfies E2EConfig;

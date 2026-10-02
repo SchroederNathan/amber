@@ -113,6 +113,10 @@ throughout; keep them accurate or functions fail at runtime.
   - To add a scheme, add one entry to `colorSchemes`. To switch at runtime, call
     `setColorScheme(name)` from `src/lib/color-scheme.ts` (persisted in MMKV, read before
     `StyleSheet.configure`). The home-screen widget gets the active palette with each snapshot.
+  - `plugins/load-theme.js` bundles `src/theme/colors.ts` and `schemes.ts` for native resources
+    (Android accent, widget palette), so an edit there changes the native fingerprint and the PR
+    e2e workflow builds instead of repacking. Put JS-only tokens in their own file (e.g.
+    `note-colors.ts`, exposed as `theme.noteColors`).
   - Never hardcode hex colors outside `src/theme/`. Skia and other JS-read colors
     (e.g. `AnimatedText`'s `color` prop) must come from `useUnistyles()`, not from a
     `StyleSheet.create` style: those don't update on a live theme change.

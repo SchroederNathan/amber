@@ -161,6 +161,20 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           </View>
         ) : null}
 
+        {item.type === 'note' && item.note && item.noteColor ? (
+          // A colored note leads with its text on a sheet of its color, like
+          // the composer field it was typed in, so the color is the first
+          // thing on the page.
+          <View
+            collapsable={false}
+            style={[styles.noteSheet, { backgroundColor: theme.noteColors[item.noteColor] }]}
+          >
+            <Text selectable style={styles.paragraph}>
+              {item.note}
+            </Text>
+          </View>
+        ) : null}
+
         {item.url ? (
           <View style={styles.titleContainer}>
             <Pressable
@@ -235,7 +249,7 @@ export const ItemDetail = memo(function ItemDetail({ item, isZoomTarget }: Props
           <ProductsSection item={item} />
         ) : null}
 
-        {item.type === 'note' && item.note && item.title ? (
+        {item.type === 'note' && item.note && item.title && !item.noteColor ? (
           <Text selectable style={styles.paragraph}>
             {item.note}
           </Text>
@@ -387,6 +401,7 @@ function SimilarGrid({ items }: { items: DetailItem[] }) {
 // intentionally small so opening a detail page does not eagerly build that
 // interaction stack below the fold.
 function SimilarItemCard({ item }: { item: DetailItem }) {
+  const { theme } = useUnistyles();
   const imageUri = item.imageUrl ?? item.heroImageUrl;
   const aspectRatio = Math.min(
     Math.max(item.aspectRatio ?? (item.type === 'link' ? 1.91 : 1), 0.5),
@@ -424,7 +439,16 @@ function SimilarItemCard({ item }: { item: DetailItem }) {
             </View>
           )
         ) : (
-          <View style={[styles.similarTextFace, item.type === 'note' && styles.similarNoteFace]}>
+          // Not collapsable, like the feed card's face (see item-card.tsx).
+          <View
+            collapsable={false}
+            style={[
+              styles.similarTextFace,
+              item.type === 'note' && styles.similarNoteFace,
+              item.type === 'note' &&
+                item.noteColor && { backgroundColor: theme.noteColors[item.noteColor] },
+            ]}
+          >
             <Text style={styles.similarTextFaceTitle} numberOfLines={4}>
               {title}
             </Text>
@@ -515,6 +539,11 @@ const styles = StyleSheet.create((theme) => ({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingTop: theme.gap(2),
+  },
+  noteSheet: {
+    padding: theme.gap(2),
+    borderRadius: theme.radius.lg,
+    borderCurve: 'continuous',
   },
   paragraph: {
     ...theme.type.body,
