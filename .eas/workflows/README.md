@@ -59,7 +59,7 @@ manual dispatches. It has five jobs:
    `bun x e2e explore` with a goal made from the PR title, description, and
    changed screens. The suite blocks the PR. Explore only reports. There is
    no session step: `e2e.config.ts` uses the EAS Simulators device provider
-   (`@e2e-dev/eas`), so with `EAS_BUILD_ID` set each pass leases its own
+   (`@e2e-dev/eas`), so with `E2E_EAS_BUILD_ID` set each pass leases its own
    hosted iPhone with the build installed and stops it when it ends.
 4. `comment` posts a summary on the PR. Screenshots, videos, `report.json`,
    and `junit.xml` are in the `e2e-results` artifact.
@@ -70,7 +70,7 @@ Run it by hand, with an optional explore goal:
 bunx eas-cli@latest workflow:run .eas/workflows/pr-e2e.yml -F goal="Save a link and check its detail screen"
 ```
 
-Run the suite locally against a booted simulator (leave `EAS_BUILD_ID` unset;
+Run the suite locally against a booted simulator (leave `E2E_EAS_BUILD_ID` unset;
 set it to an `e2e` simulator build id to run on EAS Simulators instead). The runner does not read
 `.env.local`, so load it for `AI_GATEWAY_API_KEY`. Set `E2E_DEVICE` (name or
 UDID) when several simulators are booted, and `E2E_APP_ID` to test a dev

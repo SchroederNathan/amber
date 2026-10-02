@@ -2,7 +2,7 @@ name: PR E2E (TesterArmy on EAS Simulator)
 
 # Builds (or repacks) an iOS simulator build of the PR, then runs two
 # TesterArmy `e2e` passes. e2e.config.ts uses the EAS Simulators device
-# provider (@e2e-dev/eas): with EAS_BUILD_ID set, each pass gets its own hosted
+# provider (@e2e-dev/eas): with E2E_EAS_BUILD_ID set, each pass gets its own hosted
 # iPhone with the build installed, started and stopped by e2e itself.
 #   1. `e2e run`: the scripted suite in e2e/. It blocks the PR when it fails.
 #   2. `e2e explore`: an agent reads the PR title, description, and changed
@@ -99,7 +99,8 @@ jobs:
     # always returns a string. e2e/ci/pr.mjs and explore-goal.mjs parse them.
     env:
       # The simulator build the EAS Simulators provider installs (e2e.config.ts).
-      EAS_BUILD_ID: ${{ after.repack.outputs.build_id || after.build.outputs.build_id }}
+      # Not EAS_BUILD_ID: EAS sets that for this job and fetches its sources by it.
+      E2E_EAS_BUILD_ID: ${{ after.repack.outputs.build_id || after.build.outputs.build_id }}
       PR_JSON: ${{ toJSON(github.event.pull_request || '') }}
       SKIP_EXPLORE: ${{ toJSON(inputs.explore == false) }}
       MANUAL_GOAL: ${{ toJSON(inputs.goal || '') }}

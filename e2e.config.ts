@@ -4,12 +4,14 @@ import { easSimulators } from '@e2e-dev/eas';
 import { mobileTools } from '@e2e-dev/mobile/tools';
 import { gateway } from 'ai';
 
-// With EAS_BUILD_ID set (CI does), the run gets its own hosted EAS Simulators
+// With E2E_EAS_BUILD_ID set (CI does), the run gets its own hosted EAS Simulators
 // iPhone with that simulator build installed, started when the run starts and
 // stopped when it ends; EXPO_TOKEN (or an `eas login`) authenticates it.
 // Without it, the run drives a local booted simulator: E2E_DEVICE (a name or
 // UDID) pins one when several are booted.
-const easBuildId = process.env.EAS_BUILD_ID;
+// Not EAS_BUILD_ID: EAS Build sets that one for the job itself and fetches the
+// job's sources with it, so overriding it in a workflow job breaks the job.
+const easBuildId = process.env.E2E_EAS_BUILD_ID;
 const iphone = mobile({
   platform: 'ios',
   device: easBuildId ? easSimulators({ buildId: easBuildId, tags: ['pr-e2e'] }) : process.env.E2E_DEVICE,
