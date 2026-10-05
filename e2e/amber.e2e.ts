@@ -1,5 +1,5 @@
 import { test } from '@e2e-dev/mobile';
-import { expect, unique } from 'e2e';
+import { expect, unique, type TestFixtures } from 'e2e';
 import { z } from 'zod';
 
 // A pronounceable made-up name, different on every run (e.g. "Morvelin").
@@ -15,6 +15,43 @@ async function tapCenter(locator: { boundingBox(): Promise<{ width: number; heig
   const box = await locator.boundingBox();
   if (!box) throw new Error('The node to tap has no bounding box.');
   await locator.tap({ position: { x: box.width / 2, y: box.height / 2 } });
+}
+
+// Opens Home's Add sheet and its note composer. agent-device reports every
+// control in the form sheet as covered (by the sheet's full-screen dismiss
+// region), so plain taps and fills are refused; tapCenter taps at a position,
+// which goes to that point directly. A tap that lands while the sheet is still
+// sliding up can be lost (1 of 2 local runs), and a position tap does not wait
+// for the sheet to settle, so tap Note again until the composer opens.
+async function openNoteComposer(screen: TestFixtures['screen']) {
+  await screen.getByRole('button', { name: 'Add' }).tap();
+  const input = screen.getByTestId('add-input');
+  for (let taps = 0; !(await input.isVisible()); taps++) {
+    if (taps === 3) throw new Error('The note composer did not open after 3 taps on Note.');
+    await tapCenter(screen.getByTestId('add-note'));
+    await input.waitFor({ timeout: 3_000 }).catch(() => {});
+  }
+  await expect(input).toBeVisible();
+}
+
+// Deletes the first card in the Home feed. The act loop cannot see feed cards
+// in the tree and must tap ⋯ from a screenshot, so this uses the stronger
+// explorer model and stops at Delete. Best effort: a miss leaves one item
+// behind on the shared test account but does not fail the suite.
+async function deleteFirstCard(agent: TestFixtures['agent'], title: string) {
+  try {
+    await agent.act(
+      'take a screenshot, tap the ⋯ button under the first card in the Home feed (top left, titled {title}), ' +
+        'then choose Delete. Stop as soon as you have tapped Delete; do not check the feed afterwards.',
+      { agent: 'explorer', params: { title: unique(title) } },
+    );
+    await agent.waitFor(`the first card in the Home feed (top left) is no longer titled "${title}"`, {
+      vision: 'only',
+      timeout: 15_000,
+    });
+  } catch (error) {
+    console.warn(`Cleanup: could not delete the "${title}" note.`, error);
+  }
 }
 
 // One serial group: the members share one signed-in app, in order. CI starts
@@ -61,20 +98,7 @@ test.describe('amber', { serial: true }, () => {
     await app.open();
 
     // The Add sheet is in the accessibility tree: exact steps, no model calls.
-    await screen.getByRole('button', { name: 'Add' }).tap();
-    // agent-device reports every control in the form sheet as covered (by
-    // the sheet's full-screen dismiss region), so plain taps and fills are
-    // refused. tapCenter taps at a position, which goes to that point directly.
-    // A tap that lands while the sheet is still sliding up can be lost (1 of
-    // 2 local runs), and a position tap does not wait for the sheet to settle.
-    // Tap again until the composer opens.
-    const input = screen.getByTestId('add-input');
-    for (let taps = 0; !(await input.isVisible()); taps++) {
-      if (taps === 3) throw new Error('The note composer did not open after 3 taps on Note.');
-      await tapCenter(screen.getByTestId('add-note'));
-      await input.waitFor({ timeout: 3_000 }).catch(() => {});
-    }
-    await expect(input).toBeVisible();
+    await openNoteComposer(screen);
 
     // The composer focuses its field on open. The locator fill is refused
     // too, but the agent can type into the focused field.
@@ -96,23 +120,42 @@ test.describe('amber', { serial: true }, () => {
       vision: 'only',
     });
 
-    // Clean up so the shared test account does not fill with E2E notes. The
-    // act loop cannot see feed cards in the tree and must tap ⋯ from a
-    // screenshot, so this uses the stronger explorer model and stops at
-    // Delete. Cleanup is best effort: a miss leaves one note behind but does
-    // not fail the suite.
-    try {
-      await agent.act(
-        'take a screenshot, tap the ⋯ button under the first card in the Home feed (top left, titled {title}), ' +
-          'then choose Delete. Stop as soon as you have tapped Delete; do not check the feed afterwards.',
-        { agent: 'explorer', params: { title: unique(title) } },
-      );
-      await agent.waitFor(`the first card in the Home feed (top left) is no longer titled "${title}"`, {
-        vision: 'only',
-        timeout: 15_000,
-      });
-    } catch (error) {
-      console.warn(`Cleanup: could not delete the "${title}" note.`, error);
-    }
+    // Clean up so the shared test account does not fill with E2E notes.
+    await deleteFirstCard(agent, title);
+  });
+
+  test('saves a yellow note and its card is yellow', { timeout: 300_000 }, async ({ agent, app, screen }) => {
+    // The previous test ends on Home, but relaunch anyway so this test does
+    // not depend on where it stopped.
+    await app.open();
+    await openNoteComposer(screen);
+
+    // Type first: the composer focuses its field on open, and the agent types
+    // into the focused field (the locator fill is refused in the form sheet).
+    await agent.act('type {text} into the focused note field. Do not tap anything.', {
+      params: { text: unique(`Pick up the rye loaf at ${bakeryName()} bakery on Saturday`) },
+    });
+
+    // The new part: pick Yellow in the color row under the field. The field
+    // fills with the color, and the saved note's card wears it.
+    await tapCenter(screen.getByTestId('note-color-yellow'));
+    await tapCenter(screen.getByRole('button', { name: 'Save' }));
+
+    // Feed cards are missing from agent-device's snapshot, so judge the color
+    // from pixels. The feed is newest first: the new note is the first card.
+    // Name its subject too: the explore pass leaves colored notes on the shared
+    // account, so a yellow card alone could be an old one. Wait for the AI to
+    // finish as well, so the cleanup below knows its title.
+    await agent.waitFor(
+      'the first card in the Home feed (top left) has a yellow background, is a note about a bakery or bread, ' +
+        'and shows no loading spinner',
+      { vision: 'only', timeout: 120_000, interval: 5_000 },
+    );
+    const title = await agent.extract('the title text on the first card in the Home feed (top left)', {
+      schema: z.string().min(1),
+      vision: 'only',
+    });
+
+    await deleteFirstCard(agent, title);
   });
 });

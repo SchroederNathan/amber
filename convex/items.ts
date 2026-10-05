@@ -10,6 +10,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { requireUserId } from "./model/auth";
 import { effectiveStatus } from "./model/memberships";
+import { noteColorValidator, type NoteColor } from "./model/noteColors";
 
 /** Practical per-query cap so a very large library can't blow the read limit. */
 const LIST_CAP = 1000;
@@ -80,6 +81,7 @@ const itemFields = {
   siteName: v.optional(v.string()),
   heroImageUrl: v.optional(v.string()),
   note: v.optional(v.string()),
+  noteColor: v.optional(noteColorValidator),
   captureContext: v.optional(v.string()),
   intents: v.optional(v.array(intentValidator)),
   products: v.optional(v.array(productValidator)),
@@ -402,6 +404,7 @@ export async function insertNoteItem(
   text: string,
   spaceId?: Id<"spaces">,
   captureContext?: string,
+  noteColor?: NoteColor,
 ): Promise<Id<"items">> {
   if (text.trim() === "") {
     throw new Error("Note text is empty");
@@ -411,6 +414,7 @@ export async function insertNoteItem(
     type: "note",
     status: "processing",
     note: text,
+    noteColor,
     captureContext,
     tags: [],
     searchText: "",
@@ -432,11 +436,15 @@ export const createLinkItem = mutation({
 });
 
 export const createNoteItem = mutation({
-  args: { text: v.string(), spaceId: v.optional(v.id("spaces")) },
+  args: {
+    text: v.string(),
+    spaceId: v.optional(v.id("spaces")),
+    color: v.optional(noteColorValidator),
+  },
   returns: v.id("items"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    return await insertNoteItem(ctx, userId, args.text, args.spaceId);
+    return await insertNoteItem(ctx, userId, args.text, args.spaceId, undefined, args.color);
   },
 });
 
@@ -611,6 +619,7 @@ export const convertNoteToLinkInternal = internalMutation({
       type: "link",
       url: normalizeUrl(args.url),
       note: undefined,
+      noteColor: undefined,
       captureContext: undefined,
       title: args.title,
       description: args.description,

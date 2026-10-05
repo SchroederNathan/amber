@@ -55,11 +55,12 @@ manual dispatches. It has five jobs:
    `build` makes a new one. The `e2e` profile is a Release simulator build
    (`APP_VARIANT=preview`, `EXPO_PUBLIC_E2E=1`), so it shows the Dev login
    button.
-3. `e2e` starts an EAS Simulator session with the build installed. It runs
-   `bun run e2e` (the scripted suite in `e2e/`) through `simulator:exec`.
-   Then it runs `bun run e2e:explore` with a goal made from the PR title,
-   description, and changed screens. The suite blocks the PR. Explore only
-   reports.
+3. `e2e` runs `bun x e2e run` (the scripted suite in `e2e/`), then
+   `bun x e2e explore` with a goal made from the PR title, description, and
+   changed screens. The suite blocks the PR. Explore only reports. There is
+   no session step: `e2e.config.ts` uses the EAS Simulators device provider
+   (`@e2e-dev/eas`), so with `E2E_EAS_BUILD_ID` set each pass leases its own
+   hosted iPhone with the build installed and stops it when it ends.
 4. `comment` posts a summary on the PR. Screenshots, videos, `report.json`,
    and `junit.xml` are in the `e2e-results` artifact.
 
@@ -69,7 +70,8 @@ Run it by hand, with an optional explore goal:
 bunx eas-cli@latest workflow:run .eas/workflows/pr-e2e.yml -F goal="Save a link and check its detail screen"
 ```
 
-Run the suite locally against a booted simulator. The runner does not read
+Run the suite locally against a booted simulator (leave `E2E_EAS_BUILD_ID` unset;
+set it to an `e2e` simulator build id to run on EAS Simulators instead). The runner does not read
 `.env.local`, so load it for `AI_GATEWAY_API_KEY`. Set `E2E_DEVICE` (name or
 UDID) when several simulators are booted, and `E2E_APP_ID` to test a dev
 client (`com.schroedernathan.dev`) instead of an `e2e` build:
@@ -110,6 +112,6 @@ Quirks the suite works around (see comments in `e2e/amber.e2e.ts`):
    test agents call GPT-6 Luna through the AI Gateway.
 2. If the "Check EAS credentials" step fails, add an `EXPO_TOKEN` secret
    (a robot token with access to this project) to the `development`
-   environment. `simulator:start` needs it.
-3. `e2e` and `@e2e-dev/mobile` are canary releases. Keep them pinned to
-   exact versions and bump both together.
+   environment. The EAS Simulators provider authenticates with it.
+3. Keep `e2e`, `@e2e-dev/mobile`, and `@e2e-dev/eas` pinned to exact
+   versions and bump them together.
