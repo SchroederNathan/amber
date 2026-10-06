@@ -5,10 +5,14 @@ import { Pressable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Button } from '@/components/ui/button';
+import { SymbolView } from '@/components/ui/symbol';
 
-export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin }: {
+export function Welcome({ pending = false, error, biometricLabel, onBiometric, onApple, onGoogle, onDevLogin }: {
   pending?: boolean;
   error?: string | null;
+  // Set when this device has a biometric credential for a returning user.
+  biometricLabel?: string | null;
+  onBiometric?: () => void;
   onApple?: () => void;
   onGoogle?: () => void;
   onDevLogin?: () => void;
@@ -16,7 +20,9 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const [provider, setProvider] = useState<'apple' | 'google' | null>(null);
+  const [provider, setProvider] = useState<'biometric' | 'apple' | 'google' | null>(null);
+  // A returning user's quickest way back in leads; Apple steps down to match Google.
+  const appleVariant = biometricLabel ? 'secondary' : 'primary';
   return (
     <ScrollView
       style={styles.screen}
@@ -34,15 +40,27 @@ export function Welcome({ pending = false, error, onApple, onGoogle, onDevLogin 
           <Text style={styles.body}>Keep what catches your eye.</Text>
         </View>
         <View style={styles.actions}>
+          {biometricLabel && (
+            <Button
+              title={`Sign in with ${biometricLabel}`}
+              size="lg"
+              testID="biometric-login-button"
+              disabled={pending}
+              loading={pending && provider === 'biometric'}
+              onPress={() => { setProvider('biometric'); onBiometric?.(); }}
+              icon={<SymbolView name={biometricLabel === 'Face ID' ? 'faceid' : 'touchid'} size={22} tintColor={theme.colors.onPrimary} accessible={false} />}
+            />
+          )}
           <Button
             // Android signs in through Apple's web flow, where "iCloud" means nothing.
             title={process.env.EXPO_OS === 'ios' ? 'Continue with iCloud' : 'Continue with Apple'}
             size="lg"
+            variant={appleVariant}
             testID="apple-login-button"
             disabled={pending}
             loading={pending && provider === 'apple'}
             onPress={() => { setProvider('apple'); onApple?.(); }}
-            icon={<Image source={require('@assets/images/sign-in/apple.svg')} style={styles.providerIcon} tintColor={theme.colors.onPrimary} contentFit="contain" accessible={false} />}
+            icon={<Image source={require('@assets/images/sign-in/apple.svg')} style={styles.providerIcon} tintColor={appleVariant === 'primary' ? theme.colors.onPrimary : theme.colors.foreground} contentFit="contain" accessible={false} />}
           />
           <Button
             title="Continue with Google"

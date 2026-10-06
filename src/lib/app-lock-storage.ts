@@ -1,7 +1,7 @@
-import * as LocalAuthentication from 'expo-local-authentication';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { biometricLabel, getDeviceBiometrics } from './device-biometrics';
 import { hideRecentSavesWidget } from './widget-sync';
 import type { LockDependencies } from './app-lock-controller';
 
@@ -86,14 +86,9 @@ export const biometricMethods =
 
 export async function getBiometricLabel() {
   if (Platform.OS === 'web') return { available: false, label: 'Biometrics' };
-  const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-  const label =
-    Platform.OS === 'ios'
-      ? types.includes(
-          LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
-        )
-        ? 'Face ID'
-        : 'Touch ID'
-      : 'Biometrics';
-  return { available: SecureStore.canUseBiometricAuthentication(), label };
+  const device = await getDeviceBiometrics();
+  return {
+    available: SecureStore.canUseBiometricAuthentication(),
+    label: biometricLabel(device?.biometryType),
+  };
 }

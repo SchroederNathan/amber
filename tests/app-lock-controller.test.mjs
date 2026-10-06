@@ -285,3 +285,32 @@ test('turning the lock off lifts screen protection, and a failed lift still disa
   assert.equal(await failing.lock.authenticate('disable'), true);
   assert.equal(failing.lock.getSnapshot().status, 'disabled');
 });
+
+test('a session from biometric sign-in starts unlocked once, then locks as usual', async () => {
+  let prompts = 0;
+  const { lock, clock } = fixture(
+    { verify: async () => { prompts++; return true; } },
+    { startUnlocked: true, autoPrompt: true },
+  );
+  await lock.load();
+  assert.equal(lock.getSnapshot().status, 'unlocked');
+  assert.equal(prompts, 0);
+  lock.activityChanged('background');
+  clock.now = 120_000;
+  lock.activityChanged('active');
+  await settle();
+  assert.equal(prompts, 1);
+});
+
+test('a reload after biometric sign-in must verify again', async () => {
+  const { lock } = fixture({}, { startUnlocked: true });
+  await lock.load();
+  await lock.load();
+  assert.equal(lock.getSnapshot().status, 'locked');
+});
+
+test('a biometric sign-in does not lock an account that opted out', async () => {
+  const { lock } = fixture({ readEnabled: async () => false }, { startUnlocked: true });
+  await lock.load();
+  assert.equal(lock.getSnapshot().status, 'disabled');
+});

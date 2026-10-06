@@ -6,11 +6,11 @@ Amber keeps Apple/Google sign-in and Clerk's supported token cache. A separate d
 
 Checked against Expo SDK 57 and the installed `@clerk/expo` 3.7.6 on September 22, 2026:
 
-- [Expo local authentication](https://docs.expo.dev/versions/v57.0.0/sdk/local-authentication/) supplies hardware/enrollment information.
+- Hardware and enrollment information (the Face ID / Touch ID label) now comes from `getAvailability()` in `@clerk/expo-biometrics`, which replaced `expo-local-authentication` on October 6, 2026.
 - [Expo SecureStore](https://docs.expo.dev/versions/v57.0.0/sdk/securestore/) gates a per-account proof with `requireAuthentication`. Its native implementations use `biometryCurrentSet` on iOS and strong biometrics on Android. Enrollment changes invalidate the proof. No device-passcode fallback is configured.
 - [Expo screen capture](https://docs.expo.dev/versions/v57.0.0/sdk/screen-capture/) supplies native app-switcher protection. iOS uses the maximum blur; Android uses `FLAG_SECURE`, which also blocks screenshots and recording.
 - [Clerk local credentials](https://clerk.com/docs/reference/expo/native-hooks/use-local-credentials) saves and replays a password. Amber's production sign-in is Apple/Google, so this is unsuitable.
-- [Clerk biometric credentials](https://clerk.com/docs/expo/guides/development/custom-flows/authentication/biometric-sign-in) documents device-key enrollment and Clerk sign-in. The installed SDK does not export this API. Even after an SDK upgrade, sign-in would still need a local session lock to cover reopening an already signed-in app.
+- [Clerk biometric credentials](https://clerk.com/docs/expo/guides/development/custom-flows/authentication/biometric-sign-in) are for authentication only. Amber uses them for a separate "Sign in with Face ID" setting (see below), not for this lock. Clerk's mobile team confirmed on October 6, 2026 that `signIn()` and `reverify()` are not meant for a local app unlock: `reverify()` exists for backend-requested reverification before sensitive actions, and each call makes four requests to Clerk's Frontend API, so it can't work offline.
 
 No Clerk dashboard changes, stored account passwords, or Convex schema changes are needed for this implementation. Existing Clerk Native API, Apple/Google providers, and the Convex JWT configuration remain prerequisites.
 
@@ -28,6 +28,18 @@ No Clerk dashboard changes, stored account passwords, or Convex schema changes a
 - The previous global onboarding flag is not migrated. Each account sees onboarding once again to receive the privacy choice.
 
 Biometrics identify someone enrolled on the device, not a unique Clerk account owner. Someone else's enrolled face/fingerprint also unlocks the app. The lock does not encrypt server records, revoke Clerk tokens, protect a rooted device, or change the access properties of existing media URLs.
+
+## Sign in with Face ID
+
+A separate setting in Settings → Sign-in, built on [`useBiometricCredentials()`](https://clerk.com/docs/reference/expo/native-hooks/use-biometric-credentials) from `@clerk/expo/biometrics` (`@clerk/expo` 4.8.1 with `@clerk/expo-biometrics` 1.0.0). It is independent of the lock: either can be on without the other.
+
+- Turning it on calls `enroll()` (one prompt) with the default `biometry_current_set` policy. This creates a P-256 key in the Secure Enclave or Android Keystore and registers its public key with Clerk. Amber stores the returned credential ID (`amber.biometric-sign-in.<userId>`) so turning it off revokes this device's credential and no other.
+- Turning it off calls `revoke()`, which also deletes the local key. Offline, the setting stays on and the footer says why.
+- Signed out, the sign-in screen shows "Sign in with Face ID" when `getAvailability()` finds a local credential. `signIn()` signs a Clerk challenge, then `setActive()` opens the session. If the lock is on, that session opens unlocked once (`biometric-session.ts`, 30 seconds), because the user just passed Face ID.
+- Settings re-reads the state on each return to the foreground. A credential whose key was deleted (the biometric set changed) is revoked and the switch turns off.
+- Requires **User & Authentication → Biometric → Sign-in with mobile biometrics** in the Clerk Dashboard (turned on October 6, 2026), plus the Native API. If it is off, the switch is disabled with an explanation.
+- The `@clerk/expo` plugin's `faceIDPermission` sets `NSFaceIDUsageDescription` only when no other plugin set it. `expo-secure-store` always writes it, so both use the same string in `app.json`.
+- Both Clerk packages declare `expo >=54 <58` as a peer (3.7.6 did too). The iOS build compiles on SDK 58 with Xcode 27.1. The iOS Simulator has no Secure Enclave, so enrollment and sign-in must be tested on a phone.
 
 ## Recovery
 
@@ -73,5 +85,9 @@ Use `bunx expo run:android --device` for Android. Face ID is not supported in Ex
 8. Sign out from account A and sign in to B. Check that A's saves, onboarding preference, and widget thumbnails never appear for B. Sign back in to A normally; its lock remains enabled unless explicit recovery completed.
 9. Add a Recent Saves widget before enabling the lock. Confirm its content clears on enrollment and stays empty after subsequent background/foreground cycles.
 10. Repeat Android checks with strong fingerprint/face enrollment. A weak face-only device must not be offered an unusable enable flow. PIN/password must not substitute for the biometric proof.
+
+11. Turn on Sign in with Face ID. Check the user has one biometric credential in the Clerk Dashboard. Sign out and use "Sign in with Face ID". With the lock on, no second prompt may follow.
+12. Turn Sign in with Face ID off, including once offline (it must stay on). The credential must show as revoked.
+13. With the lock on, turn on Sign in with Face ID. The splash must not cover the screen behind the Face ID sheet.
 
 Before production release, complete this checklist on both supported platforms.

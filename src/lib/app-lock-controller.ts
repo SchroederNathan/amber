@@ -20,6 +20,9 @@ export type LockOptions = {
   graceMs?: number;
   // Start verification without a tap when the lock screen appears.
   autoPrompt?: boolean;
+  // The user passed a biometric check moments ago (biometric sign-in created
+  // this session), so a stored opt-in starts unlocked instead of asking again.
+  startUnlocked?: boolean;
   now?: () => number;
 };
 
@@ -36,16 +39,23 @@ export class AppLockController {
   private dependencies: LockDependencies;
   private graceMs: number;
   private autoPrompt: boolean;
+  private startUnlocked: boolean;
   private now: () => number;
 
   constructor(
     dependencies: LockDependencies,
     foreground: boolean,
-    { graceMs = LOCK_GRACE_MS, autoPrompt = true, now = Date.now }: LockOptions = {},
+    {
+      graceMs = LOCK_GRACE_MS,
+      autoPrompt = true,
+      startUnlocked = false,
+      now = Date.now,
+    }: LockOptions = {},
   ) {
     this.dependencies = dependencies;
     this.graceMs = graceMs;
     this.autoPrompt = autoPrompt;
+    this.startUnlocked = startUnlocked;
     this.now = now;
     this.snapshot = {
       status: 'loading',
@@ -76,8 +86,13 @@ export class AppLockController {
       const enabled = await this.dependencies.readEnabled();
       if (enabled) await this.dependencies.preparePrivacy();
       if (generation === this.generation) {
-        this.promptPending = enabled;
-        this.update({ status: enabled ? 'locked' : 'disabled' });
+        // Only the first load: a retry after an error must verify again.
+        const verified = this.startUnlocked && this.snapshot.foreground;
+        this.startUnlocked = false;
+        this.promptPending = enabled && !verified;
+        this.update({
+          status: enabled ? (verified ? 'unlocked' : 'locked') : 'disabled',
+        });
         this.promptIfPending();
       }
     } catch {

@@ -17,6 +17,7 @@ import {
   getBiometricLabel,
   resetLockAfterSignIn,
 } from './app-lock-storage';
+import { isFreshBiometricSession } from './biometric-session';
 import { LoadingScreen, useSplashHold } from './splash';
 import { resetAppIntents } from './app-intents';
 import { hideRecentSavesWidget } from './widget-sync';
@@ -32,6 +33,9 @@ type AppLockValue = {
   message: string | null;
   enable: () => Promise<boolean>;
   disable: () => Promise<boolean>;
+  // Runs another biometric prompt (Clerk enrollment). The system sheet makes
+  // iOS inactive, which would otherwise cover the screen with the splash.
+  whilePrompting: <T>(prompt: () => Promise<T>) => Promise<T>;
 };
 const AppLockContext = createContext<AppLockValue | null>(null);
 export function useAppLock() {
@@ -42,10 +46,12 @@ export function useAppLock() {
 
 function AccountLock({
   userId,
+  sessionId,
   recover,
   children,
 }: {
   userId: string;
+  sessionId: string;
   recover: () => void;
   children: React.ReactNode;
 }) {
@@ -54,6 +60,7 @@ function AccountLock({
       new AppLockController(
         createLockDependencies(userId),
         AppState.currentState === 'active',
+        { startUnlocked: isFreshBiometricSession(sessionId) },
       ),
   );
   const snapshot = useSyncExternalStore(
@@ -85,9 +92,18 @@ function AccountLock({
 
   const { status, busy, message, foreground } = snapshot;
   const enabled = status !== 'disabled';
+  const [prompting, setPrompting] = useState(false);
+  const whilePrompting = useCallback(async <T,>(prompt: () => Promise<T>) => {
+    setPrompting(true);
+    try {
+      return await prompt();
+    } finally {
+      setPrompting(false);
+    }
+  }, []);
   // Inside the grace period the app stays mounted, so navigation survives a
   // quick trip away. The splash hides saves while Amber is not in the foreground.
-  useSplashHold(status === 'unlocked' && !foreground && !busy, 'show');
+  useSplashHold(status === 'unlocked' && !foreground && !busy && !prompting, 'show');
   const value = useMemo(
     () => ({
       enabled,
@@ -97,8 +113,9 @@ function AccountLock({
       message,
       enable: () => controller.authenticate('enable'),
       disable: () => controller.authenticate('disable'),
+      whilePrompting,
     }),
-    [enabled, busy, foreground, biometrics, message, controller],
+    [enabled, busy, foreground, biometrics, message, controller, whilePrompting],
   );
   if (status === 'loading') return <LoadingScreen />;
   if (status === 'error')
@@ -216,6 +233,7 @@ export function AppAccessBoundary({
     <AccountLock
       key={`${userId}:${sessionId}`}
       userId={userId}
+      sessionId={sessionId}
       recover={recover}
     >
       {children}

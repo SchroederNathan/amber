@@ -1,7 +1,13 @@
-import { BiometricSetting, useBiometricFooter } from '@/components/biometric-setting';
+import {
+  BiometricSetting,
+  BiometricSignInSetting,
+  biometricSignInFooter,
+  useBiometricFooter,
+} from '@/components/biometric-setting';
 import { SettingsGroup, SettingsRow } from '@/components/settings-list';
 import { UpdateSetting, useVersionLabel } from '@/components/update-setting';
 import { useAppLock } from '@/lib/app-lock';
+import { useBiometricSignIn } from '@/lib/biometric-sign-in';
 import { useOnboarding } from '@/lib/onboarding';
 import { api } from '@convex/_generated/api';
 import { convexQuery } from '@convex-dev/react-query';
@@ -21,6 +27,7 @@ export default function ProfileScreen() {
   const { resetOnboarding } = useOnboarding();
   const { theme } = useUnistyles();
   const biometricFooter = useBiometricFooter();
+  const biometricSignIn = useBiometricSignIn();
   const versionLabel = useVersionLabel();
   const closeIcon = useToolbarIcon('xmark');
 
@@ -94,6 +101,10 @@ export default function ProfileScreen() {
 
         <SettingsGroup title="Privacy" footer={biometricFooter}>
           <BiometricSetting />
+        </SettingsGroup>
+
+        <SettingsGroup title="Sign-in" footer={biometricSignInFooter(biometricSignIn)}>
+          <BiometricSignInSetting signIn={biometricSignIn} />
         </SettingsGroup>
 
         <SettingsGroup title="App" footer={versionLabel}>
