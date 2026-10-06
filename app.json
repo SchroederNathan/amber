@@ -65,11 +65,16 @@
           }
         }
       ],
-      "@clerk/expo",
+      [
+        "@clerk/expo",
+        {
+          "faceIDPermission": "Amber uses Face ID to keep your saved content private and to sign you in."
+        }
+      ],
       [
         "expo-secure-store",
         {
-          "faceIDPermission": "Amber uses Face ID to keep your saved content private."
+          "faceIDPermission": "Amber uses Face ID to keep your saved content private and to sign you in."
         }
       ],
       "expo-web-browser",
@@ -107,12 +112,6 @@
               "image/*"
             ]
           }
-        }
-      ],
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Amber uses Face ID to keep your saved content private."
         }
       ],
       "expo-app-intents"

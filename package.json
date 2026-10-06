@@ -4,7 +4,8 @@
   "main": "index.ts",
   "dependencies": {
     "@ai-sdk/react": "^4.0.15",
-    "@clerk/expo": "^3.6.5",
+    "@clerk/expo": "^4.8.1",
+    "@clerk/expo-biometrics": "^1.0.0",
     "@convex-dev/react-query": "^0.1.0",
     "@expo/ui": "~58.0.9",
     "@mozilla/readability": "^0.6.0",
@@ -32,7 +33,6 @@
     "expo-image": "~58.0.8",
     "expo-image-picker": "~58.0.9",
     "expo-linking": "~58.0.9",
-    "expo-local-authentication": "~58.0.1",
     "expo-media-library": "~58.0.4",
     "expo-observe": "~58.0.11",
     "expo-router": "~58.0.10",
@@ -89,7 +89,7 @@
     "@shopify/react-native-skia"
   ],
   "patchedDependencies": {
-    "@clerk/expo@3.7.6": "patches/@clerk%2Fexpo@3.7.6.patch",
-    "expo-widgets@58.0.9": "patches/expo-widgets@58.0.9.patch"
+    "expo-widgets@58.0.9": "patches/expo-widgets@58.0.9.patch",
+    "@clerk/expo@4.8.1": "patches/@clerk%2Fexpo@4.8.1.patch"
   }
 }

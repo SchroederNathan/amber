@@ -1,5 +1,6 @@
 import { PrivacyScreen } from '@/components/privacy-screen';
 import { useAuth, useClerk } from '@clerk/expo';
+import { useBiometricCredentials } from '@clerk/expo/biometrics';
 import {
   createContext,
   use,
@@ -14,9 +15,12 @@ import { AppLockController } from './app-lock-controller';
 import { canResetLock, type LockRecoveryRequest } from './app-lock-recovery';
 import {
   createLockDependencies,
-  getBiometricLabel,
+  getBiometricStatus,
+  NO_BIOMETRICS,
   resetLockAfterSignIn,
+  type BiometricStatus,
 } from './app-lock-storage';
+import { isFreshBiometricSession } from './biometric-session';
 import { LoadingScreen, useSplashHold } from './splash';
 import { resetAppIntents } from './app-intents';
 import { hideRecentSavesWidget } from './widget-sync';
@@ -28,6 +32,7 @@ type AppLockValue = {
   // work gated on it never starts in a tree the lock is about to tear down.
   foreground: boolean;
   available: boolean;
+  unavailable: BiometricStatus['unavailable'];
   label: string;
   message: string | null;
   enable: () => Promise<boolean>;
@@ -42,18 +47,22 @@ export function useAppLock() {
 
 function AccountLock({
   userId,
+  sessionId,
   recover,
   children,
 }: {
   userId: string;
+  sessionId: string;
   recover: () => void;
   children: React.ReactNode;
 }) {
+  const credentials = useBiometricCredentials();
   const [controller] = useState(
     () =>
       new AppLockController(
-        createLockDependencies(userId),
+        createLockDependencies(userId, credentials),
         AppState.currentState === 'active',
+        { startUnlocked: isFreshBiometricSession(sessionId) },
       ),
   );
   const snapshot = useSyncExternalStore(
@@ -61,30 +70,34 @@ function AccountLock({
     controller.getSnapshot,
     controller.getSnapshot,
   );
-  const [biometrics, setBiometrics] = useState({
-    available: false,
-    label: 'Biometrics',
-  });
+  const [biometrics, setBiometrics] = useState<BiometricStatus>(NO_BIOMETRICS);
+  const { status, busy, message, foreground } = snapshot;
+  const enabled = status !== 'disabled';
   useEffect(() => {
     void controller.load();
-    const refreshAvailability = () => {
-      void getBiometricLabel()
-        .then(setBiometrics)
-        .catch(() => setBiometrics({ available: false, label: 'Biometrics' }));
-    };
-    refreshAvailability();
-    const subscription = AppState.addEventListener('change', (state) => {
-      controller.activityChanged(state);
-      if (state === 'active') refreshAvailability();
-    });
+    const subscription = AppState.addEventListener('change', (state) =>
+      controller.activityChanged(state),
+    );
     return () => {
       subscription.remove();
       controller.dispose();
     };
   }, [controller]);
+  // Device biometrics can change while Amber is away, so check on each return.
+  // Clerk's check only matters while the lock is off (can it be turned on?);
+  // with a credential enrolled it would cost a server round trip.
+  const checkService = status === 'disabled';
+  useEffect(() => {
+    if (!foreground) return;
+    let current = true;
+    void getBiometricStatus(checkService ? credentials : undefined)
+      .then((next) => current && setBiometrics(next))
+      .catch(() => current && setBiometrics(NO_BIOMETRICS));
+    return () => {
+      current = false;
+    };
+  }, [foreground, checkService, credentials]);
 
-  const { status, busy, message, foreground } = snapshot;
-  const enabled = status !== 'disabled';
   // Inside the grace period the app stays mounted, so navigation survives a
   // quick trip away. The splash hides saves while Amber is not in the foreground.
   useSplashHold(status === 'unlocked' && !foreground && !busy, 'show');
@@ -133,11 +146,12 @@ function ResetRecoveredLock({
   userId: string;
   complete: () => void;
 }) {
+  const credentials = useBiometricCredentials();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void resetLockAfterSignIn(userId)
+    void resetLockAfterSignIn(userId, credentials)
       .then(() => {
         if (!cancelled) complete();
       })
@@ -147,7 +161,7 @@ function ResetRecoveredLock({
     return () => {
       cancelled = true;
     };
-  }, [userId, complete, attempt]);
+  }, [userId, credentials, complete, attempt]);
   if (!failed) return <LoadingScreen />;
   return (
     <PrivacyScreen
@@ -186,8 +200,17 @@ export function AppAccessBoundary({
   }, [isLoaded, isSignedIn]);
   if (!isLoaded) return <LoadingScreen />;
   if (!isSignedIn || !userId || !sessionId) return signedOut;
-  if (recovery && recovery.userId !== userId) setRecovery(null);
-  if (canResetLock(recovery, userId, sessionId)) {
+  // Signing back in with biometrics proves the lock still works, so there is
+  // nothing to reset.
+  if (
+    recovery &&
+    (recovery.userId !== userId || isFreshBiometricSession(sessionId))
+  )
+    setRecovery(null);
+  if (
+    canResetLock(recovery, userId, sessionId) &&
+    !isFreshBiometricSession(sessionId)
+  ) {
     return <ResetRecoveredLock userId={userId} complete={completeRecovery} />;
   }
   const recover = () =>
@@ -216,6 +239,7 @@ export function AppAccessBoundary({
     <AccountLock
       key={`${userId}:${sessionId}`}
       userId={userId}
+      sessionId={sessionId}
       recover={recover}
     >
       {children}

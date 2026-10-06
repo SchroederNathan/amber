@@ -53,7 +53,9 @@ export default function OnboardingScreen() {
       ? 'Save your favorite photos and screenshots to Amber.'
       : lock.available
         ? `Unlock Amber with ${lock.label} to keep your saves private.`
-        : `Set up ${biometricMethods} on your device to lock Amber.`;
+        : lock.unavailable === 'service'
+          ? 'The lock isn’t available right now. You can turn it on later in your profile.'
+          : `Set up ${biometricMethods} on your device to lock Amber.`;
 
   const unlockTransition = useCallback(() => {
     inFlight.current = false;

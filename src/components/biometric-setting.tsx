@@ -62,12 +62,16 @@ export function BiometricSetting() {
 
 const HAS_WIDGET = process.env.EXPO_OS === 'ios' || process.env.EXPO_OS === 'android';
 
-/** Footer copy for the privacy group: the lock's last error, why it's unavailable, or the widget note. */
+/** Footer copy for the privacy group: the lock's last error, why it's unavailable, or what the lock does. */
 export function useBiometricFooter() {
-  const { enabled, available, message } = useAppLock();
+  const { enabled, available, unavailable, label, message } = useAppLock();
   if (message) return message;
-  if (!available && !enabled) return `Set up ${biometricMethods} in your device settings to use the lock.`;
-  // The home-screen widget exists on iOS and Android. Shown whether the lock is
-  // on or off, so the footer does not appear and vanish as the switch flips.
-  return HAS_WIDGET ? 'Widget previews are hidden while the lock is on.' : null;
+  if (!available && !enabled)
+    return unavailable === 'service'
+      ? 'The lock is not available right now. Try again later.'
+      : `Set up ${biometricMethods} in your device settings to use the lock.`;
+  // Shown whether the lock is on or off, so the footer does not change as the
+  // switch flips. The home-screen widget exists on iOS and Android.
+  const signIn = `${label} also signs you back in after you sign out.`;
+  return HAS_WIDGET ? `${signIn} Widget previews are hidden while the lock is on.` : signIn;
 }
