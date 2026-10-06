@@ -4,8 +4,8 @@ import { useBiometricCredentials } from '@clerk/expo/biometrics';
 import React from 'react';
 import { Platform } from 'react-native';
 import { Welcome } from '@/components/onboarding/welcome';
-import { getBiometricStatus, isBiometricCancel, signInWithBiometrics } from '@/lib/app-lock-storage';
 import { markBiometricSession } from '@/lib/biometric-session';
+import { isBiometricCancel, isNetworkError, readSignInLabel, signInWithBiometrics } from '@/lib/biometric-sign-in';
 import { useWelcomeTransition } from '@/lib/welcome-transition';
 
 // Release builds have no console, so every auth failure has to reach the
@@ -28,30 +28,19 @@ export default function Page() {
   const credentials = useBiometricCredentials();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  // "Face ID" when this device holds a biometric credential, else null. Signed
-  // out, Clerk only checks local state; a credential revoked elsewhere fails at
-  // sign-in, which clears it.
+  // "Face ID" when this device holds a biometric credential, else null.
   const [biometricLabel, setBiometricLabel] = React.useState<string | null>(null);
-
-  const readBiometricLabel = React.useCallback(async () => {
-    try {
-      const { isAvailable } = await credentials.getAvailability();
-      return isAvailable ? (await getBiometricStatus()).label : null;
-    } catch {
-      return null;
-    }
-  }, [credentials]);
 
   React.useEffect(() => {
     if (!isLoaded) return;
     let current = true;
-    void readBiometricLabel().then((label) => {
+    void readSignInLabel(credentials).then((label) => {
       if (current) setBiometricLabel(label);
     });
     return () => {
       current = false;
     };
-  }, [isLoaded, readBiometricLabel]);
+  }, [isLoaded, credentials]);
 
   const handleBiometric = async () => {
     setPending(true);
@@ -69,12 +58,12 @@ export default function Page() {
     } catch (err) {
       reveal();
       if (!isBiometricCancel(err)) {
-        setError(isClerkAPIResponseError(err) || (err instanceof Error && 'code' in err && err.code === 'network_error')
+        setError(isClerkAPIResponseError(err) || isNetworkError(err)
           ? describeError(err)
           : `${biometricLabel ?? 'Biometric'} sign-in didn’t work. Continue with Apple or Google.`);
       }
       // A failed sign-in may have cleared a stale credential.
-      setBiometricLabel(await readBiometricLabel());
+      setBiometricLabel(await readSignInLabel(credentials));
     } finally {
       setPending(false);
     }

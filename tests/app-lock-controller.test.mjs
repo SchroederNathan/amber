@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { AppLockController, LockFailure } from '../src/lib/app-lock-controller.ts';
+import { AppLockController } from '../src/lib/app-lock-controller.ts';
 
 function deferred() {
   let resolve;
@@ -18,7 +18,6 @@ function fixture(overrides = {}, options = {}) {
       writes.push(value);
     },
     enroll: async () => {},
-    unenroll: async () => {},
     verify: async () => true,
     preparePrivacy: async () => {},
     releasePrivacy: async () => {},
@@ -287,50 +286,6 @@ test('turning the lock off lifts screen protection, and a failed lift still disa
   assert.equal(failing.lock.getSnapshot().status, 'disabled');
 });
 
-test('turning the lock off verifies, then revokes, then saves the opt-out', async () => {
-  const calls = [];
-  const { lock } = fixture({
-    verify: async (action) => { calls.push(`verify:${action}`); return true; },
-    unenroll: async () => { calls.push('unenroll'); },
-    writeEnabled: async (value) => { calls.push(`write:${value}`); },
-  });
-  await lock.load();
-  assert.equal(await lock.authenticate('disable'), true);
-  assert.deepEqual(calls, ['verify:disable', 'unenroll', 'write:false']);
-});
-
-test('a failed revoke keeps the lock on and shows why', async () => {
-  const { lock, writes } = fixture({
-    unenroll: async () => { throw new LockFailure('offline'); },
-  });
-  await lock.load();
-  await lock.authenticate('unlock');
-  assert.equal(await lock.authenticate('disable'), false);
-  assert.equal(lock.getSnapshot().status, 'unlocked');
-  assert.equal(lock.getSnapshot().message, 'offline');
-  assert.deepEqual(writes, []);
-});
-
-test('unlock asks the dependency to verify for unlocking', async () => {
-  const actions = [];
-  const { lock } = fixture({ verify: async (action) => { actions.push(action); return true; } });
-  await lock.load();
-  await lock.authenticate('unlock');
-  assert.deepEqual(actions, ['unlock']);
-});
-
-test('a lock failure message reaches the lock screen; other errors get the default', async () => {
-  const shown = fixture({ verify: async () => { throw new LockFailure('Connect and try again.'); } });
-  await shown.lock.load();
-  assert.equal(await shown.lock.authenticate('unlock'), false);
-  assert.equal(shown.lock.getSnapshot().message, 'Connect and try again.');
-
-  const hidden = fixture({ verify: async () => { throw new Error('E_BIOMETRIC_REVERIFICATION_FAILED'); } });
-  await hidden.lock.load();
-  await hidden.lock.authenticate('unlock');
-  assert.match(hidden.lock.getSnapshot().message, /stays locked/);
-});
-
 test('a session from biometric sign-in starts unlocked once, then locks as usual', async () => {
   let prompts = 0;
   const { lock, clock } = fixture(
@@ -345,15 +300,16 @@ test('a session from biometric sign-in starts unlocked once, then locks as usual
   lock.activityChanged('active');
   await settle();
   assert.equal(prompts, 1);
-
-  // A reload after an error must not reuse the sign-in.
-  const again = fixture({}, { startUnlocked: true });
-  await again.lock.load();
-  await again.lock.load();
-  assert.equal(again.lock.getSnapshot().status, 'locked');
 });
 
-test('a biometric sign-in does not unlock an account that opted out', async () => {
+test('a reload after biometric sign-in must verify again', async () => {
+  const { lock } = fixture({}, { startUnlocked: true });
+  await lock.load();
+  await lock.load();
+  assert.equal(lock.getSnapshot().status, 'locked');
+});
+
+test('a biometric sign-in does not lock an account that opted out', async () => {
   const { lock } = fixture({ readEnabled: async () => false }, { startUnlocked: true });
   await lock.load();
   assert.equal(lock.getSnapshot().status, 'disabled');

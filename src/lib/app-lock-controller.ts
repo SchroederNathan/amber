@@ -11,22 +11,17 @@ export type LockDependencies = {
   readEnabled: () => Promise<boolean>;
   writeEnabled: (enabled: boolean) => Promise<void>;
   enroll: () => Promise<void>;
-  // Removes what `enroll` created. Runs after a successful `verify('disable')`.
-  unenroll: () => Promise<void>;
-  verify: (action: 'unlock' | 'disable') => Promise<boolean>;
+  verify: () => Promise<boolean>;
   preparePrivacy: () => Promise<void>;
   releasePrivacy: () => Promise<void>;
 };
-
-/** A failure whose message the lock can show as is. */
-export class LockFailure extends Error {}
 export type LockOptions = {
   // How long Amber may stay out of the foreground before it locks again.
   graceMs?: number;
   // Start verification without a tap when the lock screen appears.
   autoPrompt?: boolean;
-  // The user verified moments ago (biometric sign-in created this session),
-  // so a stored opt-in starts unlocked instead of asking again.
+  // The user passed a biometric check moments ago (biometric sign-in created
+  // this session), so a stored opt-in starts unlocked instead of asking again.
   startUnlocked?: boolean;
   now?: () => number;
 };
@@ -91,7 +86,7 @@ export class AppLockController {
       const enabled = await this.dependencies.readEnabled();
       if (enabled) await this.dependencies.preparePrivacy();
       if (generation === this.generation) {
-        // Only the first load: a retry or reload must verify again.
+        // Only the first load: a retry after an error must verify again.
         const verified = this.startUnlocked && this.snapshot.foreground;
         this.startUnlocked = false;
         this.promptPending = enabled && !verified;
@@ -158,7 +153,7 @@ export class AppLockController {
     this.update({ busy: true, message: null });
     try {
       if (action === 'enable') await this.dependencies.enroll();
-      else if (!(await this.dependencies.verify(action))) {
+      else if (!(await this.dependencies.verify())) {
         throw new Error('invalid-key');
       }
       if (this.disposed || generation !== this.generation) return false;
@@ -167,9 +162,6 @@ export class AppLockController {
         await this.dependencies.writeEnabled(true);
         this.update({ status: 'locked' });
       } else if (action === 'disable') {
-        // Revoke first: if that fails (offline), the lock stays on and says so.
-        await this.dependencies.unenroll();
-        if (this.disposed || generation !== this.generation) return false;
         await this.dependencies.writeEnabled(false);
         this.update({ status: 'disabled' });
         // The lock is already off; failing to lift the screenshot block only
@@ -180,16 +172,12 @@ export class AppLockController {
       if (this.disposed || generation !== this.generation) return false;
       this.update({ status: 'unlocked' });
       return true;
-    } catch (error) {
+    } catch {
       this.update({
         message:
-          error instanceof LockFailure
-            ? error.message
-            : action === 'enable'
-              ? 'Biometric lock was not enabled. Check your device’s biometric settings and try again.'
-              : action === 'disable'
-                ? 'The lock is still on. Try again to turn it off.'
-                : 'Amber stays locked until verification succeeds. Try again, or sign out and sign in to reset the lock.',
+          action === 'enable'
+            ? 'Biometric lock was not enabled. Check your device’s biometric settings and try again.'
+            : 'Amber stays locked until verification succeeds. Try again, or sign out and sign in to reset the lock.',
       });
       return false;
     } finally {
