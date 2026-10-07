@@ -58,9 +58,11 @@ export default function Page() {
     } catch (err) {
       reveal();
       if (!isBiometricCancel(err)) {
-        setError(isClerkAPIResponseError(err) || isNetworkError(err)
-          ? describeError(err)
-          : `${biometricLabel ?? 'Biometric'} sign-in didn’t work. Continue with Apple or Google.`);
+        setError(isNetworkError(err)
+          ? 'Connect to the internet and try again.'
+          : isClerkAPIResponseError(err)
+            ? describeError(err)
+            : `${biometricLabel ?? 'Biometric'} sign-in didn’t work. Continue with Apple or Google.`);
       }
       // A failed sign-in may have cleared a stale credential.
       setBiometricLabel(await readSignInLabel(credentials));

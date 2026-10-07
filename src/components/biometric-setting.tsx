@@ -118,6 +118,8 @@ export function biometricSignInFooter({ enabled, available, unavailable, label, 
   if (!available && !enabled)
     return unavailable === 'service'
       ? 'Sign-in with biometrics is not available right now.'
-      : `Set up ${biometricMethods} in your device settings to sign in with it.`;
+      : unavailable === 'keystore'
+        ? `This device can't store a key for ${label} sign-in.`
+        : `Set up ${biometricMethods} in your device settings to sign in with it.`;
   return `After you sign out, sign back in with ${label} instead of Apple or Google.`;
 }

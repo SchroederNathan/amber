@@ -31,6 +31,8 @@ const SERVICE_OFF = new Set([
   'feature_disabled',
   'unsupported_platform',
 ]);
+// What `revoke()` reports when Clerk no longer has the credential.
+const CREDENTIAL_MISSING = new Set(['form_resource_not_found', 'trusted_device_not_registered']);
 // The enrolled credential is gone, so the setting is off.
 const CREDENTIAL_GONE = new Set([
   'no_local_credential',
@@ -43,9 +45,9 @@ export type BiometricSignInState = {
   loaded: boolean;
   enabled: boolean;
   available: boolean;
-  // Why it can't be turned on: no usable biometrics or no hardware-backed key
+  // Why it can't be turned on: no usable biometrics, no hardware-backed key
   // storage on the device (the iOS Simulator), or the feature is off in Clerk.
-  unavailable: 'device' | 'service' | null;
+  unavailable: 'device' | 'keystore' | 'service' | null;
   label: string;
   message: string | null;
 };
@@ -69,8 +71,9 @@ async function readState(
 ): Promise<Omit<BiometricSignInState, 'message'>> {
   const device = await getDeviceBiometrics();
   const label = biometricLabel(device?.biometryType);
-  if (!device?.canEvaluateBiometrics || !device.secureKeyStorageAvailable)
-    return { ...initialState, loaded: true, label };
+  if (!device?.canEvaluateBiometrics) return { ...initialState, loaded: true, label };
+  if (!device.secureKeyStorageAvailable)
+    return { ...initialState, loaded: true, unavailable: 'keystore', label };
   const id = await SecureStore.getItemAsync(credentialKey(userId), storeOptions);
   let availability;
   try {
@@ -140,7 +143,14 @@ export function useBiometricSignIn() {
           reason: 'Turn on sign-in with biometrics for Amber',
         }),
       );
-      await SecureStore.setItemAsync(credentialKey(userId), credential.id, storeOptions);
+      try {
+        await SecureStore.setItemAsync(credentialKey(userId), credential.id, storeOptions);
+      } catch (error) {
+        // Without the saved ID the switch can't turn it off again, so don't
+        // leave a live credential behind.
+        await credentials.revoke(credential.id).catch(() => {});
+        throw error;
+      }
       setState((current) => ({ ...current, enabled: true }));
       return true;
     } catch (error) {
@@ -172,8 +182,11 @@ export function useBiometricSignIn() {
         try {
           await credentials.revoke(id);
         } catch (error) {
-          // Already gone on the server: nothing is left to revoke.
-          if (errorCode(error) !== 'form_resource_not_found') throw error;
+          // Already gone on the server: nothing is left to revoke. Clerk keeps
+          // the local key in that case, and a signed-in availability check is
+          // what deletes it, so sign-in stops offering it.
+          if (!CREDENTIAL_MISSING.has(errorCode(error) ?? '')) throw error;
+          await credentials.getAvailability({ id }).catch(() => {});
         }
         await SecureStore.deleteItemAsync(credentialKey(userId), storeOptions);
       }

@@ -56,7 +56,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      {/* Offline, Clerk otherwise throws a plain Error with no code. With this
+          flag it throws `network_error`, which the biometric copy checks for. */}
+      <ClerkProvider
+        publishableKey={publishableKey}
+        tokenCache={tokenCache}
+        experimental={{ rethrowOfflineNetworkErrors: true }}
+      >
         <NavThemeProvider>
           <SplashProvider>
             <WelcomeTransitionProvider>
