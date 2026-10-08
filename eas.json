@@ -14,6 +14,14 @@
         "APP_VARIANT": "development"
       }
     },
+    "development-simulator": {
+      "extends": "development",
+      "environment": "development",
+      "ios": {
+        "simulator": true,
+        "image": "macos-tahoe-26.6-xcode-27.1"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "ios": {
