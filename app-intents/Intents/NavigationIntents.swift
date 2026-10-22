@@ -36,6 +36,20 @@ struct OpenItemIntent {
   }
 }
 
+/// Opens a save Siri found through the Notes schema and its indexed source content.
+@available(iOS 27.0, *)
+@AppIntent(schema: .system.open)
+struct OpenNoteIntent {
+  var target: NoteEntity
+
+  @MainActor
+  func perform() async throws -> some IntentResult {
+    AmberIntentLog.record("OpenNoteIntent.perform \(target.id)")
+    await AppIntentDispatcher.shared.dispatch(name: "openItem", params: ["id": .string(target.id)])
+    return .result()
+  }
+}
+
 /// "Open my Tokyo trip space in Amber."
 @available(iOS 27.0, *)
 @AppIntent(schema: .system.open)
