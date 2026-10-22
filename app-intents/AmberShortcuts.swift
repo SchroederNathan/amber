@@ -37,21 +37,10 @@ struct AmberShortcuts: AppShortcutsProvider {
       )
     }
     #endif
-    // `SaveImageIntent` has no phrases on purpose. "Save this image to Amber" then reaches
-    // `SaveNoteIntent`, which gets the image on screen; a plain intent gets no screen content,
-    // so Siri made the user pick the image in Shortcuts. The builder only allows `#available`,
-    // so the phrases cannot be kept for older iOS alone.
-    if #available(iOS 18.0, *) {
-      AppShortcut(
-        intent: SaveLinkIntent(),
-        phrases: [
-          "Save this page to \(.applicationName)",
-          "Save this link to \(.applicationName)",
-        ],
-        shortTitle: "Save a Link",
-        systemImageName: "link"
-      )
-    }
+    // Keep the plain image and link actions available in Shortcuts without Siri phrases.
+    // Phrases containing "this" selected those actions without the screen content: images
+    // opened a picker, and links repeatedly asked which URL to save. On-screen capture uses
+    // the iOS 27 `SaveNoteIntent` schema, which routes supplied links and attachments.
   }
 
   static let shortcutTileColor: ShortcutTileColor = .orange
