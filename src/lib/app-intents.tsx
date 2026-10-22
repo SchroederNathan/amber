@@ -1,4 +1,5 @@
 import { ensureThumbnail } from '@/lib/thumbnails';
+import { appIntentContent } from '@/lib/app-intent-content';
 import { displayHost } from '@/lib/url';
 import { useSaveImages } from '@/lib/use-save-image';
 import { api } from '@convex/_generated/api';
@@ -49,6 +50,32 @@ type ListedSpace = FunctionReturnType<typeof api.spaces.listSpaces>[number];
 
 function thumbDirectory() {
   return new Directory(Paths.document, 'app-intent-thumbs');
+}
+
+function contentDirectory() {
+  return new Directory(Paths.document, 'app-intent-content');
+}
+
+/** Keep full article/note bodies on disk rather than in the UserDefaults entity catalog. */
+function writeContent(items: ListedItem[], isCurrent: () => boolean): boolean {
+  const dir = contentDirectory();
+  if (!dir.exists) dir.create({ intermediates: true });
+  const wanted = new Set<string>();
+  for (const item of items) {
+    if (!isCurrent()) return false;
+    const content = appIntentContent(item);
+    if (!content) continue;
+    const name = `${item._id}.txt`;
+    wanted.add(name);
+    const file = new File(dir, name);
+    if (file.exists && file.textSync() === content) continue;
+    if (!file.exists) file.create();
+    file.write(content);
+  }
+  for (const entry of dir.list()) {
+    if (entry instanceof File && !wanted.has(entry.name)) entry.delete();
+  }
+  return true;
 }
 
 function itemTitle(item: ListedItem): string {
@@ -134,11 +161,15 @@ function publish(work: (isCurrent: () => boolean) => Promise<void>) {
 
 function clearCatalogs() {
   return publish(async () => {
-    await AppIntents.setEntityCatalogAsync(ITEM_KIND, []);
-    await AppIntents.setEntityCatalogAsync(SPACE_KIND, []);
-    await setup?.clearSpotlight();
-    const dir = thumbDirectory();
-    if (dir.exists) dir.delete();
+    try {
+      await AppIntents.setEntityCatalogAsync(ITEM_KIND, []);
+      await AppIntents.setEntityCatalogAsync(SPACE_KIND, []);
+      await setup?.clearSpotlight();
+    } finally {
+      for (const dir of [thumbDirectory(), contentDirectory()]) {
+        if (dir.exists) dir.delete();
+      }
+    }
   });
 }
 
@@ -160,11 +191,8 @@ export async function resetAppIntents(): Promise<void> {
 function useCatalogSync(enabled: boolean) {
   const { data: items } = useQuery({ ...convexQuery(api.items.listItems, {}), enabled });
   const { data: spaces } = useQuery({ ...convexQuery(api.spaces.listSpaces, {}), enabled });
-  const lastKey = useRef<string | null>(null);
-
   useEffect(() => {
     if (enabled) return;
-    lastKey.current = null;
     void clearCatalogs();
   }, [enabled]);
 
@@ -173,11 +201,10 @@ function useCatalogSync(enabled: boolean) {
     const ready = items.filter((item) => item.status === 'ready').slice(0, ITEM_CATALOG_LIMIT);
     const itemRecords = ready.map(itemRecord);
     const spaceRecords = spaces.map(spaceRecord);
-    const key = JSON.stringify([itemRecords, spaceRecords]);
-    if (key === lastKey.current) return;
-    lastKey.current = key;
-
+    // Query structural sharing keeps these references stable until data changes. Source-body
+    // changes must also republish, even when titles, summaries, and catalog records are equal.
     void publish(async (isCurrent) => {
+      if (!writeContent(ready, isCurrent)) return;
       await AppIntents.setEntityCatalogAsync(SPACE_KIND, spaceRecords);
       await AppIntents.setEntityCatalogAsync(ITEM_KIND, itemRecords);
       // Spotlight first without thumbnails so search works right away, then again once new

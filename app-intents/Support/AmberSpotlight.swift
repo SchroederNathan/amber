@@ -12,6 +12,7 @@ import Foundation
 /// deleted.
 enum AmberSpotlight {
   private static let indexedKey = "amber.spotlight.indexedItemIds"
+  private static let indexedNotesKey = "amber.spotlight.indexedNoteIds"
   private static let batchSize = 100
   private static let deadline: Duration = .seconds(20)
 
@@ -23,17 +24,38 @@ enum AmberSpotlight {
   /// Indexes every item in the catalog and removes items that left it. Returns the indexed count.
   @available(iOS 18.0, *)
   static func syncItems() async throws -> Int {
-    let entities = await AmberCatalog.items()
+    let records = await AmberCatalog.items()
       .filter { !$0.hideInSpotlight }
-      .map(ItemEntity.init(record:))
+
+    #if compiler(>=6.4)
+    if #available(iOS 27.0, *) {
+      let count = try await sync(records.map(NoteEntity.init(record:)), key: indexedNotesKey)
+      // Replace the old generic search results after the schema-backed saves are indexed.
+      // Delete by ID because deleting a whole entity type can hang on iOS 27.
+      let legacy = UserDefaults.standard.stringArray(forKey: indexedKey) ?? []
+      if !legacy.isEmpty {
+        try await withDeadline("removing legacy save results") {
+          try await CSSearchableIndex.default().deleteAppEntities(identifiedBy: legacy, ofType: ItemEntity.self)
+        }
+        UserDefaults.standard.removeObject(forKey: indexedKey)
+      }
+      return count
+    }
+    #endif
+    return try await sync(records.map(ItemEntity.init(record:)), key: indexedKey)
+  }
+
+  @available(iOS 18.0, *)
+  private static func sync<Entity: IndexedEntity>(_ entities: [Entity], key: String) async throws -> Int
+  where Entity.ID == String {
     let index = CSSearchableIndex.default()
-    let previous = Set(UserDefaults.standard.stringArray(forKey: indexedKey) ?? [])
+    let previous = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
     let current = Set(entities.map(\.id))
 
     let removed = Array(previous.subtracting(current))
     if !removed.isEmpty {
       try await withDeadline("deleting removed saves") {
-        try await index.deleteAppEntities(identifiedBy: removed, ofType: ItemEntity.self)
+        try await index.deleteAppEntities(identifiedBy: removed, ofType: Entity.self)
       }
     }
     for start in stride(from: 0, to: entities.count, by: batchSize) {
@@ -42,13 +64,14 @@ enum AmberSpotlight {
         try await index.indexAppEntities(batch)
       }
     }
-    UserDefaults.standard.set(Array(current), forKey: indexedKey)
+    UserDefaults.standard.set(Array(current), forKey: key)
     return entities.count
   }
 
   /// Removes everything Amber put in Spotlight (sign-out, app lock).
   static func clear() async throws {
     UserDefaults.standard.removeObject(forKey: indexedKey)
+    UserDefaults.standard.removeObject(forKey: indexedNotesKey)
     try await withDeadline("clearing saves") {
       try await CSSearchableIndex.default().deleteAllSearchableItems()
     }

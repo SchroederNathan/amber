@@ -10,13 +10,18 @@ final class AppIntentsSetup: Module {
     Name("AppIntentsSetup")
 
     OnCreate {
+      #if compiler(>=6.4)
+      if #available(iOS 27.0, *) {
+        // Use the same schema-backed save for on-screen awareness and Siri's semantic index.
+        AppEntityIdentifierRegistry.shared.register(AmberCatalog.itemKind, as: NoteEntity.self)
+        AppEntityIdentifierRegistry.shared.register(AmberCatalog.spaceKind, as: SpaceEntity.self)
+      } else if #available(iOS 18.0, *) {
+        AppEntityIdentifierRegistry.shared.register(AmberCatalog.itemKind, as: ItemEntity.self)
+      }
+      #else
       if #available(iOS 18.0, *) {
         // Plain registration: Spotlight indexing is done by `AmberSpotlight`, not the package.
         AppEntityIdentifierRegistry.shared.register(AmberCatalog.itemKind, as: ItemEntity.self)
-      }
-      #if compiler(>=6.4)
-      if #available(iOS 27.0, *) {
-        AppEntityIdentifierRegistry.shared.register(AmberCatalog.spaceKind, as: SpaceEntity.self)
       }
       #endif
       if #available(iOS 18.0, *) {

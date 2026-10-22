@@ -58,6 +58,14 @@ enum AmberCatalog {
       .joined(separator: " ")
   }
 
+  /// Full saved source text, published separately from the compact entity catalog.
+  static func content(for id: String) -> String? {
+    guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    else { return nil }
+    let file = documents.appendingPathComponent("app-intent-content/\(id).txt")
+    return try? String(contentsOf: file, encoding: .utf8)
+  }
+
   /// A small JPEG thumbnail the app wrote for this item, if any.
   static func thumbnailData(for id: String) -> Data? {
     guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
