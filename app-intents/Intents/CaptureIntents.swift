@@ -171,18 +171,20 @@ struct SaveImageIntent: AppIntent {
   }
 }
 
-/// "Save this page to Amber." A plain intent with a URL parameter, so Siri can pass it the page
-/// on screen. It returns only a dialog: returning a `browser.bookmark` schema entity (or using the
-/// `browser.bookmarkURL` schema, which requires one) made iOS 27 stall the action before
-/// `perform()` ran, until the app was killed.
+/// Saves an explicit URL supplied by Shortcuts. On-screen Siri capture uses `SaveNoteIntent`;
+/// this plain intent cannot assume it receives Safari's current page. It returns only a dialog:
+/// returning a `browser.bookmark` schema entity (or using `browser.bookmarkURL`) made iOS 27
+/// stall the action before `perform()` ran, until the app was killed.
 @available(iOS 18.0, *)
 struct SaveLinkIntent: AppIntent {
   static let title: LocalizedStringResource = "Save a Link"
   static let description = IntentDescription("Saves a web page to Amber, which reads and tags it for you.")
   static let openAppWhenRun: Bool = false
 
-  @Parameter(title: "URL", requestValueDialog: "Which link should Amber save?")
-  var url: URL
+  // Optional so missing screen context reaches `perform()` instead of looping in Siri's
+  // required-parameter resolution. Never report a save or queue an invocation without a URL.
+  @Parameter(title: "URL")
+  var url: URL?
 
   @Parameter(title: "Name")
   var name: String?
@@ -193,6 +195,10 @@ struct SaveLinkIntent: AppIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult & ProvidesDialog {
+    guard let url else {
+      AmberIntentLog.record("SaveLinkIntent.perform missing URL")
+      return .result(dialog: "No link was provided. In Safari, tap Share and choose Amber to save this page.")
+    }
     AmberIntentLog.record("SaveLinkIntent.perform url=\(url.absoluteString)")
     let title = name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? url.host() ?? url.absoluteString
     do {
