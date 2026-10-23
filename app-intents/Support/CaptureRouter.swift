@@ -63,7 +63,7 @@ enum CaptureRouter {
   }
 
   static func isWebURL(_ url: URL) -> Bool {
-    return url.scheme == "https" || url.scheme == "http"
+    return ["https", "http"].contains(url.scheme?.lowercased() ?? "") && url.host() != nil
   }
 
   static func webURLs(in text: String) -> [URL] {

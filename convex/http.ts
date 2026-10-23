@@ -170,12 +170,18 @@ http.route({
     if (typeof payload === "string") {
       return json(400, { error: payload });
     }
+    const requestId = (body as Record<string, unknown>).requestId;
+    if (requestId !== undefined &&
+        (typeof requestId !== "string" || !requestId.trim() || requestId.length > 200)) {
+      return json(400, { error: "Invalid capture request ID" });
+    }
 
     const tokenHash = await sha256Hex(token);
     let result: { itemId: Id<"items"> } | null;
     try {
       result = await ctx.runMutation(internal.appIntents.captureInternal, {
         tokenHash,
+        requestId: requestId as string | undefined,
         kind: payload.kind,
         text: payload.kind === "link" ? undefined : payload.text,
         url: payload.kind === "link" ? payload.url : undefined,

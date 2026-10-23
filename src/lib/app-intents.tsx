@@ -1,220 +1,70 @@
-import { ensureThumbnail } from '@/lib/thumbnails';
-import { appIntentContent } from '@/lib/app-intent-content';
-import { displayHost } from '@/lib/url';
-import { useSaveImages } from '@/lib/use-save-image';
+import { clearAppIntentCatalogs, useAppIntentCatalogSync } from '@/lib/app-intent-catalog';
+import { appIntentsSetup as setup } from '@/lib/app-intent-native';
+import { createIntentDelivery, InvalidAppIntent } from '@/lib/app-intent-delivery';
 import { api } from '@convex/_generated/api';
-import type { Id } from '@convex/_generated/dataModel';
-import { convexQuery } from '@convex-dev/react-query';
-import { useQuery } from '@tanstack/react-query';
-import { useAction, useMutation } from 'convex/react';
-import type { FunctionReturnType } from 'convex/server';
-import { requireOptionalNativeModule } from 'expo';
+import { useAction, useConvex, useMutation } from 'convex/react';
+import type { FunctionArgs } from 'convex/server';
+import { ConvexError } from 'convex/values';
+import { fetch as expoFetch } from 'expo/fetch';
 import * as AppIntents from 'expo-app-intents';
 import { Directory, File, Paths } from 'expo-file-system';
 import { useNavigationContainerRef, useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createMMKV } from 'react-native-mmkv';
 
 // Bridge between Amber and the Swift App Intents in `app-intents/` (Siri, Spotlight, Shortcuts,
 // Visual Intelligence). Keep the catalog kinds, metadata keys, and invocation names in sync with
 // `app-intents/Support/AmberCatalog.swift` and the intents that dispatch them.
 
-const ITEM_KIND = 'item';
-const SPACE_KIND = 'space';
-// Catalogs live in UserDefaults, so they carry the newest saves only.
-const ITEM_CATALOG_LIMIT = 300;
-const THUMB_LIMIT = 60;
-const THUMB_MAX_DIM = 256;
-const NOTE_TEXT_LIMIT = 600;
-
-type SetupModule = {
-  setCaptureCredentials(siteUrl: string, token: string): Promise<void>;
-  clearCaptureCredentials(): Promise<void>;
-  hasCaptureCredentials(): Promise<boolean>;
-  /** Mirrors the `item` catalog into Spotlight; resolves with the indexed count. */
-  indexItemsInSpotlight(): Promise<number>;
-  clearSpotlight(): Promise<void>;
-};
-
-// Null on Android, web, and dev clients built before the intents existed.
-const setup = requireOptionalNativeModule<SetupModule>('AppIntentsSetup');
 const store = createMMKV({ id: 'app-intents' });
 const CAPTURE_OWNER_KEY = 'captureOwner';
+const ACCOUNT_OWNER_KEY = 'accountOwner';
+const HANDLED_KEY = 'handledInvocations';
+
+function handledIds(): string[] {
+  try {
+    const ids: unknown = JSON.parse(store.getString(HANDLED_KEY) ?? '[]');
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 const siteUrl =
   process.env.EXPO_PUBLIC_CONVEX_SITE_URL ??
   process.env.EXPO_PUBLIC_CONVEX_URL?.replace(/\.convex\.cloud$/, '.convex.site');
 
-type ListedItem = FunctionReturnType<typeof api.items.listItems>[number];
-type ListedSpace = FunctionReturnType<typeof api.spaces.listSpaces>[number];
-
-function thumbDirectory() {
-  return new Directory(Paths.document, 'app-intent-thumbs');
+// Credential setup and reset share one queue so sign-out cannot race a late token write.
+let credentialChain = Promise.resolve();
+let credentialGeneration = 0;
+function credentials(work: () => Promise<void>) {
+  const result = credentialChain.then(work);
+  credentialChain = result.catch(() => {});
+  return result;
 }
 
-function contentDirectory() {
-  return new Directory(Paths.document, 'app-intent-content');
-}
-
-/** Keep full article/note bodies on disk rather than in the UserDefaults entity catalog. */
-function writeContent(items: ListedItem[], isCurrent: () => boolean): boolean {
-  const dir = contentDirectory();
-  if (!dir.exists) dir.create({ intermediates: true });
-  const wanted = new Set<string>();
-  for (const item of items) {
-    if (!isCurrent()) return false;
-    const content = appIntentContent(item);
-    if (!content) continue;
-    const name = `${item._id}.txt`;
-    wanted.add(name);
-    const file = new File(dir, name);
-    if (file.exists && file.textSync() === content) continue;
-    if (!file.exists) file.create();
-    file.write(content);
+async function clearStagedCaptures() {
+  for (const root of [Paths.document, Paths.cache]) {
+    const dir = new Directory(root, 'siri-attachments');
+    if (dir.exists) dir.delete();
   }
-  for (const entry of dir.list()) {
-    if (entry instanceof File && !wanted.has(entry.name)) entry.delete();
-  }
-  return true;
 }
 
-function itemTitle(item: ListedItem): string {
-  const title = item.title?.trim();
-  if (title) return title;
-  if (item.type === 'note' && item.note) return item.note.trim().split('\n')[0].slice(0, 80);
-  if (item.type === 'link') return displayHost(item.url) || 'Link';
-  return 'Saved photo';
-}
-
-function itemRecord(item: ListedItem): AppIntents.AppIntentEntity {
-  const metadata: Record<string, string> = {
-    kind: item.type,
-    savedAt: String(Math.round(item._creationTime)),
-  };
-  if (item.url) metadata.url = item.url;
-  if (item.siteName) metadata.site = item.siteName;
-  if (item.note) metadata.text = item.note.slice(0, NOTE_TEXT_LIMIT);
-  const imageUrl = item.imageUrl ?? item.heroImageUrl;
-  if (imageUrl) metadata.imageUrl = imageUrl;
-  return {
-    id: item._id,
-    title: itemTitle(item),
-    subtitle: item.description?.trim() || item.siteName || undefined,
-    synonyms: [...new Set(item.tags.map((tag) => tag.trim()).filter(Boolean))].slice(0, 12),
-    metadata,
-  };
-}
-
-function spaceRecord(space: ListedSpace): AppIntents.AppIntentEntity {
-  return {
-    id: space._id,
-    title: space.name.trim() || 'Untitled space',
-    subtitle: space.description?.trim() || undefined,
-  };
-}
-
-async function writeThumbnails(items: ListedItem[], isCurrent: () => boolean): Promise<boolean> {
-  const dir = thumbDirectory();
-  if (!dir.exists) dir.create({ intermediates: true });
-  const wanted = new Map<string, string>();
-  for (const item of items) {
-    const url = item.imageUrl ?? item.heroImageUrl;
-    if (url && wanted.size < THUMB_LIMIT) wanted.set(`${item._id}.jpg`, url);
-  }
-
-  let created = false;
-  for (const [fileName, url] of wanted) {
-    if (!isCurrent()) return created;
-    if (new File(dir, fileName).exists) continue;
-    try {
-      await ensureThumbnail(dir, fileName, url, THUMB_MAX_DIM);
-      created = true;
-    } catch (error) {
-      // A missing thumbnail falls back to a symbol; never block the catalog.
-      console.warn(`App Intents thumbnail failed for ${fileName}`, error);
-    }
-  }
-  for (const entry of dir.list()) {
-    if (entry instanceof File && !wanted.has(entry.name)) {
-      try {
-        entry.delete();
-      } catch {
-        // Best effort; a stale thumbnail is harmless.
-      }
-    }
-  }
-  return created;
-}
-
-// Serialize publishes so a fast series of Convex pushes can't interleave file work.
-let publishChain: Promise<void> = Promise.resolve();
-let publishGeneration = 0;
-
-function publish(work: (isCurrent: () => boolean) => Promise<void>) {
-  const generation = ++publishGeneration;
-  const isCurrent = () => generation === publishGeneration;
-  publishChain = publishChain
-    .then(() => (isCurrent() ? work(isCurrent) : undefined))
-    .catch((error) => console.warn('App Intents catalog publish failed', error));
-  return publishChain;
-}
-
-function clearCatalogs() {
-  return publish(async () => {
-    try {
-      await AppIntents.setEntityCatalogAsync(ITEM_KIND, []);
-      await AppIntents.setEntityCatalogAsync(SPACE_KIND, []);
-      await setup?.clearSpotlight();
-    } finally {
-      for (const dir of [thumbDirectory(), contentDirectory()]) {
-        if (dir.exists) dir.delete();
-      }
-    }
-  });
-}
-
-/**
- * Forgets everything Siri knows about the signed-out account: capture credentials, queued
- * invocations, and the item and space catalogs (which also empties Spotlight).
- */
+/** Removes the signed-out account's native data, including staged capture files. */
 export async function resetAppIntents(): Promise<void> {
-  if (!AppIntents.isAvailable()) return;
+  ++credentialGeneration;
   store.remove(CAPTURE_OWNER_KEY);
-  await Promise.all([
-    setup?.clearCaptureCredentials(),
+  store.remove(ACCOUNT_OWNER_KEY);
+  store.remove(HANDLED_KEY);
+  const results = await Promise.allSettled([
+    clearStagedCaptures(),
+    credentials(async () => { await setup?.clearCaptureCredentials(); }),
     AppIntents.clearPendingInvocationsAsync(),
-    clearCatalogs(),
+    clearAppIntentCatalogs(),
   ]);
-}
-
-/** Publishes the newest saves and all spaces for Siri, Spotlight, and Visual Intelligence. */
-function useCatalogSync(enabled: boolean) {
-  const { data: items } = useQuery({ ...convexQuery(api.items.listItems, {}), enabled });
-  const { data: spaces } = useQuery({ ...convexQuery(api.spaces.listSpaces, {}), enabled });
-  useEffect(() => {
-    if (enabled) return;
-    void clearCatalogs();
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled || items === undefined || spaces === undefined) return;
-    const ready = items.filter((item) => item.status === 'ready').slice(0, ITEM_CATALOG_LIMIT);
-    const itemRecords = ready.map(itemRecord);
-    const spaceRecords = spaces.map(spaceRecord);
-    // Query structural sharing keeps these references stable until data changes. Source-body
-    // changes must also republish, even when titles, summaries, and catalog records are equal.
-    void publish(async (isCurrent) => {
-      if (!writeContent(ready, isCurrent)) return;
-      await AppIntents.setEntityCatalogAsync(SPACE_KIND, spaceRecords);
-      await AppIntents.setEntityCatalogAsync(ITEM_KIND, itemRecords);
-      // Spotlight first without thumbnails so search works right away, then again once new
-      // thumbnails exist.
-      await setup?.indexItemsInSpotlight();
-      if ((await writeThumbnails(ready, isCurrent)) && isCurrent()) {
-        await setup?.indexItemsInSpotlight();
-      }
-    });
-  }, [enabled, items, spaces]);
+  for (const result of results) {
+    if (result.status === 'rejected') throw result.reason;
+  }
 }
 
 /** Gives the native capture intents a token for this account, minting one when needed. */
@@ -225,14 +75,17 @@ function useCaptureCredentials(userId: string) {
     if (!setup || !siteUrl) return;
     const nativeSetup = setup;
     let cancelled = false;
-    void (async () => {
-      const hasCredentials = await nativeSetup.hasCaptureCredentials();
+    const generation = credentialGeneration;
+    const isCurrent = () => !cancelled && generation === credentialGeneration;
+    void credentials(async () => {
+      if (!isCurrent()) return;
+      const hasCredentials = await nativeSetup.hasCaptureCredentials(userId);
       if (hasCredentials && store.getString(CAPTURE_OWNER_KEY) === userId) return;
       const token = await issueCaptureToken({});
-      if (cancelled) return;
-      await nativeSetup.setCaptureCredentials(siteUrl, token);
-      store.set(CAPTURE_OWNER_KEY, userId);
-    })().catch((error) => console.warn('Could not set up Siri capture', error));
+      if (!isCurrent()) return;
+      await nativeSetup.setCaptureCredentials(siteUrl, token, userId);
+      if (isCurrent()) store.set(CAPTURE_OWNER_KEY, userId);
+    }).catch((error) => console.warn('Could not set up Siri capture', error));
     return () => {
       cancelled = true;
     };
@@ -244,99 +97,163 @@ function param(invocation: AppIntents.AppIntentInvocation, name: string): string
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-function spaceParam(invocation: AppIntents.AppIntentInvocation): Id<'spaces'> | undefined {
-  return param(invocation, 'spaceId') as Id<'spaces'> | undefined;
+function stagedImage(path: string): File {
+  const file = new File(new URL(`file://${encodeURI(path)}`).href);
+  const allowed = [Paths.document, Paths.cache].some((root) =>
+    file.uri.startsWith(new Directory(root, 'siri-attachments').uri.replace(/\/?$/, '/')));
+  if (!allowed) throw new InvalidAppIntent('Image is outside the capture directory');
+  return file;
 }
 
-/** Runs the invocations Siri queued: navigation, and captures that could not be saved natively. */
-function useInvocationHandler() {
+/** Runs native invocations only while this signed-in bridge remains mounted. */
+function useInvocationHandler(userId: string) {
   const router = useRouter();
   const navigation = useNavigationContainerRef();
-  const createNoteItem = useMutation(api.items.createNoteItem);
-  const createLinkItem = useMutation(api.items.createLinkItem);
-  const saveImages = useSaveImages();
-  const inFlight = useRef(new Set<string>());
+  const convex = useConvex();
+  const capture = useMutation(api.appIntents.capture);
+  const generateUploadUrl = useMutation(api.items.generateUploadUrl);
+  const active = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
 
-  async function whenNavigationReady() {
-    for (let attempt = 0; attempt < 50 && !navigation.isReady(); attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  async function captureOnce(args: FunctionArgs<typeof api.appIntents.capture>) {
+    if (!active.current) throw new Error('App Intent handler unmounted');
+    try {
+      return await capture(args);
+    } catch (error) {
+      if (error instanceof ConvexError && error.data?.code === 'INVALID_CAPTURE') {
+        throw new InvalidAppIntent(error.data.message);
+      }
+      throw error;
     }
   }
 
-  async function handle(invocation: AppIntents.AppIntentInvocation) {
+  async function whenNavigationReady() {
+    for (let attempt = 0; attempt < 50 && !navigation.isReady(); attempt++) {
+      if (!active.current) throw new Error('App Intent handler unmounted');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!active.current || !navigation.isReady()) throw new Error('Navigation is not ready');
+  }
+
+  async function handle(invocation: AppIntents.AppIntentInvocation): Promise<boolean> {
+    const ownerId = param(invocation, 'userId');
+    if (ownerId && ownerId !== userId) throw new InvalidAppIntent('Capture belongs to a signed-out account');
+    const requestId = param(invocation, 'requestId') ?? invocation.id;
+    const spaceId = param(invocation, 'spaceId');
+    const required = (name: string) => {
+      const value = param(invocation, name)?.trim();
+      if (!value) throw new InvalidAppIntent(`Missing ${name}`);
+      return value;
+    };
     switch (invocation.name) {
-      case 'search': {
+      case 'search':
         await whenNavigationReady();
-        // `t` makes a repeated query still count as a new navigation.
         router.navigate({
           pathname: '/(app)/(tabs)/(search)',
           params: { q: param(invocation, 'query') ?? '', t: String(invocation.createdAt) },
         });
-        return;
-      }
-      case 'openItem': {
-        const id = param(invocation, 'id');
-        if (!id) return;
-        await whenNavigationReady();
-        router.push({ pathname: '/item/[id]', params: { id } });
-        return;
-      }
+        return true;
+      case 'openItem':
       case 'openSpace': {
-        const id = param(invocation, 'id');
-        if (!id) return;
+        const id = required('id');
         await whenNavigationReady();
-        router.push({ pathname: '/space/[id]', params: { id } });
-        return;
+        router.navigate({ pathname: invocation.name === 'openItem' ? '/item/[id]' : '/space/[id]', params: { id } });
+        return true;
       }
-      case 'saveNote': {
-        const text = param(invocation, 'text');
-        if (text) await createNoteItem({ text, spaceId: spaceParam(invocation) });
-        return;
-      }
-      case 'saveLink': {
-        const url = param(invocation, 'url');
-        if (url) await createLinkItem({ url, spaceId: spaceParam(invocation) });
-        return;
-      }
+      case 'saveNote':
+        await captureOnce({ requestId, kind: 'note', text: required('text'), spaceId });
+        return true;
+      case 'saveLink':
+        await captureOnce({ requestId, kind: 'link', url: required('url'), spaceId });
+        return true;
       case 'saveImages': {
         const paths = invocation.params.paths;
-        if (!Array.isArray(paths)) return;
-        const files = paths
-          .filter((path): path is string => typeof path === 'string')
-          .map((path) => new File(`file://${encodeURI(path)}`))
-          .filter((file) => file.exists);
-        if (files.length === 0) return;
-        await saveImages(files.map((file) => ({ uri: file.uri })), { spaceId: spaceParam(invocation) });
-        for (const file of files) file.delete();
-        return;
+        if (!Array.isArray(paths) || paths.length === 0 || !paths.every((path) => typeof path === 'string')) {
+          throw new InvalidAppIntent('Missing image paths');
+        }
+        // New native code queues one prepared image per invocation. Keep older batches readable.
+        for (const [index, path] of paths.entries()) {
+          if (!active.current) throw new Error('App Intent handler unmounted');
+          const imageRequestId = paths.length === 1 ? requestId : `${requestId}:${index}`;
+          if (await convex.query(api.appIntents.getCaptureResult, { requestId: imageRequestId })) continue;
+          if (!active.current) throw new Error('App Intent handler unmounted');
+          const file = stagedImage(path);
+          if (!file.exists) throw new InvalidAppIntent('Capture image is no longer available');
+          const uploadUrl = await generateUploadUrl();
+          const result = await expoFetch(uploadUrl, {
+            method: 'POST', body: file,
+            headers: { 'Content-Type': param(invocation, 'mimeType') ?? file.type ?? 'image/jpeg' },
+          });
+          if (!result.ok) throw new Error(`Capture upload failed (${result.status})`);
+          const { storageId } = await result.json();
+          if (!active.current) throw new Error('App Intent handler unmounted');
+          const aspectRatio = invocation.params.aspectRatio;
+          await captureOnce({
+            requestId: imageRequestId,
+            kind: 'image', storageId, spaceId,
+            text: param(invocation, 'text'),
+            aspectRatio: typeof aspectRatio === 'number' ? aspectRatio : undefined,
+            isSticker: invocation.params.isSticker === true,
+          });
+        }
+        // Keep files until every image has committed. Receipts protect retries of older batches.
+        for (const path of paths) {
+          try { stagedImage(path).delete(); } catch { /* Best effort. */ }
+        }
+        return true;
       }
+      default:
+        console.warn(`Unknown App Intent remains pending: ${invocation.name}`);
+        return false;
     }
   }
 
-  AppIntents.useAppIntents(async (pending) => {
-    for (const invocation of pending) {
-      if (inFlight.current.has(invocation.id)) continue;
-      inFlight.current.add(invocation.id);
-      try {
-        await handle(invocation);
-        await AppIntents.removePendingInvocationAsync(invocation.id);
-      } catch (error) {
-        // Left pending, so the next launch or invocation retries it.
-        console.warn(`App Intent ${invocation.name} failed`, error);
-      } finally {
-        inFlight.current.delete(invocation.id);
-      }
-    }
-  });
+  const handler = useRef(handle);
+  const delivery = useRef<ReturnType<typeof createIntentDelivery<AppIntents.AppIntentInvocation>> | null>(null);
+  useEffect(() => { handler.current = handle; });
+  useEffect(() => {
+    delivery.current = createIntentDelivery<AppIntents.AppIntentInvocation>({
+      isActive: () => active.current,
+      isHandled: (id) => handledIds().includes(id),
+      markHandled: (id) => {
+        const ids = handledIds();
+        store.set(HANDLED_KEY, JSON.stringify([...new Set([...ids, id])].slice(-100)));
+      },
+      handle: (invocation) => handler.current(invocation),
+      acknowledge: AppIntents.removePendingInvocationAsync,
+      onError: (invocation, error) => console.warn(`App Intent ${invocation.name} failed`, error),
+    });
+  }, []);
+  AppIntents.useAppIntents(async (pending) => { await delivery.current?.(pending); });
 }
 
-/**
- * Wires Amber into Siri and Spotlight. Mount once inside the signed-in, unlocked tree. With the
- * app lock on, nothing about the user's saves is published, but Siri can still capture.
- */
-export function AppIntentsBridge({ userId, publishCatalogs }: { userId: string; publishCatalogs: boolean }) {
-  useInvocationHandler();
+function AvailableAppIntentsBridge({ userId, publishCatalogs }: { userId: string; publishCatalogs: boolean }) {
+  useInvocationHandler(userId);
   useCaptureCredentials(userId);
-  useCatalogSync(publishCatalogs && AppIntents.isAvailable());
+  useAppIntentCatalogSync(publishCatalogs);
   return null;
+}
+
+/** Mount once within the authenticated, unlocked tree. App lock disables catalog publication. */
+export function AppIntentsBridge(props: { userId: string; publishCatalogs: boolean }) {
+  return AppIntents.isAvailable() ? <AccountAppIntentsBridge key={props.userId} {...props} /> : null;
+}
+
+function AccountAppIntentsBridge(props: { userId: string; publishCatalogs: boolean }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const previous = store.getString(ACCOUNT_OWNER_KEY) ?? store.getString(CAPTURE_OWNER_KEY);
+      if (previous && previous !== props.userId) await resetAppIntents();
+      if (cancelled) return;
+      store.set(ACCOUNT_OWNER_KEY, props.userId);
+      setReady(true);
+    })().catch((error) => console.warn('Could not prepare App Intents for this account', error));
+    return () => { cancelled = true; };
+  }, [props.userId]);
+  return ready ? <AvailableAppIntentsBridge {...props} /> : null;
 }

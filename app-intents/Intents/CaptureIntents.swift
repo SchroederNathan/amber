@@ -19,17 +19,25 @@ struct SaveNoteIntent {
 
   var name: AttributedString
   var content: AttributedString?
+  @Parameter(supportedContentTypes: [.image, .url, .webArchive, .internetLocation, .html])
   var attachments: [IntentFile]
   var isPinned: Bool
   var folder: SpaceEntity?
 
   @MainActor
   func perform() async throws -> some IntentResult & ReturnsValue<NoteEntity> & ProvidesDialog {
+    guard !isPinned else { throw CaptureInputError.pinningUnsupported }
     let nameText = String(name.characters)
     let contentText = content.map { String($0.characters) }
     let text = Self.noteText(name: nameText, content: contentText)
     let links = CaptureRouter.linkAttributes(in: [name] + (content.map { [$0] } ?? []))
     let files = attachments.map { CaptureRouter.Attachment(data: $0.data, type: $0.type, filename: $0.filename) }
+    guard files.filter(CaptureRouter.isImage).count <= CaptureRouter.maxImages else {
+      throw CaptureInputError.tooManyImages
+    }
+    guard files.allSatisfy({ CaptureRouter.isImage($0) || CaptureRouter.pageURL($0) != nil }) else {
+      throw CaptureInputError.unsupportedAttachment
+    }
     let route = CaptureRouter.route(text: text, linkAttributes: links, attachments: files)
     let trace = CaptureRouter.trace(
       intent: "SaveNoteIntent", name: nameText, content: contentText, linkAttributes: links, attachments: files,
@@ -39,14 +47,14 @@ struct SaveNoteIntent {
     let saved: (NoteEntity, IntentDialog)
     switch route {
     case .link(let url):
-      saved = await saveLink(url, trace: trace)
+      saved = try await saveLink(url, trace: trace)
     case .images(let images):
       saved = try await saveImages(images, text: text, trace: trace)
     case .note:
       guard !text.isEmpty else {
         throw $name.needsValueError("What should the note say?")
       }
-      saved = await saveNote(text, trace: trace)
+      saved = try await saveNote(text, trace: trace)
     }
     return .result(value: saved.0, dialog: saved.1)
   }
@@ -61,24 +69,24 @@ struct SaveNoteIntent {
 
   /// A page Siri passed along (from any browser): saved as a link, so Amber reads the article.
   @MainActor
-  private func saveLink(_ url: URL, trace: String) async -> (NoteEntity, IntentDialog) {
+  private func saveLink(_ url: URL, trace: String) async throws -> (NoteEntity, IntentDialog) {
+    let requestId = UUID().uuidString
+    let ownerId = AmberCapture.load()?.userId
     let title = url.host()?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString
     do {
       let itemId = try await AmberCapture.save(
-        kind: "link", url: url.absoluteString, spaceId: folder?.id, trace: trace)
+        requestId: requestId, kind: "link", url: url.absoluteString, spaceId: folder?.id, trace: trace)
       AmberIntentLog.record("SaveNoteIntent saved link \(itemId)")
       let dialog: IntentDialog = folder.map { "Saved \(title) to \($0.name) in Amber." } ?? "Saved \(title) to Amber."
       return (NoteEntity(id: itemId, text: url.absoluteString, folder: folder), dialog)
     } catch {
       AmberIntentLog.record("SaveNoteIntent link capture failed: \(error)")
-      let invocationId = await AppIntentDispatcher.shared.dispatch(
+      await AppIntentDispatcher.shared.dispatch(
         name: "saveLink",
-        params: ["url": .string(url.absoluteString), "spaceId": folder.map { .string($0.id) } ?? .null]
+        params: ["url": .string(url.absoluteString), "spaceId": folder.map { .string($0.id) } ?? .null,
+          "requestId": .string(requestId), "userId": ownerId.map(AppIntentValue.string) ?? .null]
       )
-      return (
-        NoteEntity(id: invocationId, text: url.absoluteString, folder: folder),
-        "Amber will finish saving \(title)\(whereSuffix) the next time you open it."
-      )
+      throw CaptureInputError.deferred("Amber will finish saving \(title)\(whereSuffix) the next time you open it.")
     }
   }
 
@@ -93,25 +101,28 @@ struct SaveNoteIntent {
       images, words: text, sticker: StickerTarget(words: text), spaceId: folder?.id, spaceName: folder?.name,
       intent: "SaveNoteIntent", trace: trace)
     let label = text.isEmpty ? (images.count == 1 ? "Image" : "Images") : text
-    return (NoteEntity(id: saved.itemId ?? UUID().uuidString, text: label, folder: folder), saved.dialog)
+    guard let itemId = saved.itemId else {
+      throw CaptureInputError.deferred("Amber will finish saving your images\(whereSuffix) the next time you open it.")
+    }
+    return (NoteEntity(id: itemId, text: label, folder: folder), saved.dialog)
   }
 
   @MainActor
-  private func saveNote(_ text: String, trace: String) async -> (NoteEntity, IntentDialog) {
+  private func saveNote(_ text: String, trace: String) async throws -> (NoteEntity, IntentDialog) {
+    let requestId = UUID().uuidString
+    let ownerId = AmberCapture.load()?.userId
     do {
-      let itemId = try await AmberCapture.save(kind: "note", text: text, spaceId: folder?.id, trace: trace)
+      let itemId = try await AmberCapture.save(requestId: requestId, kind: "note", text: text, spaceId: folder?.id, trace: trace)
       AmberIntentLog.record("SaveNoteIntent saved \(itemId)")
       return (NoteEntity(id: itemId, text: text, folder: folder), savedDialog)
     } catch {
       AmberIntentLog.record("SaveNoteIntent capture failed: \(error)")
-      let invocationId = await AppIntentDispatcher.shared.dispatch(
+      await AppIntentDispatcher.shared.dispatch(
         name: "saveNote",
-        params: ["text": .string(text), "spaceId": folder.map { .string($0.id) } ?? .null]
+        params: ["text": .string(text), "spaceId": folder.map { .string($0.id) } ?? .null,
+          "requestId": .string(requestId), "userId": ownerId.map(AppIntentValue.string) ?? .null]
       )
-      return (
-        NoteEntity(id: invocationId, text: text, folder: folder),
-        "Amber will finish saving your note\(whereSuffix) the next time you open it."
-      )
+      throw CaptureInputError.deferred("Amber will finish saving your note\(whereSuffix) the next time you open it.")
     }
   }
 
@@ -152,6 +163,7 @@ struct SaveImageIntent: AppIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult & ProvidesDialog {
+    guard images.count <= CaptureRouter.maxImages else { throw CaptureInputError.tooManyImages }
     let files = images
       .map { CaptureRouter.Attachment(data: $0.data, type: $0.type, filename: $0.filename) }
       .filter(CaptureRouter.isImage)
@@ -199,16 +211,22 @@ struct SaveLinkIntent: AppIntent {
       AmberIntentLog.record("SaveLinkIntent.perform missing URL")
       return .result(dialog: "No link was provided. In Safari, tap Share and choose Amber to save this page.")
     }
-    AmberIntentLog.record("SaveLinkIntent.perform url=\(url.absoluteString)")
+    guard CaptureRouter.isWebURL(url) else { throw CaptureInputError.webURLRequired }
+    let requestId = UUID().uuidString
+    let ownerId = AmberCapture.load()?.userId
+    AmberIntentLog.record("SaveLinkIntent.perform")
     let title = name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? url.host() ?? url.absoluteString
     do {
       let itemId = try await AmberCapture.save(
-        kind: "link", url: url.absoluteString, trace: "intent=SaveLinkIntent route=link")
+        requestId: requestId, kind: "link", url: url.absoluteString, trace: "intent=SaveLinkIntent route=link")
       AmberIntentLog.record("SaveLinkIntent saved \(itemId)")
       return .result(dialog: "Saved \(title) to Amber.")
     } catch {
       AmberIntentLog.record("SaveLinkIntent capture failed: \(error)")
-      await AppIntentDispatcher.shared.dispatch(name: "saveLink", params: ["url": .string(url.absoluteString)])
+      await AppIntentDispatcher.shared.dispatch(name: "saveLink", params: [
+        "url": .string(url.absoluteString), "requestId": .string(requestId),
+        "userId": ownerId.map(AppIntentValue.string) ?? .null,
+      ])
       return .result(dialog: "Amber will finish saving \(title) the next time you open it.")
     }
   }
@@ -216,4 +234,22 @@ struct SaveLinkIntent: AppIntent {
 
 extension String {
   fileprivate var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+enum CaptureInputError: LocalizedError {
+  case tooManyImages
+  case unsupportedAttachment
+  case deferred(String)
+  case pinningUnsupported
+  case webURLRequired
+
+  var errorDescription: String? {
+    switch self {
+    case .tooManyImages: return "Save at most 10 images at a time in Amber."
+    case .unsupportedAttachment: return "Amber can save images and web links. Remove the other attachments and try again."
+    case .deferred(let message): return message
+    case .pinningUnsupported: return "Amber does not support pinned saves. Save this without pinning it."
+    case .webURLRequired: return "Choose an http or https web link to save in Amber."
+    }
+  }
 }

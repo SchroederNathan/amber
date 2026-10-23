@@ -3,6 +3,7 @@ import CoreSpotlight
 import CoreTransferable
 internal import ExpoAppIntents
 import Foundation
+import ImageIO
 import UniformTypeIdentifiers
 
 /// One thing saved in Amber: a link, a note, or a photo. Built from the `item` catalog.
@@ -120,7 +121,7 @@ extension ItemEntity: Transferable {
     }
     .exportingCondition { $0.url != nil }
 
-    FileRepresentation(exportedContentType: .jpeg) { item in
+    FileRepresentation(exportedContentType: .image) { item in
       let file = try await item.downloadImage()
       return SentTransferredFile(file)
     }
@@ -131,11 +132,16 @@ extension ItemEntity: Transferable {
 
   func downloadImage() async throws -> URL {
     guard let imageUrl else { throw CocoaError(.fileNoSuchFile) }
-    let (temporary, _) = try await URLSession.shared.download(from: imageUrl)
+    let (temporary, response) = try await URLSession.shared.download(from: imageUrl)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+      let source = CGImageSourceCreateWithURL(temporary as CFURL, nil),
+      let identifier = CGImageSourceGetType(source),
+      let type = UTType(identifier as String), type.conforms(to: .image)
+    else { throw CocoaError(.fileReadCorruptFile) }
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
       UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    let destination = directory.appendingPathComponent("\(safeFilename).jpg")
+    let destination = directory.appendingPathComponent("\(safeFilename).\(type.preferredFilenameExtension ?? "img")")
     try FileManager.default.moveItem(at: temporary, to: destination)
     return destination
   }
@@ -151,22 +157,22 @@ extension ItemEntity: Transferable {
 @available(iOS 18.0, *)
 struct ItemQuery: EntityStringQuery, EnumerableEntityQuery {
   func entities(for identifiers: [String]) async throws -> [ItemEntity] {
-    return await AmberCatalog.items(matching: identifiers).map(ItemEntity.init(record:))
+    return try await AmberCatalog.items(matching: identifiers).map(ItemEntity.init(record:))
   }
 
   func suggestedEntities() async throws -> [ItemEntity] {
-    return await AmberCatalog.items().prefix(20).map(ItemEntity.init(record:))
+    return try await AmberCatalog.items().prefix(20).map(ItemEntity.init(record:))
   }
 
   func entities(matching string: String) async throws -> [ItemEntity] {
-    return await AmberCatalog.items()
+    return try await AmberCatalog.items()
       .filter { AmberCatalog.matches($0, query: string) }
       .prefix(30)
       .map(ItemEntity.init(record:))
   }
 
   func allEntities() async throws -> [ItemEntity] {
-    return await AmberCatalog.items().map(ItemEntity.init(record:))
+    return try await AmberCatalog.items().map(ItemEntity.init(record:))
   }
 }
 

@@ -14,6 +14,10 @@ enum AmberIntentLog {
     UserDefaults.standard.set(Array(entries.suffix(limit)), forKey: key)
   }
 
+  static func clear() {
+    UserDefaults.standard.removeObject(forKey: key)
+  }
+
   static func entries() -> [String] {
     return UserDefaults.standard.stringArray(forKey: key) ?? []
   }

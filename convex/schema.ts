@@ -141,4 +141,12 @@ export default defineSchema({
   })
     .index("by_token_hash", ["tokenHash"])
     .index("by_user", ["userId"]),
+
+  // Committed in the same transaction as a Siri capture. Keep receipts after
+  // item deletion so a delayed invocation cannot recreate a deleted save.
+  captureReceipts: defineTable({
+    userId: v.string(),
+    requestId: v.string(),
+    itemId: v.id("items"),
+  }).index("by_user_request", ["userId", "requestId"]),
 });

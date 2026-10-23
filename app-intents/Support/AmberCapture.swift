@@ -9,6 +9,7 @@ enum AmberCapture {
   struct Credentials: Codable {
     let siteUrl: String
     let token: String
+    let userId: String?
   }
 
   enum Failure: Error, CustomStringConvertible {
@@ -31,10 +32,15 @@ enum AmberCapture {
   static func store(_ credentials: Credentials) throws {
     let data = try JSONEncoder().encode(credentials)
     var query = baseQuery()
-    SecItemDelete(query as CFDictionary)
-    query[kSecValueData as String] = data
-    query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-    let status = SecItemAdd(query as CFDictionary, nil)
+    let attributes: [String: Any] = [
+      kSecValueData as String: data,
+      kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+    ]
+    var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+    if status == errSecItemNotFound {
+      query.merge(attributes) { _, new in new }
+      status = SecItemAdd(query as CFDictionary, nil)
+    }
     guard status == errSecSuccess else {
       throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
     }
@@ -60,10 +66,10 @@ enum AmberCapture {
   /// POSTs one capture and returns the new item id. `trace` is diagnostic only (see
   /// `CaptureRouter.trace`); the server logs it.
   static func save(
-    kind: String, text: String? = nil, url: String? = nil, storageId: String? = nil,
+    requestId: String = UUID().uuidString, kind: String, text: String? = nil, url: String? = nil, storageId: String? = nil,
     aspectRatio: Double? = nil, isSticker: Bool = false, spaceId: String? = nil, trace: String? = nil
   ) async throws -> String {
-    var body: [String: Any] = ["kind": kind]
+    var body: [String: Any] = ["kind": kind, "requestId": requestId]
     body["text"] = text
     body["url"] = url
     body["storageId"] = storageId
