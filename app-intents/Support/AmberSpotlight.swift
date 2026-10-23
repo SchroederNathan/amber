@@ -24,7 +24,7 @@ enum AmberSpotlight {
   /// Indexes every item in the catalog and removes items that left it. Returns the indexed count.
   @available(iOS 18.0, *)
   static func syncItems() async throws -> Int {
-    let records = await AmberCatalog.items()
+    let records = try await AmberCatalog.items()
       .filter { !$0.hideInSpotlight }
 
     #if compiler(>=6.4)
@@ -70,11 +70,11 @@ enum AmberSpotlight {
 
   /// Removes everything Amber put in Spotlight (sign-out, app lock).
   static func clear() async throws {
-    UserDefaults.standard.removeObject(forKey: indexedKey)
-    UserDefaults.standard.removeObject(forKey: indexedNotesKey)
     try await withDeadline("clearing saves") {
       try await CSSearchableIndex.default().deleteAllSearchableItems()
     }
+    UserDefaults.standard.removeObject(forKey: indexedKey)
+    UserDefaults.standard.removeObject(forKey: indexedNotesKey)
   }
 
   /// Waits for `work` or the deadline, whichever comes first. A hung Spotlight call keeps running

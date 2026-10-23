@@ -35,21 +35,21 @@ struct SpaceEntity: AppIntentEntityRecordConvertible {
 @available(iOS 27.0, *)
 struct SpaceQuery: EntityStringQuery, EnumerableEntityQuery {
   func entities(for identifiers: [String]) async throws -> [SpaceEntity] {
-    return await AmberCatalog.spaces(matching: identifiers).map(SpaceEntity.init(record:))
+    return try await AmberCatalog.spaces(matching: identifiers).map(SpaceEntity.init(record:))
   }
 
   func suggestedEntities() async throws -> [SpaceEntity] {
-    return await AmberCatalog.spaces().map(SpaceEntity.init(record:))
+    return try await AmberCatalog.spaces().map(SpaceEntity.init(record:))
   }
 
   func entities(matching string: String) async throws -> [SpaceEntity] {
-    return await AmberCatalog.spaces()
+    return try await AmberCatalog.spaces()
       .filter { AmberCatalog.matches($0, query: string) }
       .map(SpaceEntity.init(record:))
   }
 
   func allEntities() async throws -> [SpaceEntity] {
-    return await AmberCatalog.spaces().map(SpaceEntity.init(record:))
+    return try await AmberCatalog.spaces().map(SpaceEntity.init(record:))
   }
 }
 
@@ -74,7 +74,10 @@ struct AmberAccountEntity {
 }
 
 @available(iOS 27.0, *)
-struct AmberAccountQuery: EntityQuery {
+struct AmberAccountQuery: EntityStringQuery {
+  func entities(matching string: String) async throws -> [AmberAccountEntity] {
+    return "Amber".localizedStandardContains(string) ? [.amber] : []
+  }
   func entities(for identifiers: [String]) async throws -> [AmberAccountEntity] {
     return identifiers.contains(AmberAccountEntity.amber.id) ? [.amber] : []
   }
@@ -162,7 +165,7 @@ extension NoteEntity: Transferable {
     }
     .exportingCondition { $0.originalItem?.url != nil }
 
-    FileRepresentation(exportedContentType: .jpeg) { (note: NoteEntity) in
+    FileRepresentation(exportedContentType: .image) { (note: NoteEntity) in
       guard let item = note.originalItem else { throw CocoaError(.fileNoSuchFile) }
       return SentTransferredFile(try await item.downloadImage())
     }
@@ -177,25 +180,25 @@ extension NoteEntity: Transferable {
 @available(iOS 27.0, *)
 struct NoteQuery: EntityStringQuery, EnumerableEntityQuery, IndexedEntityQuery {
   func entities(for identifiers: [String]) async throws -> [NoteEntity] {
-    return await AmberCatalog.items(matching: identifiers)
+    return try await AmberCatalog.items(matching: identifiers)
       .map(NoteEntity.init(record:))
   }
 
   func suggestedEntities() async throws -> [NoteEntity] {
-    return await AmberCatalog.items()
+    return try await AmberCatalog.items()
       .prefix(20)
       .map(NoteEntity.init(record:))
   }
 
   func entities(matching string: String) async throws -> [NoteEntity] {
-    return await AmberCatalog.items()
+    return try await AmberCatalog.items()
       .filter { AmberCatalog.matches($0, query: string) }
       .prefix(20)
       .map(NoteEntity.init(record:))
   }
 
   func allEntities() async throws -> [NoteEntity] {
-    return await AmberCatalog.items().map(NoteEntity.init(record:))
+    return try await AmberCatalog.items().map(NoteEntity.init(record:))
   }
 
   func reindexEntities(

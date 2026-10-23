@@ -8,20 +8,20 @@ enum AmberCatalog {
   static let spaceKind = "space"
 
   /// Every published item, newest first.
-  static func items() async -> [AppIntentEntityRecord] {
-    return (try? await AppIntentEntityStore.shared.entities(ofKind: itemKind)) ?? []
+  static func items() async throws -> [AppIntentEntityRecord] {
+    return try await AppIntentEntityStore.shared.entities(ofKind: itemKind)
   }
 
-  static func items(matching identifiers: [String]) async -> [AppIntentEntityRecord] {
-    return (try? await AppIntentEntityStore.shared.entities(ofKind: itemKind, matching: identifiers)) ?? []
+  static func items(matching identifiers: [String]) async throws -> [AppIntentEntityRecord] {
+    return try await AppIntentEntityStore.shared.entities(ofKind: itemKind, matching: identifiers)
   }
 
-  static func spaces() async -> [AppIntentEntityRecord] {
-    return (try? await AppIntentEntityStore.shared.entities(ofKind: spaceKind)) ?? []
+  static func spaces() async throws -> [AppIntentEntityRecord] {
+    return try await AppIntentEntityStore.shared.entities(ofKind: spaceKind)
   }
 
-  static func spaces(matching identifiers: [String]) async -> [AppIntentEntityRecord] {
-    return (try? await AppIntentEntityStore.shared.entities(ofKind: spaceKind, matching: identifiers)) ?? []
+  static func spaces(matching identifiers: [String]) async throws -> [AppIntentEntityRecord] {
+    return try await AppIntentEntityStore.shared.entities(ofKind: spaceKind, matching: identifiers)
   }
 
   /// Case- and accent-insensitive match of every word in `query` against the record's text.

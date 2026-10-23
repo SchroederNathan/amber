@@ -24,7 +24,8 @@ final class AppIntentsSetup: Module {
         AppEntityIdentifierRegistry.shared.register(AmberCatalog.itemKind, as: ItemEntity.self)
       }
       #endif
-      if #available(iOS 18.0, *) {
+      #if compiler(>=6.4)
+      if #available(iOS 27.0, *) {
         Task {
           await AppIntentDispatcher.shared.setShortcutsRefreshHandler {
             AmberShortcuts.updateAppShortcutParameters()
@@ -32,18 +33,20 @@ final class AppIntentsSetup: Module {
           AmberShortcuts.updateAppShortcutParameters()
         }
       }
+      #endif
     }
 
-    AsyncFunction("setCaptureCredentials") { (siteUrl: String, token: String) in
-      try AmberCapture.store(.init(siteUrl: siteUrl, token: token))
+    AsyncFunction("setCaptureCredentials") { (siteUrl: String, token: String, userId: String) in
+      try AmberCapture.store(.init(siteUrl: siteUrl, token: token, userId: userId))
     }
 
     AsyncFunction("clearCaptureCredentials") {
       AmberCapture.clear()
+      AmberIntentLog.clear()
     }
 
-    AsyncFunction("hasCaptureCredentials") { () -> Bool in
-      return AmberCapture.load() != nil
+    AsyncFunction("hasCaptureCredentials") { (userId: String) -> Bool in
+      return AmberCapture.load()?.userId == userId
     }
 
     AsyncFunction("indexItemsInSpotlight") { () async throws -> Int in

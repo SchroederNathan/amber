@@ -1,5 +1,5 @@
-import { v } from "convex/values";
-import { action, mutation, internalMutation } from "./_generated/server";
+import { ConvexError, v, type ObjectType } from "convex/values";
+import { action, query, mutation, internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -121,88 +121,118 @@ export const generateUploadUrlInternal = internalMutation({
   },
 });
 
+const captureArgs = {
+  requestId: v.optional(v.string()),
+  kind: v.union(v.literal("note"), v.literal("link"), v.literal("image")),
+  text: v.optional(v.string()),
+  url: v.optional(v.string()),
+  storageId: v.optional(v.string()),
+  aspectRatio: v.optional(v.number()),
+  isSticker: v.optional(v.boolean()),
+  spaceId: v.optional(v.string()),
+};
+
+const captureResult = v.object({ itemId: v.id("items") });
+type CaptureArgs = ObjectType<typeof captureArgs>;
+
+/** Check before uploading a replayed image whose native request may already have committed. */
+export const getCaptureResult = query({
+  args: { requestId: v.string() },
+  returns: v.union(v.null(), captureResult),
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const receipt = await ctx.db.query("captureReceipts")
+      .withIndex("by_user_request", (q) => q.eq("userId", userId).eq("requestId", args.requestId))
+      .unique();
+    return receipt === null ? null : { itemId: receipt.itemId };
+  },
+});
+
+/** Signed-in replay of an invocation that could not finish natively. */
+export const capture = mutation({
+  args: { ...captureArgs, requestId: v.string() },
+  returns: captureResult,
+  handler: async (ctx, args) => captureForUser(ctx, await requireUserId(ctx), args),
+});
+
 /**
  * Called by the `/app-intents/capture` HTTP action. The token hash is the only
  * credential: the userId is taken from the token row, never from the request.
  * Returns null when the token is unknown (caller responds 401).
  */
 export const captureInternal = internalMutation({
-  args: {
-    tokenHash: v.string(),
-    kind: v.union(v.literal("note"), v.literal("link"), v.literal("image")),
-    text: v.optional(v.string()),
-    url: v.optional(v.string()),
-    storageId: v.optional(v.string()),
-    aspectRatio: v.optional(v.number()),
-    isSticker: v.optional(v.boolean()),
-    spaceId: v.optional(v.string()),
-  },
-  returns: v.union(v.null(), v.object({ itemId: v.id("items") })),
+  args: { ...captureArgs, tokenHash: v.string() },
+  returns: v.union(v.null(), captureResult),
   handler: async (ctx, args) => {
     const token = await claimCaptureToken(ctx, args.tokenHash);
-    if (token === null) {
-      return null;
-    }
-    const userId = token.userId;
-
-    // An invalid, deleted, or foreign spaceId is dropped silently: the save
-    // itself must not fail because of a stale space picked in Siri.
-    let spaceId: Id<"spaces"> | undefined = undefined;
-    if (args.spaceId !== undefined) {
-      const normalized = ctx.db.normalizeId("spaces", args.spaceId);
-      if (normalized !== null) {
-        const space = await ctx.db.get(normalized);
-        if (space !== null && space.userId === userId) {
-          spaceId = normalized;
-        }
-      }
-    }
-
-    if (args.kind === "image") {
-      const storageId =
-        args.storageId === undefined
-          ? null
-          : ctx.db.system.normalizeId("_storage", args.storageId);
-      const file =
-        storageId === null ? null : await ctx.db.system.get(storageId);
-      if (storageId === null || file === null) {
-        throw new Error("Uploaded image not found");
-      }
-      if (file.contentType !== undefined && !file.contentType.startsWith("image/")) {
-        throw new Error("Upload is not an image");
-      }
-      const context = args.text?.trim().slice(0, MAX_CAPTURE_CONTEXT_LENGTH);
-      const itemId = await insertImageItem(ctx, userId, {
-        storageId,
-        aspectRatio: args.aspectRatio,
-        isSticker: args.isSticker,
-        // Marks the item as a native capture, which turns on the source-page
-        // lookup in `ai.processItem`, so it is set even when empty. A sticker
-        // is one object cut out on the device, not a screenshot of a page, so
-        // it is classified like a camera sticker instead.
-        captureContext: args.isSticker === true ? undefined : (context ?? ""),
-        spaceId,
-      });
-      return { itemId };
-    }
-
-    if (args.kind === "note") {
-      const text = args.text ?? "";
-      if (text.length > MAX_CAPTURE_NOTE_LENGTH) {
-        throw new Error("Note text is too long");
-      }
-      // Siri often turns "save this" on a web page into a note that copies
-      // the page, with no URL. The empty context marks the note as a native
-      // capture, so `ai.processItem` looks for that page.
-      const itemId = await insertNoteItem(ctx, userId, text, spaceId, "");
-      return { itemId };
-    }
-
-    const url = args.url ?? "";
-    if (url.length > MAX_CAPTURE_URL_LENGTH) {
-      throw new Error("URL is too long");
-    }
-    const itemId = await insertLinkItem(ctx, userId, url, spaceId);
-    return { itemId };
+    if (token === null) return null;
+    return await captureForUser(ctx, token.userId, args);
   },
 });
+
+function invalidCapture(message: string): never {
+  throw new ConvexError({ code: "INVALID_CAPTURE", message });
+}
+
+async function captureForUser(ctx: MutationCtx, userId: string, args: CaptureArgs) {
+  // Optional only for native binaries released before request IDs were added.
+  const requestId = args.requestId;
+  if (requestId !== undefined) {
+    if (!requestId.trim() || requestId.length > 200) {
+      invalidCapture("Invalid capture request ID");
+    }
+    const receipt = await ctx.db
+      .query("captureReceipts")
+      .withIndex("by_user_request", (q) => q.eq("userId", userId).eq("requestId", requestId))
+      .unique();
+    if (receipt !== null) return { itemId: receipt.itemId };
+  }
+
+  // Stale, deleted and foreign Siri destinations do not prevent a capture.
+  let spaceId: Id<"spaces"> | undefined;
+  if (args.spaceId !== undefined) {
+    const normalized = ctx.db.normalizeId("spaces", args.spaceId);
+    const space = normalized === null ? null : await ctx.db.get(normalized);
+    if (space?.userId === userId) spaceId = space._id;
+  }
+
+  let itemId: Id<"items">;
+  if (args.kind === "image") {
+    const storageId = args.storageId === undefined
+      ? null
+      : ctx.db.system.normalizeId("_storage", args.storageId);
+    const file = storageId === null ? null : await ctx.db.system.get(storageId);
+    if (storageId === null || file === null) invalidCapture("Uploaded image not found");
+    if (file.contentType !== undefined && !file.contentType.startsWith("image/")) {
+      invalidCapture("Upload is not an image");
+    }
+    if (args.aspectRatio !== undefined && (!Number.isFinite(args.aspectRatio) || args.aspectRatio <= 0)) {
+      invalidCapture("Invalid aspect ratio");
+    }
+    const context = args.text?.trim().slice(0, MAX_CAPTURE_CONTEXT_LENGTH);
+    itemId = await insertImageItem(ctx, userId, {
+      storageId,
+      aspectRatio: args.aspectRatio,
+      isSticker: args.isSticker,
+      captureContext: args.isSticker === true ? undefined : (context ?? ""),
+      spaceId,
+    });
+  } else if (args.kind === "note") {
+    const text = args.text?.trim() ?? "";
+    if (!text || text.length > MAX_CAPTURE_NOTE_LENGTH) invalidCapture("Invalid note text");
+    itemId = await insertNoteItem(ctx, userId, text, spaceId, "");
+  } else {
+    const url = args.url?.trim() ?? "";
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { invalidCapture("Invalid URL"); }
+    if (!["http:", "https:"].includes(parsed.protocol) || url.length > MAX_CAPTURE_URL_LENGTH) {
+      invalidCapture("Invalid URL");
+    }
+    itemId = await insertLinkItem(ctx, userId, url, spaceId);
+  }
+
+  if (args.requestId !== undefined) {
+    await ctx.db.insert("captureReceipts", { userId, requestId: args.requestId, itemId });
+  }
+  return { itemId };
+}

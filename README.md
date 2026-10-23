@@ -89,6 +89,26 @@ This builds the dev client and starts Metro. For subsequent runs you can just st
 bun start
 ```
 
+### Siri, Shortcuts, and Spotlight
+
+Amber declares its App Intents in `app-intents/` and connects them to the signed-in app
+through `src/lib/app-intents.tsx`. See Expo's [SDK 58 App Intents docs](https://docs.expo.dev/versions/v58.0.0/sdk/app-intents/)
+and [introduction](https://expo.dev/blog/introducing-expo-app-intents).
+
+Build with Xcode 27 for the iOS 27 Notes schema and shortcut phrases. Image and link actions
+also work in Shortcuts on iOS 18+. Swift changes require a new native build. Deploy the Convex
+schema and functions before distributing this build so the `captureReceipts` table and replay
+mutation are available.
+
+Native captures save without opening Amber. Failed captures wait until you open and unlock
+the app. Retries share a request ID, so a lost response does not create another save. Enabling
+the app lock removes published saves and spaces from Siri and Spotlight. Signing out also
+removes capture credentials and pending captures on this device.
+
+Run `bun run test:convex` for capture replay and authorization tests. Before release, test
+Siri and Shortcuts with the app running and closed, including an offline capture followed by
+reopening Amber. Also run a populated shortcut saved by the previous build after upgrading.
+
 ## Scripts
 
 | Command                 | What it does                                  |
