@@ -18,9 +18,10 @@ export async function getMembership(
   itemId: Id<"items">,
   spaceId: Id<"spaces">,
 ): Promise<Doc<"spaceItems"> | null> {
-  const rows = await ctx.db
+  return await ctx.db
     .query("spaceItems")
-    .withIndex("by_item", (q) => q.eq("itemId", itemId))
-    .collect();
-  return rows.find((row) => row.spaceId === spaceId) ?? null;
+    .withIndex("by_item_and_space", (q) =>
+      q.eq("itemId", itemId).eq("spaceId", spaceId),
+    )
+    .first();
 }
